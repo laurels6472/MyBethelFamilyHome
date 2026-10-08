@@ -149,7 +149,7 @@ try{({})?._test;}catch(e){console.log('[FM] Updating for iOS compatibility');}
 var db=null;
 function initFirebase(cfg){try{if(firebase.apps.length)firebase.app().delete();firebase.initializeApp(cfg);db=firebase.database();localStorage.setItem('fb_cfg',JSON.stringify(cfg));return true;}catch(e){console.error(e);return false;}}
 // To hard-wire sync for EVERY device, paste your Firebase config object here (or use Admin > Sync Setup + a device link).
-var FM_FIREBASE_CONFIG = null;
+var FM_FIREBASE_CONFIG = {"apiKey":"AIzaSyCeztnV2Kw2aImhrINlN1NbkinCdJpUS94","authDomain":"mybethelfamilyhome-1e19a.firebaseapp.com","projectId":"mybethelfamilyhome-1e19a","storageBucket":"mybethelfamilyhome-1e19a.firebasestorage.app","messagingSenderId":"287969705339","appId":"1:287969705339:web:5e7ad9ee016908892951de"};
 (function(){
   try{
     var m=(location.hash||'').match(/[#&]fb=([^&]+)/);
