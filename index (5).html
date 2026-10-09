@@ -5503,7 +5503,25 @@ function PinEntry(props) {
   var noPin   = !hasPin(person.id);
   var isAdmin = person.role === 'parent';
 
-  React.useEffect(function() { if (noPin) setStep('create'); }, []);
+  React.useEffect(function() {
+    if (!noPin) return;
+    setStep('create');
+    if (isAdmin && typeof db !== 'undefined' && db) {
+      setStep('checking');
+      var done = false, to = setTimeout(function() { if (!done) { done = true; setStep('create'); } }, 4000);
+      try {
+        db.ref('argilan/pins/' + person.id).once('value').then(function(snap) {
+          if (done) return; done = true; clearTimeout(to);
+          var v = snap.val();
+          if (v) {
+            try { var st = JSON.parse(localStorage.getItem('argilan_pins') || '{}'); st[person.id] = String(v); localStorage.setItem('argilan_pins', JSON.stringify(st)); } catch (e) {}
+            try { if (typeof window._appSetPin === 'function') window._appSetPin(person.id, String(v)); } catch (e) {}
+            setStep('enter');
+          } else setStep('create');
+        }).catch(function() { if (!done) { done = true; clearTimeout(to); setStep('create'); } });
+      } catch (e) { setStep('create'); }
+    }
+  }, []);
 
   function savePin(id, pin) {
     var pinStr = String(pin);
@@ -5543,6 +5561,7 @@ function PinEntry(props) {
       setDigits(n); setErr('');
       if (n.length < 4) return;
 
+      if (step === 'checking') return;
       if (step === 'enter') {
         var ok = false;
         try { ok = checkPin(person.id, n); } catch(e) {}
@@ -5601,7 +5620,7 @@ function PinEntry(props) {
     );
   }
 
-  var heading = step==='create' ? (isAdmin ? 'Create your PIN' : 'Welcome! Make your own 4-digit passcode') : step==='confirm' ? 'Confirm your PIN' : 'Enter your PIN';
+  var heading = step==='checking' ? 'Checking your family account…' : step==='create' ? (isAdmin ? 'Create your PIN' : 'Welcome! Make your own 4-digit passcode') : step==='confirm' ? 'Confirm your PIN' : 'Enter your PIN';
 
   var dots = /*#__PURE__*/React.createElement("div", {style:{display:'flex',gap:16,marginBottom:6}},
     [0,1,2,3].map(function(i) {
@@ -5650,17 +5669,18 @@ function PinEntry(props) {
     numpad,
     /*#__PURE__*/React.createElement("div",{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:10,marginTop:24}},
       /*#__PURE__*/React.createElement("button",{onClick:onBack,style:{background:'transparent',border:'none',color:'rgba(255,255,255,.3)',fontSize:11,cursor:'pointer'}},"Back"),
-      showReset && isAdmin && !confirmReset && /*#__PURE__*/React.createElement("button",{
+      false && showReset && isAdmin && !confirmReset && /*#__PURE__*/React.createElement("button",{
         onClick:function(){ setConfirmReset(true); },
         style:{background:'transparent',border:'none',color:'rgba(255,82,82,.4)',fontSize:10,cursor:'pointer'}
       },"Forgot PIN? Reset it"),
-      showReset && isAdmin && confirmReset && /*#__PURE__*/React.createElement("div",{style:{textAlign:'center'}},
+      false && showReset && isAdmin && confirmReset && /*#__PURE__*/React.createElement("div",{style:{textAlign:'center'}},
         /*#__PURE__*/React.createElement("div",{style:{fontSize:10,color:'rgba(255,255,255,.5)',marginBottom:8}},"This will clear your PIN so you can create a new one."),
         /*#__PURE__*/React.createElement("div",{style:{display:'flex',gap:8,justifyContent:'center'}},
           /*#__PURE__*/React.createElement("button",{onClick:doReset,style:{background:'#EF5350',color:'#fff',border:'none',borderRadius:20,padding:'7px 16px',fontSize:11,fontWeight:800,cursor:'pointer'}},"Yes, Reset PIN"),
           /*#__PURE__*/React.createElement("button",{onClick:function(){ setConfirmReset(false); },style:{background:'rgba(255,255,255,.08)',color:'#aaa',border:'none',borderRadius:20,padding:'7px 16px',fontSize:11,cursor:'pointer'}},"Cancel")
         )
       ),
+      showReset && isAdmin && /*#__PURE__*/React.createElement('div',{style:{fontSize:10,color:'rgba(255,255,255,.55)',textAlign:'center',maxWidth:240,lineHeight:1.5}},'Forgot it? Go Back, tap "Forgot a PIN?" at the bottom, and the other parent enters their PIN to reset yours.'),
       // Children/others: no self-reset — ask a parent instead
       showReset && !isAdmin && !requestSent && /*#__PURE__*/React.createElement("button",{
         onClick: requestPinHelp,
@@ -5782,17 +5802,14 @@ function ForgotPinPanel(props) {
 
   function verifyAdmin() {
     try {
-      var ok = checkPin('laurel', adminPin.trim());
+      var ok = checkPin('laurel', adminPin.trim()) || checkPin('eric', adminPin.trim());
       if (ok) { setVerified(true); setMsg(''); setAdminPin(''); }
       else { setMsg('Incorrect PIN'); setAdminPin(''); }
     } catch(e) { setMsg('Try again'); }
   }
 
   function tryRecovery() {
-    var p = (recovPhrase||'').trim().toUpperCase();
-    if (p==='ARGILAN2FAMILY'||p==='BETHEL2026'||p==='LAURELRESET') {
-      setVerified(true); setMsg(''); setRecovPhrase('');
-    } else { setMsg('Incorrect recovery phrase'); }
+    setMsg('Recovery phrases are turned off. Use the other parent\u2019s PIN.');
   }
 
   function resetFor(personId, personName) {
@@ -5821,7 +5838,7 @@ function ForgotPinPanel(props) {
       /*#__PURE__*/React.createElement('button',{onClick:function(){setOpen(false);setVerified(false);setAdminPin('');setMsg('');setRecovPhrase('');},style:{background:'transparent',border:'none',color:'rgba(255,255,255,.4)',fontSize:20,cursor:'pointer',lineHeight:1}},'x')
     ),
     !verified&&/*#__PURE__*/React.createElement('div',null,
-      /*#__PURE__*/React.createElement('div',{style:{fontSize:10,color:'rgba(255,255,255,.5)',marginBottom:6}},"Enter Laurel's PIN:"),
+      /*#__PURE__*/React.createElement('div',{style:{fontSize:10,color:'rgba(255,255,255,.5)',marginBottom:6}},"A parent must approve. Enter Laurel's or Eric's PIN:"),
       /*#__PURE__*/React.createElement('div',{style:{display:'flex',gap:8,marginBottom:16}},
         /*#__PURE__*/React.createElement('input',{
           type:'password',inputMode:'numeric',maxLength:4,value:adminPin,
@@ -5831,7 +5848,7 @@ function ForgotPinPanel(props) {
         }),
         /*#__PURE__*/React.createElement('button',{onClick:verifyAdmin,style:{background:'#9C8DC4',color:'#000',border:'none',borderRadius:10,padding:'10px 14px',fontWeight:800,fontSize:11,cursor:'pointer'}},'Verify')
       ),
-      /*#__PURE__*/React.createElement('div',{style:{borderTop:'1px solid rgba(255,255,255,.07)',paddingTop:12}},
+      false && /*#__PURE__*/React.createElement('div',{style:{borderTop:'1px solid rgba(255,255,255,.07)',paddingTop:12}},
         /*#__PURE__*/React.createElement('div',{style:{fontSize:9,color:'rgba(255,255,255,.3)',marginBottom:6}},'Admin forgot their own PIN? Use recovery phrase:'),
         /*#__PURE__*/React.createElement('div',{style:{display:'flex',gap:8}},
           /*#__PURE__*/React.createElement('input',{
@@ -5842,7 +5859,7 @@ function ForgotPinPanel(props) {
           }),
           /*#__PURE__*/React.createElement('button',{onClick:tryRecovery,style:{background:'rgba(239,83,80,.15)',color:'#EF5350',border:'1px solid rgba(239,83,80,.3)',borderRadius:10,padding:'8px 12px',fontWeight:800,fontSize:10,cursor:'pointer'}},'Use')
         ),
-        /*#__PURE__*/React.createElement('div',{style:{fontSize:8,color:'rgba(255,255,255,.15)',marginTop:4}},'Phrases: ARGILAN2FAMILY / BETHEL2026 / LAURELRESET')
+        /*#__PURE__*/React.createElement('div',{style:{fontSize:8,color:'rgba(255,255,255,.15)',marginTop:4}},'')
       ),
       msg&&/*#__PURE__*/React.createElement('div',{style:{color:'#EF5350',fontSize:10,marginTop:8,textAlign:'center'}},msg)
     ),
@@ -6931,6 +6948,7 @@ function Dashboard({
   const [tab, setTab] = useState('schedule');
   const [showNotifs, setShowNotifs] = useState(false);
   const [profileId, setProfileId] = useState(null);
+  const [showSwitch, setShowSwitch] = useState(false);
   const [viewingAs, setViewingAs] = useState(null); // admin switching to another person's account
   const [schedEditMode, setSchedEditMode] = useState(false);
 
@@ -7088,6 +7106,12 @@ function Dashboard({
     setViewingAs(pid === personId ? null : pid);
     setTab('board');
   }
+  if (showSwitch && isAdmin) return /*#__PURE__*/React.createElement('div', { style: { position: 'fixed', inset: 0, background: '#0f0c29', zIndex: 1000, overflowY: 'auto', padding: 20 } },
+    /*#__PURE__*/React.createElement('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 4 } }, 'Switch to who?'),
+    /*#__PURE__*/React.createElement('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.5)', marginBottom: 14 } }, 'See the app exactly as that person does. Tap yourself to come back.'),
+    fam.filter(p => !p.deleted).map(p => /*#__PURE__*/React.createElement('button', { key: p.id, onClick: () => { handleSwitch(p.id); setShowSwitch(false); }, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: p.color + '22', border: '1px solid ' + p.color + '66', borderRadius: 16, padding: '12px 14px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', textAlign: 'left' } },
+      /*#__PURE__*/React.createElement('span', { style: { fontSize: 26 } }, p.emoji), p.name + (p.id === personId ? ' (me)' : ''), effectiveId === p.id ? ' ✓' : '')),
+    /*#__PURE__*/React.createElement('button', { onClick: () => setShowSwitch(false), style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 20, padding: 12, fontWeight: 800, marginTop: 8, cursor: 'pointer' } }, 'Close'));
   if (showNotifs) return /*#__PURE__*/React.createElement(NotifPanel, {
     notifs: myNotifs,
     onClose: () => setShowNotifs(false),
@@ -7099,6 +7123,7 @@ function Dashboard({
     currentPersonId: personId
   });
   if (profileId) return /*#__PURE__*/React.createElement(ProfileModal, {
+    person: getPerson(profileId),
     personId: profileId,
     onClose: () => setProfileId(null),
     sessions: sessions,
@@ -7168,8 +7193,9 @@ function Dashboard({
       border: 'none', fontSize: 14, flexShrink: 0,
       cursor: canGoForward ? 'pointer' : 'default'
     }
-  }, "\u203A"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setProfileId(personId),
+  }, "\u203A"), /*#__PURE__*/React.createElement(isAdmin ? "button" : "div", {
+    onClick: isAdmin ? () => setShowSwitch(true) : undefined,
+    title: isAdmin ? "Switch to another family member" : undefined,
     style: {
       width: 34,
       height: 34,
@@ -7180,9 +7206,10 @@ function Dashboard({
       justifyContent: 'center',
       fontSize: 18,
       border: isOwner ? '2px solid #C0CA33' : 'none',
+      cursor: isAdmin ? 'pointer' : 'default',
       flexShrink: 0
     }
-  }, person.emoji), /*#__PURE__*/React.createElement("div", {
+  }, viewingAs ? effectivePerson.emoji : person.emoji), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
     }
@@ -7761,7 +7788,9 @@ function App() {
     });
     const saved = localStorage.getItem('last_user');
     if (saved) try {
-      setUser(JSON.parse(saved));
+      const su = JSON.parse(saved);
+      if (su && su.role !== 'parent' && su.personId !== 'laurel' && su.personId !== 'eric') setUser(su);
+      else localStorage.removeItem('last_user');
     } catch (e) {}
     return () => {
       u1();
