@@ -51,6 +51,10 @@ if (typeof firebase === 'undefined') {
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
+/* iPhone/iPad Safari & Chrome only deliver taps to non-button elements that look clickable — make every tappable thing on touch screens count */
+@media (hover:none) { div, span, p, li, td, th, tr, label, img, svg, h1, h2, h3, h4, section, article, summary { cursor: pointer; } input, textarea, select { cursor: text; } }
+html { touch-action: manipulation; -webkit-tap-highlight-color: rgba(255,255,255,.08); }
+
 /* tab-like rows wrap into boxes instead of scrolling sideways */
 [style*="display: flex"][style*="overflow-x: auto"]{overflow-x:visible!important;flex-wrap:wrap!important}
 [style*="display: flex"][style*="overflow-x: auto"]>button{flex:1 1 auto!important;min-height:40px}
@@ -5809,7 +5813,7 @@ function PinEntry(props) {
         id, type: 'pin_reset_request',
         personId: person.id, personName: person.name,
         title: '🔒 ' + person.name + ' forgot their PIN',
-        message: person.name + ' needs a PIN set or reset. Go to Admin → PIN Manager (you can also tap 🔐 Show PIN to read it to them).',
+        message: person.name + ' needs a PIN set or reset. Go to Admin → Family Members (you can also tap 🔐 Show PIN to read it to them).',
         timestamp: Date.now(), read: false, approved: null
       });
     } catch(e) {}
@@ -7475,7 +7479,7 @@ function Dashboard({
       color: '#C0CA33',
       marginLeft: 8
     }
-  }, calcPoints(sessions, effectiveId), "pts")))), (isLaurel || personId === 'eric') && /*#__PURE__*/React.createElement("button", {
+  }, calcPoints(sessions, effectiveId), "pts")))), (typeof PrincipleBar === 'function') && React.createElement(PrincipleBar, { tab: tab, compact: true, key: 'pnbar' }), (isLaurel || personId === 'eric') && /*#__PURE__*/React.createElement("button", {
     onClick: toggleAdminMode,
     style: {
       width: '100%',
@@ -7677,7 +7681,6 @@ function Dashboard({
   tab === 'accounts' && typeof MyAccounts !== 'undefined' && /*#__PURE__*/React.createElement(MyAccounts, { personId: effectiveId, isAdmin: isAdmin || isOwner, family: fam }),
   tab === 'safety' && typeof SafetyCenter !== 'undefined' && /*#__PURE__*/React.createElement(SafetyCenter, { isAdmin: isAdmin || isOwner, family: fam }),
   tab === 'money' && hs('money', 'bank') === 'bills' && typeof BillHub !== 'undefined' && /*#__PURE__*/React.createElement(BillHub, { isAdmin: isAdmin || isOwner, isOwner: personId === 'laurel', personId: personId, family: fam }),
-  (tab !== 'habits' && typeof PrincipleBar === 'function') && React.createElement(PrincipleBar, { tab: tab, key: 'pn' + tab }),
   (tab === 'money') && typeof HubBar === 'function' && React.createElement(HubBar, { hub: tab, parent: effectiveRole !== 'child', sub: hs(tab, tab === 'money' ? 'bank' : 'board'), onPick: (v) => setHubSub(x => Object.assign({}, x, { [tab]: v })) }),
   tab === 'money' && hs('money', 'bank') === 'shop' && typeof BethelStore === 'function' && /*#__PURE__*/React.createElement(BethelStore, { personId: effectiveId, isAdmin: isAdmin || isOwner, family: fam, payMode: payMode, updateSetting: updateSetting, addNotif: addNotif }),
   (tab === 'habits') && typeof HabitLeaders === 'function' && React.createElement(HabitLeaders, { personId: effectiveId, isAdmin: !!(isAdmin || isOwner) && !viewingAs, family: fam, sessions: sessions, onUpdate: onUpdate }),
@@ -7841,7 +7844,7 @@ function Dashboard({
     style: {
       marginTop: 20
     }
-  }, /*#__PURE__*/React.createElement(SyncSetupPanel, null), typeof FamilyAccessPanel === 'function' && /*#__PURE__*/React.createElement(FamilyAccessPanel, null), /*#__PURE__*/React.createElement(PinManager, {
+  }, /*#__PURE__*/React.createElement(SyncSetupPanel, null), typeof FamilyAccessPanel === 'function' && /*#__PURE__*/React.createElement(FamilyAccessPanel, null), /*#__PURE__*/React.createElement(typeof MemberManager === 'function' ? MemberManager : PinManager, {
     family: fam,
     pins: pins,
     setPin: setPin,
@@ -29800,6 +29803,7 @@ function NutritionMealBuilder(props) {
   var say = function (t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3500); };
   var local = q.trim().length >= 2 ? NT_FOODS.filter(function (f) { return f.name.toLowerCase().indexOf(q.trim().toLowerCase()) !== -1; }).slice(0, 8) : [];
 
+  function addMany(list, photo) { setItems(function (prev) { return prev.concat(list.map(function (f, i) { return Object.assign({}, f, { key: f.id + Date.now() + i, n: 1 }); })); }); }
   function addFood(f) { setItems(items.concat([Object.assign({}, f, { key: f.id + Date.now(), n: 1 })])); setQ(''); setOnline([]); }
   function setN(key, n) { setItems(items.map(function (it) { return it.key === key ? Object.assign({}, it, { n: Math.max(0.25, ntR(n, 2)) }) : it; })); }
   function drop(key) { setItems(items.filter(function (it) { return it.key !== key; })); }
@@ -29855,12 +29859,13 @@ function NutritionMealBuilder(props) {
 
   return h('div', { style: { background: 'rgba(255,183,77,.07)', border: '1px solid rgba(255,183,77,.3)', borderRadius: 12, padding: 12, marginBottom: 10 } },
     h('div', { style: { fontSize: 11, fontWeight: 800, color: '#FFB74D', marginBottom: 2 } }, '🍽 WHAT’S ON THE PLATE?'),
-    h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.5)', marginBottom: 8 } }, 'Pick the foods and how much — the app does the math. (It cannot read a photo by itself; the photo is saved with the meal.)'),
+    h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.5)', marginBottom: 8 } }, 'Pick the foods and how much — the app does the math. Or take a photo and let the app estimate it.'),
     msg && h('div', { style: { background: 'rgba(76,175,130,.15)', color: '#9be5bd', borderRadius: 8, padding: '6px 10px', fontSize: 11, marginBottom: 6 } }, msg),
     scan && h(NutriScan, { onCode: byBarcode, onFail: function (t) { setScan(false); say(t); }, onClose: function () { setScan(false); } }),
     h('div', { style: { display: 'flex', gap: 6 } },
       h('input', { type: 'text', value: q, onChange: function (e) { setQ(e.target.value); }, placeholder: 'Search a food (apple, rice, pizza…)', style: Object.assign({}, NT_INP, { marginBottom: 0 }) }),
       h('button', { onClick: function () { setScan(true); }, style: ntBtn('#42A5F5') }, '📷')),
+    typeof FoodPhoto === 'function' && h(FoodPhoto, { isAdmin: props.isAdmin, onFoods: addMany }),
     local.map(function (f) { return h('div', { key: f.id, onClick: function () { addFood(f); }, style: { display: 'flex', gap: 8, padding: '9px 6px', borderBottom: '1px solid rgba(255,255,255,.07)', cursor: 'pointer' } }, h('div', { style: { flex: 1, fontSize: 13, color: '#fff' } }, f.name, h('span', { style: { color: 'rgba(255,255,255,.45)', fontSize: 11 } }, ' · ' + f.serving)), h('div', { style: { fontSize: 11, color: '#FFB74D', fontWeight: 800 } }, f.carbs + ' g carbs')); }),
     q.trim().length >= 2 && h('div', { style: { display: 'flex', gap: 6, margin: '6px 0', flexWrap: 'wrap' } },
       h('button', { onClick: searchOnline, disabled: busy, style: NT_GHOST }, busy ? 'Searching…' : '🌐 Search packaged foods online'),
@@ -31489,7 +31494,7 @@ function StartMyDay(props) {
   var clocked = !!sd.dayStart;
   var ready = !!sd.readyAt;
   var oS = React.useState(null), openStep = oS[0], setOpen = oS[1];
-  React.useEffect(function () { function go() { setOpen(!clocked ? 1 : 2); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} } window.addEventListener('fm-go-ready', go); return function () { window.removeEventListener('fm-go-ready', go); }; }, [clocked]);
+  React.useEffect(function () { function go() { var n = !clocked ? 1 : 2; setOpen(n); setTimeout(function () { try { var el = document.getElementById('fm-step-' + n); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.style.transition = 'box-shadow .3s'; el.style.boxShadow = '0 0 0 4px #FFD54F'; setTimeout(function () { el.style.boxShadow = ''; }, 1600); } else window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 120); } window.addEventListener('fm-go-ready', go); return function () { window.removeEventListener('fm-go-ready', go); }; }, [clocked]);
   // remember the first clock-in of the day
   React.useEffect(function () { if (false && running.length > 0 && !sd.clockedAt) { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { clockedAt: Date.now() })); } catch (e) {} } });
   var cfgS = ktUse('startday_cfg', null), cfg = cfgS[0] || {};
@@ -31517,7 +31522,7 @@ function StartMyDay(props) {
       h('div', { style: { width: 46, height: 46, borderRadius: '50%', background: state === 'done' ? C.done : 'transparent', border: '3px solid ' + col, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: state === 'done' ? 24 : 22, color: state === 'done' ? '#000' : '#fff', flexShrink: 0 } }, state === 'done' ? '✓' : state === 'lock' ? '🔒' : icon),
       h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 18, fontWeight: 900, color: state === 'lock' ? 'rgba(255,255,255,.4)' : '#fff' } }, n + '. ' + title), h('div', { style: { fontSize: 13, color: state === 'lock' ? 'rgba(255,255,255,.3)' : '#c8c8d8' } }, sub)));
   }
-  function box(n, state, children) { return h('div', { style: { background: state === 'now' ? 'rgba(255,213,79,.08)' : 'rgba(255,255,255,.05)', border: '2px solid ' + (state === 'now' ? C.now : state === 'done' ? 'rgba(76,175,130,.5)' : 'rgba(255,255,255,.1)'), borderRadius: 18, padding: 14, marginBottom: 12 } }, children); }
+  function box(n, state, children) { return h('div', { id: 'fm-step-' + n, style: { background: state === 'now' ? 'rgba(255,213,79,.08)' : 'rgba(255,255,255,.05)', border: '2px solid ' + (state === 'now' ? C.now : state === 'done' ? 'rgba(76,175,130,.5)' : 'rgba(255,255,255,.1)'), borderRadius: 18, padding: 14, marginBottom: 12 } }, children); }
   var s1 = clocked ? 'done' : 'now', s2 = !clocked ? 'lock' : ready ? 'done' : 'now', s3 = !ready ? 'lock' : 'now';
   var go = function (t) { return function () { props.onSwitchTab && props.onSwitchTab(t); }; };
   var big = function (bg, fg, fn, label) { return h('button', { onClick: fn, style: { display: 'block', width: '100%', background: bg, color: fg, border: 'none', borderRadius: 16, padding: '16px 14px', fontWeight: 900, fontSize: 17, marginTop: 8, cursor: 'pointer', textAlign: 'left' } }, label); };
@@ -32250,7 +32255,7 @@ function FamilyFreshStart(props) {
   }
   function clearKidPins() {
     kids.forEach(function (p) { try { if (typeof window._appSetPin === 'function') window._appSetPin(p.id, ''); else syncSet('pins/' + p.id, null); } catch (e) {} });
-    setMsg('✅ All children’s passcodes are cleared. They cannot log in until you set each one in Admin → PIN Manager.');
+    setMsg('✅ All children’s passcodes are cleared. They cannot log in until you set each one in Admin → Family Members.');
   }
   var b = { display: 'block', width: '100%', textAlign: 'left', borderRadius: 12, padding: '12px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 8, background: 'rgba(255,255,255,.07)', color: '#fff', border: '1px solid rgba(255,255,255,.25)' };
   return h('div', { style: { margin: '10px 14px' } },
@@ -36149,11 +36154,11 @@ function mdsAdd(pid, it) {
   try { syncSet('medsched/' + pid + '/' + id, { id: id, type: it.type === 'insulin' ? 'insulin' : 'med', name: it.name || '', dose: it.dose || '', site: it.site || '', time: it.time || '08:00', by: window._currentPersonId || pid, created: Date.now() }); } catch (e) {}
   return id;
 }
-function mdsToggle(pid, it, date, on) {
+function mdsToggle(pid, it, date, on, tsOver) {
   var eid = 'ms_' + date.replace(/-/g, '') + '_' + it.id;
   if (on) {
-    var ts = mdsTimeTs(it.time);
-    var entry = { id: eid, type: it.type === 'insulin' ? 'insulin' : 'med', ts: ts, loggedBy: window._currentPersonId || pid, scheduled: true, note: '✅ Checked off from my daily schedule (' + mdsFmt(it.time) + ')' };
+    var ts = tsOver || mdsTimeTs(it.time);
+    var entry = { id: eid, type: it.type === 'insulin' ? 'insulin' : 'med', ts: ts, loggedBy: window._currentPersonId || pid, scheduled: true, note: (tsOver ? '✅ Taken — time entered from reminder' : '✅ Checked off from my daily schedule (' + mdsFmt(it.time) + ')') };
     if (it.type === 'insulin') { entry.dose = it.dose || ''; entry.site = it.site || ''; if (it.name) entry.medName = it.name; } else { entry.medName = it.name || ''; entry.dose = it.dose || ''; }
     try { syncSet('health_log/' + pid + '/' + eid, entry); syncSet('medlog/' + pid + '/' + date + '/' + it.id, Date.now()); } catch (e) {}
   } else {
@@ -36194,7 +36199,52 @@ function MedSchedule(props) {
       h('div', { style: { display: 'flex', gap: 6, marginBottom: 6 } }, h('input', { value: form.dose, onChange: function (e) { setForm(Object.assign({}, form, { dose: e.target.value })); }, placeholder: form.type === 'insulin' ? 'Units (from your care team)' : 'Dose (e.g. 5 mg)', style: Object.assign({}, inp, { flex: 1, minWidth: 0 }) }), h('input', { type: 'time', value: form.time, onChange: function (e) { setForm(Object.assign({}, form, { time: e.target.value })); }, style: Object.assign({}, inp, { width: 110 }) })),
       h('div', { style: { display: 'flex', gap: 6 } }, h('button', { onClick: function () { if (!form.name.trim() && form.type !== 'insulin') return; mdsAdd(pid, form); setForm(null); }, style: btn('#4CAF82', '#000') }, 'Add to my daily list'), h('button', { onClick: function () { setForm(null); }, style: btn('rgba(255,255,255,.15)') }, 'Cancel')))
       : h('button', { onClick: function () { var d = new Date(); setForm({ type: 'med', name: '', dose: '', time: ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) }); }, style: Object.assign({}, btn('#9C27B0'), { marginTop: 8 }) }, '➕ Add a medicine or insulin'),
+    h(MedRemSettings, { pid: pid }),
     h('div', { style: { fontSize: 9, color: 'rgba(255,255,255,.35)', marginTop: 6, lineHeight: 1.5 } }, 'This is a record of what was taken, not medical advice. Doses and times come from the doctor and a parent.'));
+}
+
+// ── Reminder: when a scheduled dose is due, pop up + sound + phone notification. Ask-for-the-time or auto-log, per person. ──
+function MedReminder() {
+  var h = React.createElement, tS = React.useState(0), setT = tS[1], pid = window._currentPersonId || '';
+  var ref = React.useRef({});
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 15000); return function () { clearInterval(iv); }; }, []);
+  var sS = ktUse('medsched/' + (pid || '_none'), {}), sched = sS[0] || {}, lS = ktUse('medlog/' + (pid || '_none') + '/' + todayKey(), {}), log = lS[0] || {}, cS = ktUse('medrem_cfg/' + (pid || '_none'), {}), cfg = cS[0] || {};
+  var tmS = React.useState(''), tm = tmS[0], setTm = tmS[1];
+  if (!pid || cfg.off) return null;
+  var date = todayKey(), now = Date.now(), items = Object.keys(sched).map(function (k) { return sched[k]; }).filter(function (x) { return x && x.id; });
+  function snoozeKey(x) { return 'fm_medsnz_' + pid + '_' + date + '_' + x.id; }
+  var dueItems = items.filter(function (x) { if (log[x.id]) return false; if (mdsTimeTs(x.time) > now) return false; var z = 0; try { z = +localStorage.getItem(snoozeKey(x)) || 0; } catch (e) {} return z < now; }).sort(function (a, b) { return (a.time || '').localeCompare(b.time || ''); });
+  if (!dueItems.length) return null;
+  var x = dueItems[0], nm = (x.type === 'insulin' ? '💉 ' : '💊 ') + (x.name || (x.type === 'insulin' ? 'Insulin' : 'Medicine')) + (x.dose ? ' · ' + x.dose : '');
+  // auto-log mode: log it at the scheduled time and tell them
+  if (cfg.mode === 'auto') {
+    if (!ref.current['a' + x.id + date]) { ref.current['a' + x.id + date] = 1; try { mdsToggle(pid, x, date, true); } catch (e) {} try { if (typeof playSound === 'function') playSound('success'); if (typeof fireBrowserNotif === 'function') fireBrowserNotif('Medicine logged', nm + ' was logged at ' + mdsFmt(x.time) + '. Open the app to undo.'); } catch (e) {} }
+    return null;
+  }
+  if (!ref.current['n' + x.id + date]) { ref.current['n' + x.id + date] = 1; try { if (typeof playSound === 'function') playSound('reminder'); if (typeof fireBrowserNotif === 'function') fireBrowserNotif('Time for your medicine', nm + ' — ' + mdsFmt(x.time)); } catch (e) {} }
+  var nowD = new Date(), nowStr = ('0' + nowD.getHours()).slice(-2) + ':' + ('0' + nowD.getMinutes()).slice(-2), val = tm || nowStr;
+  function toTs(hhmm) { var m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || ''); var d = new Date(); if (m) d.setHours(+m[1], +m[2], 0, 0); return d.getTime(); }
+  var btn = function (bg, fg) { return { width: '100%', background: bg, color: fg || '#fff', border: 'none', borderRadius: 14, padding: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 8 }; };
+  return h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', zIndex: 5200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 } },
+    h('div', { style: { width: '100%', maxWidth: 420, background: 'linear-gradient(160deg,#2b1055,#1a1a2e)', border: '3px solid #CE93D8', borderRadius: 22, padding: 18, boxShadow: '0 0 40px #CE93D888' } },
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#CE93D8', letterSpacing: 1 } }, '⏰ MEDICINE REMINDER'),
+      h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff', margin: '6px 0 2px' } }, nm),
+      h('div', { style: { fontSize: 13, color: '#d8d8e8', marginBottom: 12 } }, 'Scheduled for ' + mdsFmt(x.time) + (dueItems.length > 1 ? ' · ' + (dueItems.length - 1) + ' more due' : '')),
+      h('div', { style: { fontSize: 12, color: '#d8d8e8', marginBottom: 4 } }, 'What time did you take it? (change it if it was earlier)'),
+      h('input', { type: 'time', value: val, onChange: function (e) { setTm(e.target.value); }, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 12, color: '#fff', padding: 12, fontSize: 20, textAlign: 'center' } }),
+      h('button', { onClick: function () { mdsToggle(pid, x, date, true, toTs(val)); setTm(''); try { if (typeof playSound === 'function') playSound('success'); } catch (e) {} setT(function (n) { return n + 1; }); }, style: btn('#4CAF82', '#000') }, '✅ I took it — log it at ' + mdsFmt(val)),
+      h('button', { onClick: function () { try { localStorage.setItem(snoozeKey(x), String(Date.now() + 10 * 60000)); } catch (e) {} ref.current['n' + x.id + date] = 0; setT(function (n) { return n + 1; }); }, style: btn('rgba(255,255,255,.12)') }, '⏰ Remind me in 10 minutes'),
+      h('button', { onClick: function () { try { localStorage.setItem(snoozeKey(x), String(Date.now() + 20 * 3600000)); } catch (e) {} setT(function (n) { return n + 1; }); }, style: { width: '100%', background: 'none', border: 'none', color: '#9a9ab0', fontSize: 12, marginTop: 6, cursor: 'pointer' } }, 'Skip this one today')));
+}
+
+function MedRemSettings(props) {
+  var h = React.createElement, cS = ktUse('medrem_cfg/' + props.pid, {}), cfg = cS[0] || {};
+  function set(k, v) { try { syncSet('medrem_cfg/' + props.pid + '/' + k, v); } catch (e) {} }
+  var opt = function (id, label) { var on = (cfg.mode || 'ask') === id && !cfg.off; return h('button', { key: id, onClick: function () { set('off', false); set('mode', id); }, style: { flex: 1, background: on ? '#9C27B0' : 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 6px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, label); };
+  return h('div', { style: { marginTop: 10, padding: 10, background: 'rgba(0,0,0,.2)', borderRadius: 10 } },
+    h('div', { style: { fontSize: 11, fontWeight: 800, color: '#CE93D8', marginBottom: 6 } }, '⏰ WHEN IT IS TIME TO TAKE IT'),
+    h('div', { style: { display: 'flex', gap: 6 } }, opt('ask', '🔔 Remind me & ask the time'), opt('auto', '⚡ Log it automatically'), h('button', { onClick: function () { set('off', !cfg.off); }, style: { background: cfg.off ? '#E53935' : 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 8px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, cfg.off ? 'Off' : 'Off?')),
+    h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.45)', marginTop: 5, lineHeight: 1.5 } }, 'Reminders pop up with a sound while the app is open. “Ask” lets you adjust the time before saving; “automatic” logs it at the scheduled time.'));
 }
 
 </script>
@@ -36253,9 +36303,10 @@ function pnDay() { var d = new Date(), a = Date.UTC(d.getFullYear(), d.getMonth(
 function pnPick(slot) { var n = PN_VERSES.length, i = ((pnDay() + (typeof slot === 'number' ? slot : Math.max(0, PN_TABS.indexOf(slot))) * 3) % n + n) % n; return PN_VERSES[i]; }
 function PrincipleBar(props) {
   var h = React.createElement, v = pnPick(props.tab);
-  return h('div', { style: { margin: '8px 12px 4px', padding: '10px 14px', borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)' } },
+  var cp = !!props.compact;
+  return h('div', { style: { margin: cp ? '6px 12px 2px' : '8px 12px 4px', flexShrink: 0, padding: cp ? '6px 12px' : '10px 14px', borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)' } },
     h('div', { style: { fontSize: 10, fontWeight: 900, letterSpacing: 1.5, color: '#FFD54F', marginBottom: 3 } }, '📖 TODAY’S PRINCIPLE'),
-    h('div', { style: { fontSize: 13, color: '#fff', fontWeight: 700, lineHeight: 1.5 } }, '“' + v[1] + '”'),
+    h('div', { style: { fontSize: cp ? 12 : 13, color: '#fff', fontWeight: 700, lineHeight: 1.45 } }, '“' + v[1] + '”'),
     h('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.55)', marginTop: 3, fontWeight: 800 } }, v[0] + ' · New World Translation'));
 }
 function PrincipleBox(props) {
@@ -36320,6 +36371,119 @@ function ResetAppCard(props) {
 
 </script>
 <script>
+// ═══ PHOTO FOOD ANALYZER — take a picture of a meal/snack, get carbs, fat, fiber, protein, calories ═══
+// Uses Google's Gemini vision model on its FREE tier with a free key a parent pastes in once (aistudio.google.com/apikey).
+// Results are ESTIMATES. They land in the meal builder as editable foods so the carb total and insulin math use them.
+var FP_PROMPT = 'You are a nutrition estimator helping a family manage meals and diabetes carb counting. Look at the photo of food. List every distinct food or drink you can see. For each, estimate the portion visible and its nutrition for THAT portion. Respond with ONLY JSON in this exact shape: {"foods":[{"name":"short name","serving":"portion seen, e.g. 1 cup (about 150 g)","cal":number,"carbs":number,"protein":number,"fat":number,"fiber":number,"confidence":"high|medium|low"}],"note":"one short sentence about anything uncertain, e.g. hidden sauces or sugary drinks"}. Carbs, protein, fat and fiber are in grams, cal in kilocalories. Total carbohydrates (not net). If no food is visible return {"foods":[],"note":"No food found in the photo."}.';
+var FP_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+function fpParse(txt) {
+  var s = String(txt || '').replace(/^```(?:json)?/i, '').replace(/```$/, '').trim(), a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a < 0 || b < 0) throw new Error('The answer was not readable.');
+  return JSON.parse(s.slice(a, b + 1));
+}
+async function fpAnalyze(dataUrl, key, model) {
+  var b64 = dataUrl.split(',')[1], tried = [model].concat(FP_MODELS.filter(function (m) { return m !== model; })), lastErr = '';
+  for (var i = 0; i < tried.length; i++) {
+    try {
+      var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + tried[i] + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: FP_PROMPT }, { inline_data: { mime_type: 'image/jpeg', data: b64 } }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } })
+      });
+      var j = await r.json();
+      if (!r.ok) { lastErr = (j && j.error && j.error.message) || ('Error ' + r.status); if (r.status === 400 && /API key/i.test(lastErr)) throw new Error('That key was not accepted. Ask a parent to check it.'); if (r.status === 429) throw new Error('The free daily limit was reached. Try again later or add the food by hand.'); continue; }
+      var t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(function (p) { return p.text || ''; }).join('');
+      var out = fpParse(t), foods = (out.foods || []).map(function (f, k) { return { id: 'ai' + Date.now().toString(36) + k, name: String(f.name || 'Food'), serving: String(f.serving || '1 portion'), cal: ntR(f.cal, 0), carbs: ntR(f.carbs), protein: ntR(f.protein), fat: ntR(f.fat), fiber: ntR(f.fiber), conf: f.confidence || '' }; });
+      return { foods: foods, note: out.note || '', model: tried[i] };
+    } catch (e) { if (/key was not accepted|daily limit/.test(e.message)) throw e; lastErr = e.message || String(e); }
+  }
+  throw new Error(lastErr || 'Could not analyze the photo.');
+}
+function FoodPhoto(props) {
+  var h = React.createElement, cS = ktUse('ai_cfg', {}), cfg = cS[0] || {}, key = cfg.geminiKey || '';
+  var bS = React.useState(false), busy = bS[0], setBusy = bS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], pS = React.useState(''), prev = pS[0], setPrev = pS[1];
+  var kS = React.useState(''), kIn = kS[0], setKIn = kS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var ref = React.useRef(null);
+  function pick() { if (!key) { setOpen(true); setMsg(props.isAdmin ? 'Paste your free key below first (steps are listed).' : 'A parent needs to turn this on once — ask Mom or Dad.'); return; } if (ref.current) ref.current.click(); }
+  function onFile(e) {
+    var f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+    setBusy(true); setMsg('Looking at your food…');
+    ntResizeImage(f, 1024, function (url) {
+      setPrev(url);
+      fpAnalyze(url, key, cfg.model || FP_MODELS[0]).then(function (res) {
+        setBusy(false);
+        if (!res.foods.length) { setMsg(res.note || 'No food found — try a closer photo, or add it by hand.'); return; }
+        props.onFoods(res.foods, url); setMsg('✅ Added ' + res.foods.length + ' item' + (res.foods.length > 1 ? 's' : '') + ' below. These are estimates — check the portions!' + (res.note ? ' ' + res.note : ''));
+      }).catch(function (er) { setBusy(false); setMsg('⚠️ ' + (er.message || er)); });
+    });
+  }
+  function saveKey() { var k = kIn.trim(); if (k.length < 20) { setMsg('That does not look like a key.'); return; } try { syncSet('ai_cfg', Object.assign({}, cfg, { geminiKey: k })); } catch (e) {} setKIn(''); setMsg('✅ Saved. Everyone in the family can now use photo analysis.'); setOpen(false); }
+  function clearKey() { try { syncSet('ai_cfg', Object.assign({}, cfg, { geminiKey: '' })); } catch (e) {} setMsg('Key removed.'); }
+  var btn = { background: 'linear-gradient(135deg,#7E57C2,#42A5F5)', color: '#fff', border: 'none', borderRadius: 14, padding: '11px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer', width: '100%' };
+  return h('div', { style: { margin: '8px 0' } },
+    h('input', { ref: ref, type: 'file', accept: 'image/*', capture: 'environment', onChange: onFile, style: { display: 'none' } }),
+    h('button', { onClick: pick, disabled: busy, style: Object.assign({}, btn, busy ? { opacity: .6 } : {}) }, busy ? '⏳ Analyzing…' : '📸 Take a photo — find the carbs, fat & fiber'),
+    prev && h('img', { src: prev, alt: 'meal', style: { width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 12, marginTop: 8 } }),
+    msg && h('div', { style: { fontSize: 12, color: '#fff', background: 'rgba(255,255,255,.08)', borderRadius: 10, padding: '8px 10px', marginTop: 6, lineHeight: 1.5 } }, msg),
+    (open || (props.isAdmin && !key)) && props.isAdmin && h('div', { style: { marginTop: 8, padding: 10, borderRadius: 12, background: 'rgba(126,87,194,.15)', border: '1px solid rgba(126,87,194,.5)' } },
+      h('div', { style: { fontSize: 12, fontWeight: 800, color: '#fff', marginBottom: 4 } }, 'One-time free setup (parents only)'),
+      h('div', { style: { fontSize: 11, color: '#d8d8e8', lineHeight: 1.6, marginBottom: 6 } }, '1. Go to aistudio.google.com/apikey and sign in with a Google account.  2. Tap “Create API key” (free — no card needed).  3. Copy it and paste it here. Photos are sent to Google only when someone taps the photo button. Free limits apply, so only food photos please.'),
+      h('input', { value: kIn, onChange: function (e) { setKIn(e.target.value); }, placeholder: 'Paste free Gemini key', style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 14, marginBottom: 6 } }),
+      h('button', { onClick: saveKey, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 800, cursor: 'pointer' } }, 'Save key')),
+    props.isAdmin && key && h('button', { onClick: clearKey, style: { background: 'none', border: 'none', color: '#9a9ab0', fontSize: 11, cursor: 'pointer', marginTop: 4 } }, 'Remove the saved key'),
+    h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)', marginTop: 4, lineHeight: 1.5 } }, 'AI photo estimates can be off — hidden sauces, drinks and portion size matter. Fix any item below before using the numbers for insulin.'));
+}
+
+</script>
+<script>
+// ═══ FAMILY MEMBERS — one card per person: name, age, phone, email, PIN (set / show / reset / delete) ═══
+function MemberCard(props) {
+  var h = React.createElement, p = props.p, pid = p.id, iS = ktUse('member_info/' + pid, {}), info = iS[0] || {};
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1], eS = React.useState(false), editing = eS[0], setEditing = eS[1], pS = React.useState(''), pin = pS[0], setPin = pS[1], sS = React.useState(false), shown = sS[0], setShown = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var pinNow = props.readPin(pid), has = !!pinNow;
+  function save(k, v) { try { syncSet('member_info/' + pid + '/' + k, v === '' ? null : v); } catch (e) {} }
+  function savePin() { var c = pin.replace(/[^0-9]/g, '').slice(0, 4); if (c.length !== 4) { setMsg('PIN must be exactly 4 digits.'); return; } props.setPin && props.setPin(pid, c); setMsg('✅ PIN saved — tell ' + p.name + ' it is ' + c + '.'); setEditing(false); setPin(''); props.onResolved && props.onResolved(pid); }
+  function clearPin() { if (!(window._safeConfirm ? window._safeConfirm('Remove ' + p.name + '’s PIN? They cannot log in until you set a new one.') : true)) return; props.setPin && props.setPin(pid, ''); setMsg('PIN removed.'); }
+  var inp = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 10, color: '#fff', padding: '9px 10px', fontSize: 14 };
+  var lab = function (t, el) { return h('div', { style: { marginBottom: 8 } }, h('div', { style: { fontSize: 10, color: '#b8b8c8', marginBottom: 3, fontWeight: 700 } }, t), el); };
+  var fld = function (k, type, ph) { return h('input', { key: pid + k + (info[k] || ''), type: type || 'text', defaultValue: info[k] || '', placeholder: ph || '', onBlur: function (e) { save(k, e.target.value.trim()); }, style: inp }); };
+  var pill = function (bg, fg, bd) { return { fontSize: 12, fontWeight: 800, background: bg, color: fg, border: '1px solid ' + (bd || bg), borderRadius: 20, padding: '8px 14px', cursor: 'pointer' }; };
+  return h('div', { style: { marginBottom: 8, background: 'rgba(255,255,255,.05)', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,.08)' } },
+    h('div', { onClick: function () { setOpen(!open); }, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer' } },
+      h('span', { style: { fontSize: 26 } }, p.emoji || '👤'),
+      h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, info.full || p.full || p.name), h('div', { style: { fontSize: 11, color: has ? '#4CAF82' : '#FFB74D' } }, (info.age ? 'Age ' + info.age + ' · ' : '') + (has ? '🔒 PIN is set' : '⚠️ No PIN yet'))),
+      h('span', { style: { color: '#b8b8c8', fontSize: 14 } }, open ? '▲' : '▼')),
+    open && h('div', { style: { padding: '4px 12px 12px', borderTop: '1px solid rgba(255,255,255,.08)' } },
+      msg && h('div', { style: { fontSize: 11, color: '#9be5bd', background: 'rgba(76,175,130,.12)', borderRadius: 8, padding: '6px 10px', margin: '8px 0' } }, msg),
+      h('div', { style: { height: 8 } }),
+      lab('Full name', fld('full', 'text', p.full || p.name)),
+      h('div', { style: { display: 'flex', gap: 8 } }, h('div', { style: { flex: 1 } }, lab('Age', fld('age', 'number', 'e.g. 13'))), h('div', { style: { flex: 2 } }, lab('Birthday', fld('birthday', 'date')))),
+      lab('Phone number', fld('phone', 'tel', '(555) 555-5555')),
+      lab('Email', fld('email', 'email', 'name@email.com')),
+      h('div', { style: { fontSize: 11, fontWeight: 800, color: '#CE93D8', margin: '10px 0 6px' } }, '🔑 LOGIN PIN'),
+      editing ? h('div', { style: { display: 'flex', gap: 8, marginBottom: 6 } },
+        h('input', { type: 'tel', inputMode: 'numeric', maxLength: 4, value: pin, onChange: function (e) { setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4)); }, placeholder: '4 digits', style: Object.assign({}, inp, { flex: 1, textAlign: 'center', letterSpacing: 6, fontSize: 18 }) }),
+        h('button', { onClick: savePin, style: pill('#4CAF82', '#000') }, 'Save'), h('button', { onClick: function () { setEditing(false); setPin(''); }, style: pill('rgba(255,255,255,.12)', '#fff') }, 'Cancel'))
+      : h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } },
+        has && h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 800, letterSpacing: 4, minWidth: 70 } }, shown ? pinNow : '••••'),
+        has && h('button', { onClick: function () { setShown(!shown); }, style: pill('rgba(66,165,245,.2)', '#90CAF9', 'rgba(66,165,245,.5)') }, shown ? 'Hide' : '🔐 Show PIN'),
+        h('button', { onClick: function () { setEditing(true); setMsg(''); }, style: pill('rgba(156,141,196,.25)', '#d1c4e9', 'rgba(156,141,196,.5)') }, has ? '🔄 Reset PIN' : '➕ Set PIN'),
+        has && h('button', { onClick: clearPin, style: pill('rgba(239,83,80,.12)', '#EF5350', 'rgba(239,83,80,.35)') }, 'Delete PIN'))));
+}
+function MemberManager(props) {
+  var h = React.createElement, fam = (props.family || (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : [])).filter(function (p) { return !p.deleted; }), pins = props.pins;
+  var rq = ktUse('notifs', {})[0] || {};
+  var requests = Object.values(rq).filter(function (n) { return n && n.type === 'pin_reset_request' && n.approved == null; });
+  function readPin(id) { var l = {}; try { l = JSON.parse(localStorage.getItem('argilan_pins') || '{}'); } catch (e) {} return (pins && pins[id]) || l[id] || ''; }
+  function resolved(id) { requests.filter(function (r) { return r.personId === id; }).forEach(function (r) { try { syncSet('notifs/' + r.id, Object.assign({}, r, { read: true, approved: true, adminNote: 'PIN reset to a new code.' })); } catch (e) {} }); }
+  return h('div', { style: { padding: 14 } },
+    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '👨‍👩‍👧‍👦 My Bethel Family — members'),
+    h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 10 } }, 'Tap a person to see and edit their name, age, phone, email and login PIN.'),
+    requests.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '1px solid rgba(255,152,0,.4)', borderRadius: 10, padding: '8px 10px', fontSize: 12, color: '#FFCC80' } }, '🙋 ' + requests.map(function (r) { return r.personName || r.personId; }).join(', ') + (requests.length > 1 ? ' are' : ' is') + ' locked out — open their card and tap Reset PIN.'),
+    fam.map(function (p) { return h(MemberCard, { key: p.id, p: p, readPin: readPin, setPin: props.setPin, onResolved: resolved }); }));
+}
+
+</script>
+<script>
 // ═══ APP ROOT ─────────────────────────────────────────────────────────────────
 (function() {
   const rootEl = document.getElementById('root');
@@ -36327,7 +36491,7 @@ function ResetAppCard(props) {
   try {
     if (ReactDOM.createRoot) {
       const root = ReactDOM.createRoot(rootEl);
-      root.render(React.createElement(React.Fragment, null, React.createElement(AppErrorBoundary, null, React.createElement(App)), typeof DeviceGuard === 'function' ? React.createElement(DeviceGuard) : null, typeof TermsOverlay === 'function' ? React.createElement(TermsOverlay) : null, typeof OnTaskGuard === 'function' ? React.createElement(OnTaskGuard) : null, typeof FMPresence === 'function' ? React.createElement(FMPresence) : null, typeof TimerGate === 'function' ? React.createElement(TimerGate) : null, typeof ResetWatcher === 'function' ? React.createElement(ResetWatcher) : null));
+      root.render(React.createElement(React.Fragment, null, React.createElement(AppErrorBoundary, null, React.createElement(App)), typeof DeviceGuard === 'function' ? React.createElement(DeviceGuard) : null, typeof TermsOverlay === 'function' ? React.createElement(TermsOverlay) : null, typeof OnTaskGuard === 'function' ? React.createElement(OnTaskGuard) : null, typeof FMPresence === 'function' ? React.createElement(FMPresence) : null, typeof TimerGate === 'function' ? React.createElement(TimerGate) : null, typeof ResetWatcher === 'function' ? React.createElement(ResetWatcher) : null, typeof MedReminder === 'function' ? React.createElement(MedReminder) : null));
     } else {
       ReactDOM.render(React.createElement(React.Fragment, null, React.createElement(AppErrorBoundary, null, React.createElement(App)), typeof DeviceGuard === 'function' ? React.createElement(DeviceGuard) : null), rootEl);
     }
