@@ -7660,6 +7660,7 @@ function Dashboard({
     typeof ScheduleToCalendar === 'function' && React.createElement(ScheduleToCalendar, { family: fam }),
     typeof NotifyRouting === 'function' && React.createElement(NotifyRouting, { family: fam }),
     typeof FamilyFreshStart === 'function' && React.createElement(FamilyFreshStart, { family: fam, sessions: sessions, onUpdate: onUpdate }),
+    typeof PciWhereBoard === 'function' && React.createElement(PciWhereBoard, null),
     typeof PciSettings === 'function' && React.createElement(PciSettings, null),
     typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, null),
     typeof CheckInSettings === 'function' && React.createElement(CheckInSettings, null),
@@ -32376,13 +32377,13 @@ function pciGuess(running) {
   if (a === 'fun') return 'friends'; if (a === 'free') return 'home'; if (a === 'driving') return 'out'; return 'work';
 }
 function ParentCheckIn(props) {
-  var h = React.createElement, pid = props.personId, name = props.name || pid, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : dflt, name = props.name || pid, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
   var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : (props.role === 'child' || props.role === 'teen' || props.role === 'kid');
   var ciS = ktUse('checkins/' + dayK + '/' + pid, {}), done = Object.values(ciS[0] || {}).filter(function (r) { return !r.missed; });
   var tS = React.useState(0), setT = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
-  var fS = React.useState({ status: null, ctx: '', aff: '', mood: null, help: false, who: 'Mom & Dad' }), f = fS[0], setF = fS[1];
+  var fS = React.useState({ status: null, ctx: '', aff: '', mood: null, help: false, who: dflt }), f = fS[0], setF = fS[1];
   var sentS = React.useState(false), sent = sentS[0], setSent = sentS[1];
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 15000); return function () { clearInterval(iv); }; }, []);
   React.useEffect(function () { var fn = function () { setSent(false); setOpen(true); }; window.addEventListener('fm-checkin-open', fn); return function () { window.removeEventListener('fm-checkin-open', fn); }; }, []);
@@ -32393,7 +32394,7 @@ function ParentCheckIn(props) {
   var now = Date.now(), next = 0; try { next = +localStorage.getItem(nk) || 0; } catch (e) {}
   if (active && !next) { next = (done.length ? now : t0) + (lo + Math.random() * (hi - lo)) * 60000; if (!done.length) next = now; try { localStorage.setItem(nk, String(next)); } catch (e) {} }
   var due = active && next && now >= next;
-  React.useEffect(function () { if (due && !open) { setSent(false); setOpen(true); setF({ status: pciGuess(running), ctx: '', aff: '', mood: null, help: false, who: 'Mom & Dad' }); try { playSound('reminder'); fireBrowserNotif('Check in with Mom & Dad', 'Tap to tell them where you are'); } catch (e) {} } });
+  React.useEffect(function () { if (due && !open) { setSent(false); setOpen(true); setF({ status: pciGuess(running), ctx: '', aff: '', mood: null, help: false, who: dflt }); try { playSound('reminder'); fireBrowserNotif('Check in with Mom & Dad', 'Tap to tell them where you are'); } catch (e) {} } });
   // missed check-in: popup came up and was not answered within the grace time -> one deduction per check-in
   React.useEffect(function () {
     var dk = 'fm_pci_due_' + pid + '_' + dayK;
@@ -32419,22 +32420,22 @@ function ParentCheckIn(props) {
   var curLabel = running.length ? running.map(function (r) { return (typeof planActLabel === 'function' ? planActLabel(r.activity) : r.activity); }).join(' + ') : 'nothing';
   function submit() {
     if (!f.status) return;
-    var id = 'ci' + Date.now().toString(36), rec = { id: id, ts: Date.now(), who: f.who || 'Mom & Dad', status: f.status, statusLabel: st ? st[2] : f.status, ctx: f.ctx.trim(), ctxQ: ctxQ, aff: f.aff.trim(), affQ: aff, mood: f.mood, help: f.help, clocked: curLabel };
+    var id = 'ci' + Date.now().toString(36), rec = { id: id, ts: Date.now(), who: f.who || dflt, status: f.status, statusLabel: st ? st[2] : f.status, ctx: f.ctx.trim(), ctxQ: ctxQ, aff: f.aff.trim(), affQ: aff, mood: f.mood, help: f.help, clocked: curLabel };
     try { syncSet('checkins/' + dayK + '/' + pid + '/' + id, rec); } catch (e) {}
-    var bits = ['With ' + (f.who || 'Mom & Dad'), (st ? st[1] + ' ' + st[2] : f.status), rec.ctx && ('“' + rec.ctx + '”'), rec.aff && ('Affirmation: “' + rec.aff + '”'), f.mood && ('Feeling ' + f.mood), 'Clocked into: ' + curLabel].filter(Boolean);
-    if (props.addNotif) { try { props.addNotif(f.help ? 'alert' : 'checkin', pid, (f.help ? '🆘 ' : '👋 ') + name + (f.help ? ' needs help' : ' checked in'), bits.join(' · '), { requiresApproval: false }); } catch (e) {} }
+    var bits = ['With ' + (f.who || dflt), (st ? st[1] + ' ' + st[2] : f.status), rec.ctx && ('“' + rec.ctx + '”'), rec.aff && ('Affirmation: “' + rec.aff + '”'), f.mood && ('Feeling ' + f.mood), 'Clocked into: ' + curLabel].filter(Boolean);
+    if (props.addNotif) { try { props.addNotif(f.help ? 'alert' : 'checkin', pid, (f.help ? '🆘 ' : '👋 ') + name + (f.help ? ' needs help' : ' checked in'), bits.join(' · '), { requiresApproval: false, adminOnly: isP }); } catch (e) {} }
     try { playSound('success'); localStorage.removeItem('fm_pci_due_' + pid + '_' + dayK); } catch (e) {}
     setSent(true); schedule(lo + Math.random() * (hi - lo)); setTimeout(function () { setOpen(false); setT(function (x) { return x + 1; }); }, 1800);
   }
   var big = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 14, color: '#fff', padding: 12, fontSize: 16, fontFamily: 'inherit' };
   return h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', zIndex: 5000, overflowY: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 12px' } },
     h('div', { style: { width: '100%', maxWidth: 520, background: 'linear-gradient(160deg,#2b1055,#1a1a2e)', border: '3px solid #FF1493', borderRadius: 22, padding: 18, boxShadow: '0 0 40px #FF149388' } },
-      sent ? h('div', { style: { textAlign: 'center', padding: 30 } }, h('div', { style: { fontSize: 60 } }, '✅'), h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, 'Sent to ' + (f.who || 'Mom & Dad') + '!'))
+      sent ? h('div', { style: { textAlign: 'center', padding: 30 } }, h('div', { style: { fontSize: 60 } }, '✅'), h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, 'Sent to ' + (f.who || dflt) + '!'))
       : h('div', null,
-        h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '👋 Check in with Mom & Dad'),
+        h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '👋 Check in with ' + dflt),
         h('div', { style: { fontSize: 13, color: '#d8d8e8', margin: '2px 0 12px' } }, 'You are clocked into: ' + curLabel),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, 'Who are you checking in with?'),
-        h('div', { style: { display: 'flex', gap: 8, marginBottom: 12 } }, ['Mom', 'Dad', 'Mom & Dad'].map(function (w) { var on = f.who === w; return h('button', { key: w, onClick: function () { setF(Object.assign({}, f, { who: w })); }, style: { flex: 1, background: on ? '#FF1493' : 'rgba(255,255,255,.1)', color: '#fff', border: '2px solid ' + (on ? '#FF1493' : 'rgba(255,255,255,.25)'), borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, w); })),
+        h('div', { style: { display: 'flex', gap: 8, marginBottom: 12 } }, (isP ? [dflt] : ['Mom', 'Dad', 'Mom & Dad']).map(function (w) { var on = f.who === w; return h('button', { key: w, onClick: function () { setF(Object.assign({}, f, { who: w })); }, style: { flex: 1, background: on ? '#FF1493' : 'rgba(255,255,255,.1)', color: '#fff', border: '2px solid ' + (on ? '#FF1493' : 'rgba(255,255,255,.25)'), borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, w); })),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, '1. What are you doing? Where are you in your day?'),
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 } }, PCI_STATUS.map(function (x) { var on = f.status === x[0]; return h('button', { key: x[0], onClick: function () { setF(Object.assign({}, f, { status: x[0] })); }, style: { background: on ? '#FF1493' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, padding: '12px 6px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, x[1] + ' ' + x[2]); })),
         ctxQ && h('div', null, h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, '2. ' + ctxQ), h('textarea', { rows: 2, value: f.ctx, onChange: function (e) { setF(Object.assign({}, f, { ctx: e.target.value })); }, style: Object.assign({}, big, { marginBottom: 12 }) })),
@@ -32486,6 +32487,25 @@ function PciDayReview(props) {
 function PciButton(props) {
   var h = React.createElement;
   return h('button', { onClick: pciOpen, style: { display: 'block', width: 'calc(100% - 28px)', margin: '8px 14px', background: 'linear-gradient(135deg,#FF1493,#8E24AA)', color: '#fff', border: 'none', borderRadius: 16, padding: '13px 16px', fontWeight: 900, fontSize: 15, cursor: 'pointer', textAlign: 'left' } }, '👋 Check in with Mom & Dad', h('span', { style: { display: 'block', fontSize: 11, fontWeight: 600, opacity: .85 } }, 'Tell us who you are with, what you are doing and how you feel'));
+}
+
+// ── Admin board: where is everyone? latest check-in per person today ──
+function PciWhereRow(props) {
+  var h = React.createElement, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey(), cS = ktUse('checkins/' + dayK + '/' + props.p.id, {}),
+    arr = Object.values(cS[0] || {}).filter(function (r) { return !r.missed; }).sort(function (a, b) { return b.ts - a.ts; }), r = arr[0];
+  return h('div', { style: { display: 'flex', gap: 10, alignItems: 'center', padding: '7px 0', borderTop: '1px solid rgba(255,255,255,.08)' } },
+    h('div', { style: { fontSize: 24 } }, props.p.emoji || '👤'),
+    h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff' } }, props.p.name + (r && r.help ? ' 🆘' : '')),
+      r ? h('div', { style: { fontSize: 12, color: '#d8d8e8' } }, (r.statusLabel || r.status) + (r.who ? ' · with ' + r.who : '') + (r.ctx ? ' — “' + r.ctx + '”' : ''), h('span', { style: { color: '#9a9ab0' } }, ' · ' + dcTime(r.ts) + (arr.length > 1 ? ' · ' + arr.length + ' check-ins' : '')))
+        : h('div', { style: { fontSize: 12, color: '#7d7d92' } }, 'No check-in yet today')),
+    r && r.mood && h('div', { style: { fontSize: 22 } }, PCI_MOODE[r.mood] || ''));
+}
+function PciWhereBoard() {
+  var h = React.createElement, fam = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (p) { return !p.deleted; });
+  return h('div', { style: { margin: '10px 14px', padding: 12, background: 'rgba(33,150,243,.1)', border: '1px solid rgba(33,150,243,.5)', borderRadius: 14 } },
+    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '📍 Where is everyone?'),
+    h('div', { style: { fontSize: 11, color: '#c8c8d8', marginBottom: 6 } }, 'Latest check-in from each person today — parents too.'),
+    fam.map(function (p) { return h(PciWhereRow, { key: p.id, p: p }); }));
 }
 
 </script>
