@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="app-version" content="v1785898722">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14112e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>MyBethelFamilyHome</title>
+<meta name="apple-mobile-web-app-title" content="MyBethelFamilyHome">
+<meta name="application-name" content="MyBethelFamilyHome">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+<script>
+if (typeof firebase === 'undefined') {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-app-compat.js"><\/script><script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-database-compat.js"><\/script>');
+}
+</script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+/* tab-like rows wrap into boxes instead of scrolling sideways */
+[style*="display: flex"][style*="overflow-x: auto"]{overflow-x:visible!important;flex-wrap:wrap!important}
+[style*="display: flex"][style*="overflow-x: auto"]>button{flex:1 1 auto!important;min-height:40px}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+body{min-height:100%;font-family:Georgia,serif;background:#0f0c29;color:#fff;}
+#root{min-height:100%;display:flex;flex-direction:column;}
+input,button,select,textarea{font-family:Georgia,serif;}
+button{cursor:pointer;border:none;outline:none;}
+input,textarea{outline:none;border:none;}
+.pulse{animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px;}
+::-webkit-scrollbar-track{background:transparent;}
+/* Scrollable content wrapper */
+.tab-content{flex:1;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;padding-bottom:env(safe-area-inset-bottom,40px);}
+/* Make sure all tab panels scroll naturally */
+.tab-panel{min-height:0;overflow-y:auto;}
+.fab{position:fixed;bottom:24px;right:16px;z-index:800;width:54px;height:54px;border-radius:27px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:transform .2s;}
+.fab:active{transform:scale(.9);}
+.overlay{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;animation:fadeIn .15s ease;}
+.modal{width:100%;max-width:480px;margin:0 auto;border-radius:24px 24px 0 0;background:linear-gradient(180deg,#1a1a2e,#111228);animation:slideUp .25s ease;overflow:hidden;}
+.modal-full{position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,#0a0818,#111228);display:flex;flex-direction:column;animation:fadeIn .2s ease;}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:12px 14px;}
+.lbl{font-size:10px;color:#444;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+
+/* PIN text security — hides digits as dots like a password field */
+input.pin-field { -webkit-text-security: disc; text-security: disc; }
+input.pin-field.show-pin { -webkit-text-security: none; text-security: none; }
+/* PIN pad touch targets */
+button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+/* Mobile keyboard + input improvements */
+input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px !important; /* prevent iOS zoom on focus */
+}
+textarea { overflow-y: auto; }
+input:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(192,202,51,.5) !important;
+  box-shadow: 0 0 0 2px rgba(192,202,51,.15);
+}
+</style>
+
+<script>
+// ─── Notifications + Service Worker ─────────────────────────────────────────
+window._sendNotif = function(title, body, tag) {
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission === 'granted') {
+    try { new Notification(title || 'MyBethelFamilyHome', { body: body||'', icon:'/icon-192.png', tag:tag||'fm', requireInteraction:true }); } catch(e) {}
+  } else if (Notification.permission === 'default') {
+    Notification.requestPermission().then(function(p) { if (p === 'granted') window._sendNotif(title, body, tag); });
+  }
+};
+document.addEventListener('click', function askOnce() {
+  if (Notification.permission === 'default') Notification.requestPermission();
+  document.removeEventListener('click', askOnce);
+}, {once:true});
+// ── Service Worker (inline — try /sw.js first, then blob fallback) ──────────
+var SW_CODE = [
+  "self.addEventListener('install',function(e){self.skipWaiting();});",
+  "self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());});",
+  "self.addEventListener('push',function(e){",
+  "  var d={};try{d=e.data?e.data.json():{};}catch{}",
+  "  e.waitUntil(self.registration.showNotification(d.title||'MyBethelFamilyHome',{",
+  "    body:d.body||'New update',icon:'/icon-192.png',badge:'/icon-192.png',",
+  "    vibrate:[200,100,200],tag:d.tag||'fm',requireInteraction:true",
+  "  }));",
+  "});",
+  "self.addEventListener('notificationclick',function(e){",
+  "  e.notification.close();",
+  "  e.waitUntil(clients.matchAll({type:'window'}).then(function(c){",
+  "    for(var i of c){if('focus' in i)return i.focus();}",
+  "    if(clients.openWindow)return clients.openWindow('/');",
+  "  }));",
+  "});"
+].join('\n');
+window._SW_CODE = SW_CODE;
+
+function _registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  // Try the hosted /sw.js first (works on GitHub Pages when sw.js is uploaded alongside index.html)
+  navigator.serviceWorker.register('/sw.js')
+    .then(function(r){ window._swReg=r; console.log('[FM] SW ready'); })
+    .catch(function() {
+      // Fallback: register from URL.createObjectURL on same-origin page
+      // (only works on localhost — on GitHub Pages, upload sw.js alongside index.html)
+      try {
+        var blob = new Blob([SW_CODE], {type:'text/javascript'});
+        var url  = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(url)
+          .then(function(r){ window._swReg=r; })
+          .catch(function(e){ console.info('[FM] Push SW unavailable — in-app notifications active.'); });
+      } catch(e) {}
+    });
+}
+window.addEventListener('load', _registerSW);
+
+// Helper: download sw.js from the app itself
+window._downloadSW = function() {
+  var a = document.createElement('a');
+  a.href = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(SW_CODE);
+  a.download = 'sw.js';
+  a.click();
+};
+</script>
+</head>
+<script>
+window._safeConfirm = function(msg) {
+  // iOS WKWebView blocks window.confirm — use a global flag instead
+  // Returns true always (admin should double-tap to confirm actions)
+  return true;
+};
+</script>
+
+<script>
+// iOS compatibility polyfills
+if(!Array.prototype.at){Array.prototype.at=function(i){if(i<0)i=this.length+i;return this[i];};}
+if(!String.prototype.at){String.prototype.at=function(i){if(i<0)i=this.length+i;return this[i];};}
+// Fix optional chaining crash on iOS 13
+try{({})?._test;}catch(e){console.log('[FM] Updating for iOS compatibility');}
+</script>
+<body>
+<div id="root"></div>
+
+<script>
+// Firebase
+var db=null;
+var FM_BUILD='b3-'+'20261009';var _fmFbErr='';function initFirebase(cfg){try{if(typeof firebase==='undefined')throw new Error('Firebase library did not load (firebase is not defined)');if(firebase.apps.length)firebase.app().delete();firebase.initializeApp(cfg);db=firebase.database();try{localStorage.setItem('fb_cfg',JSON.stringify(cfg));}catch(x){}return true;}catch(e){_fmFbErr=String((e&&e.message)||e);console.error(e);return false;}}
+// To hard-wire sync for EVERY device, paste your Firebase config object here (or use Admin > Sync Setup + a device link).
+var FM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCeztnV2Kw2aImhrINlN1NbkinCdJpUS94",
+  authDomain: "mybethelfamilyhome-1e19a.firebaseapp.com",
+  databaseURL: "https://mybethelfamilyhome-1e19a-default-rtdb.firebaseio.com",
+  projectId: "mybethelfamilyhome-1e19a",
+  storageBucket: "mybethelfamilyhome-1e19a.firebasestorage.app",
+  messagingSenderId: "287969705339",
+  appId: "1:287969705339:web:5e7ad9ee016908892951de"
+};
+(function(){
+  try{
+    var m=(location.hash||'').match(/[#&]fb=([^&]+)/);
+    if(m){ var c=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1]))))); localStorage.setItem('fb_cfg',JSON.stringify(c)); history.replaceState(null,'',location.pathname+location.search); }
+  }catch(e){ console.error('fb link',e); }
+  var s=FM_FIREBASE_CONFIG?JSON.stringify(FM_FIREBASE_CONFIG):localStorage.getItem('fb_cfg');
+  if(s)try{initFirebase(JSON.parse(s));}catch(e){}
+})();
+function syncSet(p,v){if(/^pins\/(laurel|eric)$/.test(p)){localStorage.setItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_'),JSON.stringify(v));return;}localStorage.setItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_'),JSON.stringify(v));if(db)db.ref('argilan/'+p).set(v).catch(function(){});}
+function syncGet(p){try{return JSON.parse(localStorage.getItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_')));}catch(e){return null;}}
+
+// ═══ UNIVERSAL FIREBASE SYNC ══════════════════════════════════════════════════
+
+
+// Patch syncSet — track sync status AND keep rolling localStorage backup
+var _originalSyncSet = syncSet;
+var _backupData = (function(){
+  try{ return JSON.parse(localStorage.getItem('_fm_backup')||'{}'); }catch{ return {}; }
+})();
+syncSet = function(p, v) {
+  setSyncStatus('syncing');
+  _originalSyncSet(p, v);
+  try { Object.keys(_backupData).forEach(function (k) { if (k.indexOf(p + '/') === 0) delete _backupData[k]; }); } catch (e) {}
+  try { window.dispatchEvent(new CustomEvent('fm-local', { detail: p })); } catch (e) {}
+  // Write to rolling backup — keeps ALL data safe even if Firebase is down
+  try{
+    _backupData[p] = v;
+    _backupData['_ts'] = Date.now();
+    localStorage.setItem('_fm_backup', JSON.stringify(_backupData));
+  }catch{}
+  setTimeout(function() { setSyncStatus('synced'); }, 800);
+};
+// On startup: if Firebase is empty for a path, restore from backup
+function restoreFromBackup(path){
+  var v = syncGet(path);
+  if(v !== null) return v; // Firebase has it
+  var backed = _backupData[path];
+  if(backed !== undefined) return backed;
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function syncOn(p,cb,nulls){var l=syncGet(p);if(l!==null)cb(l);var ref=null,fn=null,had=false,key='_s_'+p.replace(/[^a-zA-Z0-9]/g,'_');if(db){ref=db.ref('argilan/'+p);fn=function(s){var v=s.val();if(v!==null){had=true;localStorage.setItem(key,JSON.stringify(v));cb(v);}else if(nulls&&had){had=false;localStorage.removeItem(key);cb(null);}else if(v===null&&l!==null&&nulls===undefined){}};ref.on('value',fn);}return function(){if(ref&&fn)ref.off('value',fn);};}
+// window.storage polyfill
+window.storage={
+  get:function(k){return new Promise(function(res,rej){var v=localStorage.getItem('ws_'+k);if(v===null)rej(new Error('nf'));else res({key:k,value:v});});},
+  set:function(k,v){return new Promise(function(res){localStorage.setItem('ws_'+k,String(v));if(db)db.ref('argilan/ws/'+k.replace(/[^a-zA-Z0-9]/g,'_')).set(String(v)).catch(function(){});res({key:k,value:v});});},
+  delete:function(k){return new Promise(function(res){localStorage.removeItem('ws_'+k);res({key:k,deleted:true});});},
+  list:function(p){return new Promise(function(res){var ks=Object.keys(localStorage).filter(function(k){return k.startsWith('ws_')&&(!p||k.slice(3).startsWith(p));}).map(function(k){return k.slice(3);});res({keys:ks});});}
+};
+// Notifications
+function askNotifPerm(){if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();}
+function fireBrowserNotif(t,b){if(!('Notification'in window)||Notification.permission!=='granted')return;var ttl='MyBethelFamilyHome — '+t,o={body:b||'',icon:'icon-192.png',vibrate:[200,100,200]};try{if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){navigator.serviceWorker.getRegistration().then(function(r){if(r&&r.showNotification)r.showNotification(ttl,o);else try{new Notification(ttl,o);}catch(e){}}).catch(function(){try{new Notification(ttl,o);}catch(e){}});return;}new Notification(ttl,o);}catch(e){}}
+// Sound system — LOUD and fun. Every level is much louder than before; level 4 is the loudest the app can make.
+// (A web page can never go above the device's own volume — keep the phone/tablet volume up and the silent switch off.)
+var _actx=null,_master=null;
+function _ctx(){
+  if(!_actx){
+    _actx=new(window.AudioContext||window.webkitAudioContext)();
+    try{
+      var comp=_actx.createDynamicsCompressor();
+      comp.threshold.value=-30;comp.knee.value=6;comp.ratio.value=14;comp.attack.value=0.002;comp.release.value=0.12;
+      _master=_actx.createGain();_master.gain.value=1;
+      _master.connect(comp);comp.connect(_actx.destination);
+    }catch(e){_master=null;}
+  }
+  if(_actx.state==='suspended'){try{_actx.resume();}catch(e){}}
+  return _actx;
+}
+function _volLevel(){try{if(typeof window._effVol==='function'){var e=window._effVol();if(e!=null)return e;}}catch(x){}var v=localStorage.getItem('alarm_vol');return v===null?4:parseInt(v);}
+var _LEVEL_GAIN=[0,2.2,3.2,4.5,6.5];
+// f = start frequency, d = seconds, t = wave, f2 = optional glide target
+function beep(f,d,v,t,f2){
+  try{
+    var lv=_volLevel();
+    if(lv===0)return;
+    var c=_ctx(),o=c.createOscillator(),g=c.createGain();
+    var peak=(v||.5)*(_LEVEL_GAIN[lv]||4.5);
+    o.type=t||'square';
+    o.frequency.setValueAtTime(f,c.currentTime);
+    if(f2)o.frequency.exponentialRampToValueAtTime(f2,c.currentTime+d*0.9);
+    g.gain.setValueAtTime(0.0001,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak,0.001),c.currentTime+0.012);
+    g.gain.setValueAtTime(Math.max(peak,0.001),c.currentTime+Math.max(0.015,d*0.6));
+    g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+d);
+    o.connect(g);g.connect(_master||c.destination);
+    o.start(c.currentTime);o.stop(c.currentTime+d+0.02);
+  }catch(e){}
+}
+function _seq(notes,gap,wave){notes.forEach(function(n,i){setTimeout(function(){beep(n[0],n[1]||.14,n[2]||.5,n[3]||wave||'square',n[4]);},i*gap);});}
+function _buzz(p){try{if(navigator.vibrate&&_volLevel()>=3)navigator.vibrate(p);}catch(e){}}
+function playSound(type){
+  var lv=_volLevel();
+  if(lv===0)return;
+  var S={
+    // happy "boing-ding" — messages and notifications (plays twice so it cannot be missed)
+    notif:function(){var run=function(){_seq([[600,.1,.5,'square',1200],[1568,.1,.5,'square'],[2093,.28,.5,'triangle']],110);};run();if(lv>=3)setTimeout(run,700);_buzz([250,100,250]);},
+    // cheerful bugle call — check-ins and reminders
+    reminder:function(){var run=function(){_seq([[523,.13],[659,.13],[784,.13],[1047,.12],[784,.1],[1047,.4,.55,'triangle']],150);};run();if(lv>=2)setTimeout(run,1300);_buzz([300,120,300,120,500]);},
+    // slide-whistle siren — urgent things
+    alert:function(){for(var i=0;i<(lv>=4?5:3);i++)(function(i){setTimeout(function(){beep(500,.3,.6,'sawtooth',1500);setTimeout(function(){beep(1500,.3,.6,'sawtooth',500);},300);},i*620);})(i);_buzz([400,100,400,100,600,100,600]);},
+    // cash register "cha-ching"
+    payment:function(){_seq([[1319,.07,.55],[1760,.07,.55],[2349,.07,.55],[3136,.45,.5,'triangle']],95);},
+    // rising whoosh + pop
+    clockIn:function(){beep(300,.22,.55,'sawtooth',1400);setTimeout(function(){beep(1568,.16,.55,'square');},210);setTimeout(function(){beep(2093,.3,.5,'triangle');},340);},
+    // falling whoosh + thud
+    clockOut:function(){beep(1400,.22,.55,'sawtooth',300);setTimeout(function(){beep(220,.25,.6,'triangle',110);},230);},
+    // little fanfare
+    success:function(){_seq([[784,.1],[988,.1],[1175,.1],[1568,.45,.55,'triangle']],120);},
+    // bloop-bloop-bling
+    claim:function(){_seq([[400,.1,.55,'sine',700],[600,.1,.55,'sine',900],[1200,.3,.5,'triangle',2000]],120);}
+  };
+  if(S[type])S[type]();
+}
+// iOS/Chrome keep sound locked until the first tap — unlock it on the first touch
+(function(){var un=function(){try{_ctx();var c=_actx;var o=c.createOscillator(),g=c.createGain();g.gain.value=0.0001;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.02);}catch(e){}document.removeEventListener('touchstart',un,true);document.removeEventListener('click',un,true);};document.addEventListener('touchstart',un,true);document.addEventListener('click',un,true);})();
+// Google Calendar
+var gcalReady=false,gcalToken=null;
+function initGcal(cid,cb){
+  if(!window.google){cb(false,'GIS not loaded');return;}
+  window._gcalClient=google.accounts.oauth2.initTokenClient({
+    client_id:cid,scope:'https://www.googleapis.com/auth/calendar.events',
+    callback:function(r){if(r.error){gcalReady=false;if(cb)cb(false,r.error);return;}gcalToken=r.access_token;gcalReady=true;localStorage.setItem('gcal_cid',cid);if(cb)cb(true,'');}
+  });
+}
+function createGcalEvent(cal,ev,cb){
+  if(!gcalToken){if(cb)cb(null,'not authenticated');return;}
+  fetch('https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(cal)+'/events',{method:'POST',headers:{'Authorization':'Bearer '+gcalToken,'Content-Type':'application/json'},body:JSON.stringify(ev)})
+    .then(function(r){return r.json();}).then(function(d){if(cb)cb(d,null);}).catch(function(e){if(cb)cb(null,e.message);});
+}
+// ─── Sync Status (pure JS, no React) ──────────────────────────────────────────
+var _syncStatus = 'synced';
+var _syncStatusListeners = [];
+function setSyncStatus(s) {
+  _syncStatus = s;
+  _syncStatusListeners.forEach(function(fn) { try { fn(s); } catch {} });
+}
+// Patch syncSet to track sync status (runs before React loads, safe)
+var _origSyncSet = syncSet;
+syncSet = function(p, v) {
+  setSyncStatus('syncing');
+  _origSyncSet(p, v);
+  setTimeout(function() { setSyncStatus('synced'); }, 800);
+};
+// Auto-sync known localStorage keys to Firebase on startup
+function autoSyncLocalToFirebase() {
+  var family = ['laurel','eric','ryan','kayla','ashelyn','mykah','jacob'];
+  family.forEach(function(pid) {
+    var v = localStorage.getItem('journal_' + pid);
+    if (v && !syncGet('journals/' + pid)) {
+      try { syncSet('journals/' + pid, JSON.parse(v)); } catch {}
+    }
+  });
+  var pins = localStorage.getItem('argilan_pins');
+  if (pins && !syncGet('pins')) {
+    try { syncSet('pins', JSON.parse(pins)); } catch {}
+  }
+}
+// Version check — auto-reload when new deploy detected
+var _vcheckInterval = null;
+function startVersionCheck() {
+  if (_vcheckInterval) return;
+  _vcheckInterval = setInterval(function() {
+    if (!db) return;
+    db.ref('argilan/app_version').once('value', function(snap) {
+      var v = snap.val();
+      var local = localStorage.getItem('_app_version');
+      if (v && local && v !== local) {
+        localStorage.setItem('_app_version', v);
+        window.location.reload(true);
+      } else if (v && !local) {
+        localStorage.setItem('_app_version', v);
+      }
+    });
+  }, 60000);
+}
+</script>
+<script src="js/01-core-hooks-login.js"></script>
+<script src="js/02-curriculum-data-school.js"></script>
+<script src="js/02a-lessons.js"></script>
+<script src="js/03-tasks-messenger-gradebook.js"></script>
+<script src="js/04-jw-spiritual-meal-science.js"></script>
+<script src="js/05-dka-curriculum-v3.js"></script>
+<script src="js/06-journal-schedule-menu-myday.js"></script>
+<script src="js/07-timeeditor-workpanel-attendance-clock.js"></script>
+<script src="js/08-dka-module-morning-routine.js"></script>
+<script src="js/08a-dka-scripts.js"></script>
+<script src="js/09-schedrequests-bethel-music.js"></script>
+<script src="js/10-sop-calendar-fieldtrips.js"></script>
+<script src="js/10b-meeting-material.js"></script>
+<script src="js/10c-money.js"></script>
+<script src="js/10d-kitchen.js"></script>
+<script src="js/10e-nutrition.js"></script>
+<script src="js/10f-numpad-wheel.js"></script>
+<script src="js/10g-billhub.js"></script>
+<script src="js/10h-finance-plus.js"></script>
+<script src="js/10i-safety.js"></script>
+<script src="js/10j-clock-depts.js"></script>
+<script src="js/10k-ontask.js"></script>
+<script src="js/10l-units.js"></script>
+<script src="js/10m-access.js"></script>
+<script src="js/10n-startday.js"></script>
+<script src="js/10o-plan.js"></script>
+<script src="js/10p-routines.js"></script>
+<script src="js/10q-dayclock.js"></script>
+<script src="js/10r-store.js"></script>
+<script src="js/10s-teacher.js"></script>
+<script src="js/10t-myday.js"></script>
+<script src="js/10u-payroll.js"></script>
+<script src="js/10v-volume.js"></script>
+<script src="js/10w-camera-lab.js"></script>
+<script src="js/10x-computer-lab.js"></script>
+<script src="js/10y-series-studio.js"></script>
+<script src="js/10z-money-skills.js"></script>
+<script src="js/10za-smart-menu.js"></script>
+<script src="js/10zb-menu-learning.js"></script>
+<script src="js/10zc-kitchen-challenge.js"></script>
+<script src="js/10zd-team-hospitality.js"></script>
+<script src="js/10ze-habit-leaders.js"></script>
+<script src="js/11-mount.js"></script>
+</body>
+</html>
