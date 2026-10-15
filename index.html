@@ -7160,6 +7160,8 @@ function Dashboard({
   const [profileId, setProfileId] = useState(null);
   const [showSwitch, setShowSwitch] = useState(false);
   const [showNav, setShowNav] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
   const [viewingAs, setViewingAs] = useState(null); // admin switching to another person's account
   const [schedEditMode, setSchedEditMode] = useState(false);
 
@@ -7332,9 +7334,13 @@ function Dashboard({
     React.createElement('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 12 } }, '☰ Menu — where do you want to go?'),
     tabs.map(t => React.createElement('button', { key: t.id, onClick: () => { setTab(t.id); setShowNav(false); try { window.scrollTo({ top: 0 }); } catch (e) {} }, style: { display: 'block', width: '100%', textAlign: 'left', background: tab === t.id ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.07)', border: '1px solid ' + (tab === t.id ? '#FFD54F' : 'rgba(255,255,255,.15)'), borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, t.l + (tab === t.id ? '  ✓' : ''))),
     isAdmin && React.createElement('button', { onClick: () => { setShowNav(false); setShowSwitch(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(3,155,229,.2)', border: '1px solid rgba(3,155,229,.6)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '👥 Switch to another family member'),
+    React.createElement('button', { onClick: () => { setShowNav(false); setShowContacts(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '📞 Family contacts — call, text, WhatsApp'),
+    React.createElement('button', { onClick: () => { setShowNav(false); setShowSetup(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '⚙️ Settings — sound, alerts & device setup'),
     React.createElement('button', { onClick: () => { setShowNav(false); setShowNotifs(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '🔔 Notifications' + (myUnread ? ' (' + myUnread + ')' : '')),
     React.createElement('button', { onClick: () => { setShowNav(false); onLogout && onLogout(); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(239,83,80,.18)', border: '1px solid rgba(239,83,80,.5)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '🚪 Sign out'),
     React.createElement('button', { onClick: () => setShowNav(false), style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 20, padding: 12, fontWeight: 800, marginTop: 8, cursor: 'pointer' } }, 'Close'));
+  if (showContacts && typeof FamilyContacts === 'function') return React.createElement(FamilyContacts, { personId: personId, fam: fam, onClose: () => setShowContacts(false) });
+  if (showSetup && typeof DeviceSetup === 'function') return React.createElement(DeviceSetup, { personId: personId, name: person && person.name, isAdmin: isAdmin || isOwner, family: fam, onVol: (i) => updateSetting('alarmVol', i), onClose: () => setShowSetup(false) });
   if (showMsgs) return React.createElement('div', { style: { minHeight: '100vh', background: 'linear-gradient(160deg,#0f0c29,#1a1a2e,#24243e)', padding: 12 } },
     React.createElement('button', { onClick: () => setShowMsgs(false), style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 18, padding: '12px 18px', fontWeight: 900, fontSize: 15, cursor: 'pointer', marginBottom: 10 } }, '← Back'),
     React.createElement(MessengerPanel, { personId: personId, isAdmin: isAdmin || isOwner, syncSet: syncSet, family: fam }));
@@ -7385,7 +7391,7 @@ function Dashboard({
     style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#14112e', borderBottom: '1px solid rgba(255,255,255,.1)', flexShrink: 0, position: 'relative' }
   }, /*#__PURE__*/React.createElement("div", { style: { flex: 1, fontSize: 13, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, (viewingAs ? (effectivePerson.emoji || '') + ' Viewing ' + effectivePerson.name + '\u2019s account  ·  you are ' + (person ? person.name : '') : (person && person.emoji ? person.emoji + ' ' : '') + 'Signed in as ' + (person ? person.name : ''))),
   /*#__PURE__*/React.createElement(SyncDot, null), /*#__PURE__*/React.createElement(SndToggle2, {
-    vol: isChild && typeof window._effVol === 'function' && window._effVol() != null ? window._effVol() : alarmVol,
+    vol: !(isAdmin || isOwner) && typeof window._effVol === 'function' && window._effVol() != null ? window._effVol() : alarmVol,
     onUpdate: updateSetting
   }), typeof MsgBubble === 'function' && React.createElement(MsgBubble, { personId: personId, onClick: () => window._msgTo && window._msgTo(null) }), /*#__PURE__*/React.createElement(NotifBell, {
     unread: myUnread,
@@ -7526,7 +7532,7 @@ function Dashboard({
     onClick: () => setTab(t.id),
     style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, lineHeight: 1.15, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', wordBreak: 'break-word',
       background: on ? effectivePerson.color : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#cfd3e0', border: `1px solid ${on ? effectivePerson.color : 'rgba(255,255,255,.12)'}` }
-  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, (typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
     family: fam,
     sessions: sessions,
     currentPersonId: personId,
@@ -7665,6 +7671,7 @@ function Dashboard({
     typeof NotifyRouting === 'function' && React.createElement(NotifyRouting, { family: fam }),
     typeof FamilyFreshStart === 'function' && React.createElement(FamilyFreshStart, { family: fam, sessions: sessions, onUpdate: onUpdate }),
     typeof PciWhereBoard === 'function' && React.createElement(PciWhereBoard, null),
+    (isAdmin || isOwner) && typeof PasscodeRotate === 'function' && React.createElement(PasscodeRotate, null),
     typeof PciSettings === 'function' && React.createElement(PciSettings, null),
     typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, null),
     typeof CheckInSettings === 'function' && React.createElement(CheckInSettings, null),
@@ -30777,6 +30784,28 @@ var SF_STEPS = {
     ['p5', 'Block incognito/guest browsing, extensions installs, and proxy/VPN apps with the admin policy; turn off the guest account.'],
     ['p6', 'Set time limits and an app/game allowlist in Family Safety / Screen Time. Test: restart, try a blocked site in every browser, try incognito, try a VPN extension.']
   ],
+  lock: [
+    ['l0', 'READ THIS FIRST: this app is a website. A website cannot be a VPN, mirror a screen, switch off Siri, or stop someone turning a phone off and on. Those can only be done by the phone’s own management system (MDM / supervision). The steps below set that up — the app’s job is to record each person’s agreement and keep your checklist.'],
+    ['l1', 'Agreement first: have each member tap "I agree" in ☰ Menu → Settings → Safety agreement. That is the record that they know the devices are managed for their safety. (The wording says Terms & Conditions only — no private details.)'],
+    ['l2', 'iPhone/iPad — SUPERVISE it (Apple Configurator on a Mac, free, or an MDM such as Mosyle / Jamf Now — check current pricing). Supervision is what makes controls stick after a restart.'],
+    ['l3', 'Once supervised, push ONE profile from your MDM that: (a) installs an Always-On VPN / DNS filter the child cannot delete, (b) blocks removing profiles, (c) blocks erasing the phone and changing the passcode, (d) turns Siri off (restriction "Allow Siri" = off) and (e) blocks adding other accounts. Because it is a profile, it comes back after every restart.'],
+    ['l4', 'Free filtering that follows the phone: NextDNS (free tier) or CleanBrowsing / Cloudflare Family DNS as a managed profile. Always-On VPN needs supervision; an unsupervised phone lets the user switch a VPN off, so do not rely on it.'],
+    ['l5', 'Locking apps: Screen Time → App Limits / Always Allowed (unsupervised) or the MDM "app allowlist / single-app mode" (supervised). Locking a phone to chosen apps on a schedule is exactly what supervised mode is for.'],
+    ['l6', 'Seeing what they do: Apple and Google do NOT allow free live screen-mirroring of a phone. The closest real options are Screen Time / Family Link activity reports, Bark alerts (already in your setup), and Apple Classroom on supervised iPads/Macs on your Wi-Fi. Decide with the family what you will look at, and keep to what the agreement says.'],
+    ['l7', 'Android: enroll the phone as a fully managed device (Android Enterprise via an MDM, or Samsung Knox Manage). That allows Always-On VPN with "block connections without VPN", app allowlists, blocking factory reset and safe mode, and turning off the assistant. Family Link alone cannot stop a determined user.'],
+    ['l8', 'Windows / Mac: standard (non-admin) child accounts, Microsoft Family Safety or Screen Time, DNS filter on the device AND the router, and block VPN/proxy installs. A computer’s “security” settings are locked by keeping the administrator password to yourselves.'],
+    ['l9', 'The weak points to close: Apple ID / Google account passwords the child knows, Screen Time passcode they can guess or watch you type, a second device, cellular data (so use a carrier filter too), and factory reset. Test by restarting, then trying each one — write down what still works.'],
+    ['l10', 'CONTACTS ONLY (iPhone/iPad, kids on Family Sharing): your phone → Settings → Screen Time → [child] → Communication Limits. Set Phone, FaceTime and Messages to Contacts Only, both During Screen Time and During Downtime. Add only the people you approved to the child’s contacts, and turn off the child’s ability to edit contacts if your iOS offers that switch. Use a Screen Time passcode only you and Eric know.'],
+    ['l11', 'SCHOOL & WORK HOURS (iPhone/iPad): Screen Time → [child] → Downtime → set the school and work blocks for each day. Under Always Allowed keep only Phone, Messages (approved contacts) and this family app. Menu names change between iOS versions — check Apple’s current help page.'],
+    ['l12', 'EMAIL & SOCIAL (iPhone/iPad): Screen Time → App Limits → add the Social and Email categories with a very short limit (or none). Content & Privacy Restrictions → block adding new accounts and installing apps without approval. Use a DNS filter profile so social sites are also blocked in the browser.'],
+    ['l13', 'Android (Google Family Link): School time and Bedtime schedules, app limits, approval for every new app, and a contacts allowlist where the phone supports it. Fully managed phones can enforce more (see the Android step above).'],
+    ['l14', 'Windows ThinkPads: Microsoft Family Safety → screen-time schedule for school and work hours, app and website limits, activity reports; standard user account; BIOS password with USB boot off.'],
+    ['l15', 'DISCORD: it is not end-to-end encrypted for text, but Discord does not let anyone read messages from outside. Use the official Family Center — the teen links their account to yours from their Discord settings, and you see activity such as new friends, servers joined and who they message or call, not the message text. Minimum age is 13. Set Privacy & Safety so only friends (or nobody) can send friend requests, turn off DMs from server members, and turn on the sensitive-content filters. To look at messages, sit down together and go through the account — the Conduct Agreement covers that.'],
+    ['l17', 'ALLOWED / BLOCKED WEBSITES (iPhone/iPad): Screen Time → [child] → Content & Privacy Restrictions → Content Restrictions → Web Content. “Allowed Websites Only” is your white list (add each site). “Limit Adult Websites” keeps adult sites out and has a Never Allow list for your black list. Younger children: Allowed Websites Only. Older: Limit Adult Websites plus the Never Allow list.'],
+    ['l18', 'ONLY APPROVED BROWSERS (iPhone/iPad): Settings → Screen Time → Content & Privacy Restrictions → iTunes & App Store Purchases → Installing Apps → Don’t Allow (or use Family Sharing “Ask to Buy”) so no new browser can be added. Delete any browser you did not approve. On a supervised phone, the MDM can also hide or block a specific app. Web filters apply to browsers built on Apple’s engine, but a DNS filter on the device is the backup.'],
+    ['l19', 'ONLY APPROVED BROWSERS (Android / Windows): Android Family Link → Chrome → “Only allow approved sites” (or block sites), and approve every app install. Windows Family Safety: turn on web filtering — it blocks browsers other than Microsoft Edge, then add allowed and blocked sites. Standard (non-admin) accounts stop them installing another browser.'],
+    ['l16', 'Test it: restart each device, then try texting an unapproved number, opening a social app during Downtime, and adding a new contact. Write down anything that still works and fix it.']
+  ],
   grandpa: [
     ['g1', 'iPhone (iOS 17+): turn on Assistive Access (Settings → Accessibility → Assistive Access). It shows only a few big-button apps you choose and hides Settings, so nothing can be changed by accident.'],
     ['g2', 'Set an Assistive Access passcode that only family knows (it is needed to exit).'],
@@ -30788,13 +30817,16 @@ var SF_STEPS = {
 };
 function SF_Hardening(props) {
   var h = React.createElement, fam = props.fam, pid = props.sel || (fam[0] || {}).id;
-  var pS = React.useState('ios'), plat = pS[0], setPlat = pS[1];
+  var pS = React.useState('lock'), plat = pS[0], setPlat = pS[1], agS = ktUse('device_agree', {}), dag = agS[0] || {};
   var dS = ktUse('safety/hardening/' + pid, {}), done = dS[0] || {};
   var steps = SF_STEPS[plat], n = steps.filter(function (x) { return done[x[0]]; }).length;
   return h('div', null,
     h('div', { style: Object.assign({}, SF_CARD, { borderColor: 'rgba(255,152,0,.5)' }) }, h('div', { style: { fontSize: 12, color: '#FFCC80', lineHeight: 1.6 } }, 'This app cannot lock a phone or act as a VPN — only the phone\u2019s own system can. These steps are what makes controls hard to switch off, even after a restart. No setting is 100% against a determined person, so test each one and keep Bark/monitoring on as a backstop. Get each person\u2019s agreement (or a guardian\u2019s) first.')),
     h('div', { style: { display: 'flex', gap: 5, overflowX: 'auto', marginBottom: 8 } }, fam.map(function (p) { return h('button', { key: p.id, onClick: function () { props.setSel(p.id); }, style: { flexShrink: 0, padding: '5px 10px', borderRadius: 20, border: 'none', background: pid === p.id ? p.color || '#81C784' : 'rgba(255,255,255,.1)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, p.emoji + ' ' + p.name); })),
-    h('div', { style: { display: 'flex', gap: 5, marginBottom: 8 } }, [['ios', 'iPhone / iPad'], ['android', 'Android'], ['pc', 'Windows / Mac PC'], ['grandpa', 'Simple phone (Grandpa)']].map(function (k) { return h('button', { key: k[0], onClick: function () { setPlat(k[0]); }, style: { flex: 1, padding: '7px 4px', borderRadius: 20, border: '1px solid ' + (plat === k[0] ? '#81C784' : 'rgba(255,255,255,.2)'), background: plat === k[0] ? '#81C784' : 'transparent', color: plat === k[0] ? '#000' : '#ccc', fontWeight: 700, fontSize: 11, cursor: 'pointer' } }, k[1]); })),
+    h('div', { style: { display: 'flex', gap: 5, marginBottom: 8 } }, [['lock', '🔒 VPN & lock-down'], ['ios', 'iPhone / iPad'], ['android', 'Android'], ['pc', 'Windows / Mac PC'], ['grandpa', 'Simple phone (Grandpa)']].map(function (k) { return h('button', { key: k[0], onClick: function () { setPlat(k[0]); }, style: { flex: 1, padding: '7px 4px', borderRadius: 20, border: '1px solid ' + (plat === k[0] ? '#81C784' : 'rgba(255,255,255,.2)'), background: plat === k[0] ? '#81C784' : 'transparent', color: plat === k[0] ? '#000' : '#ccc', fontWeight: 700, fontSize: 11, cursor: 'pointer' } }, k[1]); })),
+    plat === 'lock' && typeof PasscodeRotate === 'function' && h(PasscodeRotate, null),
+    plat === 'lock' && typeof ConductAdmin === 'function' && h(ConductAdmin, { fam: fam, nameOf: props.nameOf }),
+    plat === 'lock' && h('div', { style: Object.assign({}, SF_CARD, { borderColor: 'rgba(66,165,245,.5)' }) }, h('div', { style: { fontSize: 12, fontWeight: 800, color: '#90CAF9', marginBottom: 4 } }, '✍️ Who has agreed to device safety management'), fam.filter(function (p) { return p.id !== 'laurel' && p.id !== 'eric'; }).map(function (p) { var a = dag[p.id]; return h('div', { key: p.id, style: { fontSize: 12, color: a && a.ts ? '#7be3ae' : '#FFB74D', padding: '2px 0' } }, (p.emoji || '') + ' ' + p.name + ' — ' + (a && a.ts ? '✅ agreed ' + new Date(a.ts).toLocaleDateString() : 'not yet')); })),
     h('div', { style: { fontSize: 12, fontWeight: 800, color: '#fff', marginBottom: 6 } }, props.nameOf(pid) + ' — ' + n + ' of ' + steps.length + ' steps done'),
     steps.map(function (x) { return h('label', { key: x[0], style: Object.assign({}, SF_CARD, { display: 'flex', gap: 10, alignItems: 'flex-start', opacity: done[x[0]] ? 0.6 : 1 }) }, h('input', { type: 'checkbox', checked: !!done[x[0]], onChange: function (e) { sfWrite('safety/hardening/' + pid + '/' + x[0], e.target.checked ? Date.now() : null, 'Checklist step ' + x[0] + ' for ' + props.nameOf(pid)); }, style: { width: 22, height: 22, flexShrink: 0, marginTop: 2 } }), h('div', { style: { fontSize: 12, color: '#fff', lineHeight: 1.5 } }, x[1])); }),
     h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)', lineHeight: 1.5 } }, 'Menu names change between iOS/Android versions — check Apple\u2019s and Google\u2019s current help pages. VPN-style filtering comes from the management tool or DNS profile you install, not from this app.'));
@@ -30924,7 +30956,7 @@ var SF_TERMS_DEFAULT = "Welcome to MyBethelFamilyHome.\n\n• This app is for ou
 function TermsOverlay() {
   var h = React.createElement, t = React.useState(0), setTick = t[1], rd = React.useState(false), ready = rd[0], setReady = rd[1];
   React.useEffect(function () { var iv = setInterval(function () { setTick(function (x) { return x + 1; }); }, 1500), t0 = setTimeout(function () { setReady(true); }, 1800); return function () { clearInterval(iv); clearTimeout(t0); }; }, []);
-  var pid = ''; try { pid = (JSON.parse(localStorage.getItem('last_user') || 'null') || {}).personId || ''; } catch (e) {}
+  var pid = window._loginPersonId || ''; if (!pid) { try { pid = (JSON.parse(localStorage.getItem('last_user') || 'null') || {}).personId || ''; } catch (e) {} }
   var cfgS = ktUse('terms/config', null), cfg = cfgS[0] || {};
   var agS = ktUse('terms/agreed/' + (pid || '_none'), null), ag = agS[0];
   var ver = cfg.version || 1, text = cfg.text || SF_TERMS_DEFAULT, lk = 'fm_terms_' + pid + '_v' + ver;
@@ -31455,11 +31487,11 @@ function FMPresence() {
   React.useEffect(function () {
     function beat() {
       if (typeof db === 'undefined' || !db) return;
-      var pid = ''; try { pid = (JSON.parse(localStorage.getItem('last_user') || 'null') || {}).personId || ''; } catch (e) {}
+      var pid = window._loginPersonId || window._currentPersonId || ''; if (!pid) { try { pid = (JSON.parse(localStorage.getItem('last_user') || 'null') || {}).personId || ''; } catch (e) {} }
       var id = typeof sfDeviceId === 'function' ? sfDeviceId() : 'dev'; var ref = db.ref('argilan/presence/' + id);
       try { ref.set({ pid: pid, ts: Date.now(), ua: (navigator.userAgent || '').slice(0, 60), vis: document.visibilityState }); ref.onDisconnect().remove(); } catch (e) {}
     }
-    beat(); var iv = setInterval(beat, 25000); document.addEventListener('visibilitychange', beat);
+    beat(); var iv = setInterval(beat, 12000); window.addEventListener('fm-presence-beat', beat); document.addEventListener('visibilitychange', beat);
     return function () { clearInterval(iv); document.removeEventListener('visibilitychange', beat); };
   }, []);
   return null;
@@ -32374,6 +32406,7 @@ function CheckInSettings() {
 
 // ── Check in with the parents: where am I, what am I doing, how am I — at random times through the day ──
 var PCI_STATUS = [['school', '📚', 'On school work'], ['chores', '🧹', 'Doing chores'], ['home', '🏠', 'Home — free time'], ['friends', '🎉', 'Fun / with friends'], ['out', '🚗', 'Out and about'], ['eating', '🍽', 'Eating'], ['spiritual', '🙏', 'Spiritual time'], ['work', '💼', 'Working']];
+var PCI_MOODS = [['🤩', 'excited', 'Excited'], ['😀', 'happy', 'Happy'], ['😌', 'calm', 'Calm'], ['🙂', 'okay', 'Okay'], ['😐', 'meh', 'Meh'], ['😴', 'tired', 'Tired'], ['😟', 'worried', 'Worried'], ['😢', 'sad', 'Sad'], ['😡', 'frustrated', 'Frustrated'], ['🤒', 'sick', 'Not feeling good']];
 var PCI_PROMPTS = ['What is one good thing you can say about yourself right now? (your affirmation)', 'What is one thing you finished since the last check-in?', 'What is one thing you are proud of today?', 'Is anything hard right now? What kind of help would make it easier?', 'What are you thankful for today?', 'What is your next step after this?', 'Tell Mom or Dad something fun or interesting you learned or saw.', 'What is something kind you did for someone today?'];
 var PCI_CONTEXT = { school: 'What are you working on right now? (subject and what part)', chores: 'Which chore are you on and how far along are you?', work: 'What are you working on right now?', spiritual: 'What are you reading, studying or doing right now?', friends: 'Who are you with, and where are you?', out: 'Where are you and who are you with?', eating: 'What are you eating? Is it a meal or a snack?', home: 'What are you doing with your free time?' };
 function pciGuess(running) {
@@ -32456,7 +32489,7 @@ function ParentCheckIn(props) {
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, (ctxQ ? '3. ' : '2. ') + aff),
         h('textarea', { rows: 2, value: f.aff, onChange: function (e) { setF(Object.assign({}, f, { aff: e.target.value })); }, style: Object.assign({}, big, { marginBottom: 12 }) }),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, 'How are you feeling?'),
-        h('div', { style: { display: 'flex', gap: 8, marginBottom: 12 } }, [['😀', 'happy'], ['🙂', 'okay'], ['😐', 'meh'], ['😟', 'worried'], ['😢', 'sad']].map(function (m) { var on = f.mood === m[1]; return h('button', { key: m[1], onClick: function () { setF(Object.assign({}, f, { mood: m[1] })); }, style: { flex: 1, fontSize: 28, padding: '8px 0', background: on ? '#FF1493' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, cursor: 'pointer' } }, m[0]); })),
+        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 12 } }, PCI_MOODS.map(function (m) { var on = f.mood === m[1]; return h('button', { key: m[1], onClick: function () { setF(Object.assign({}, f, { mood: m[1] })); }, style: { padding: '6px 0', background: on ? '#FF1493' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, cursor: 'pointer', color: '#fff' } }, h('div', { style: { fontSize: 26 } }, m[0]), h('div', { style: { fontSize: 9, fontWeight: 800 } }, m[2])); })),
         h('button', { onClick: function () { setF(Object.assign({}, f, { help: !f.help })); }, style: { width: '100%', background: f.help ? '#E53935' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (f.help ? '#fff' : 'rgba(255,255,255,.25)'), borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginBottom: 12 } }, f.help ? '🆘 I need help — Mom & Dad will be alerted loudly' : '🆘 I need help with something'),
         h('button', { onClick: submit, disabled: !f.status, style: { width: '100%', background: f.status ? '#4CAF82' : '#555', color: f.status ? '#000' : '#aaa', border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 18, cursor: f.status ? 'pointer' : 'default' } }, f.status ? '📨 Send check-in' : 'Pick where you are first'),
         h('button', { onClick: function () { close(true); }, style: { width: '100%', background: 'transparent', color: '#c8c8d8', border: 'none', padding: 12, fontSize: 13, cursor: 'pointer', marginTop: 4 } }, 'Remind me in 10 minutes'))));
@@ -32484,7 +32517,7 @@ function PciRecent(props) {
   return h('div', null, arr.slice(0, 5).map(function (r) { return h('div', { key: r.id, style: { padding: '3px 0', borderTop: '1px solid rgba(255,255,255,.06)' } }, h('b', null, dcTime(r.ts) + ' · ' + r.statusLabel + (r.help ? ' · 🆘 NEEDS HELP' : '') + (r.mood ? ' · ' + r.mood : '')), r.ctx && h('div', { style: { color: '#b8b8c8' } }, '“' + r.ctx + '”'), r.aff && h('div', { style: { color: '#b8b8c8' } }, 'Affirmation: “' + r.aff + '”')); }));
 }
 // ═══ My day in review — every check-in's feeling + affirmation, for the child (and parents) ═══
-var PCI_MOODN = { happy: 5, okay: 4, meh: 3, worried: 2, sad: 1 }, PCI_MOODE = { happy: '😀', okay: '🙂', meh: '😐', worried: '😟', sad: '😢' };
+var PCI_MOODN = { excited: 5, happy: 5, calm: 4, okay: 4, meh: 3, tired: 2, worried: 2, sad: 1, frustrated: 1, sick: 1 }, PCI_MOODE = { excited: '🤩', happy: '😀', calm: '😌', okay: '🙂', meh: '😐', tired: '😴', worried: '😟', sad: '😢', frustrated: '😡', sick: '🤒' };
 function PciDayReview(props) {
   var h = React.createElement, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey(), cS = ktUse('checkins/' + dayK + '/' + props.pid, {}),
     arr = Object.values(cS[0] || {}).sort(function (a, b) { return a.ts - b.ts; });
@@ -33863,7 +33896,8 @@ var PR_FREQ = [['daily', 'Daily'], ['weekly', 'Weekly'], ['biweekly', 'Every 2 w
 var prZ = function (n) { return (n < 10 ? '0' : '') + n; };
 function prDayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + prZ(d.getMonth() + 1) + '-' + prZ(d.getDate()); }
 function prCfg() { var c = null; try { c = syncGet('payroll_cfg'); } catch (e) {} c = c || {}; return { enabled: c.enabled !== false, people: c.people || {}, anchor: c.anchor || '2026-10-05' }; }
-function prPerson(pid) { var p = (prCfg().people || {})[pid] || {}; return { freq: p.freq || 'weekly', auto: !!p.auto }; }
+function prMethod(pid) { var m = null; try { m = syncGet('pay_method/' + pid); } catch (e) {} return m && m.mode ? m : null; }
+function prPerson(pid) { var p = (prCfg().people || {})[pid] || {}, m = prMethod(pid); return { freq: p.freq || 'weekly', auto: m ? m.mode === 'auto' : !!p.auto }; }
 function prFmt(raw) { raw = +raw || 0; return (window._payMode || 'pay') === 'points' ? (Math.round(raw * 100) / 100) + ' pts' : 'B$' + raw.toFixed(2); }
 function prIsEmployee(pid) { try { var fam = window._payrollFamily || []; var p = fam.filter(function (x) { return x.id === pid; })[0]; return !!p && p.role === 'child' && p.inPaySystem !== false; } catch (e) { return false; } }
 window._payrollOn = function (pid) { return prCfg().enabled && prIsEmployee(pid); };
@@ -33937,6 +33971,35 @@ function PayrollEngine(props) {
 }
 var prBtn = function (bg, fg, fn, t, extra) { return React.createElement('button', { onClick: fn, style: Object.assign({ background: bg, color: fg, border: 'none', borderRadius: 14, padding: '11px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer' }, extra || {}) }, t); };
 function PrChip(status) { var m = { pending: ['⏳ Waiting for approval', '#FFD54F'], paid: ['✅ Paid', '#7be3ae'], rejected: ['✖ Not paid', '#FF8A80'] }[status] || [status, '#aaa']; return React.createElement('span', { style: { fontSize: 12, fontWeight: 900, color: m[1] } }, m[0]); }
+// ── Pay contract: each child signs how they get paid (automatic or manual). They may change it later unless a parent chose it (then it is locked for good). ──
+function PayContract(props) {
+  var h = React.createElement, pid = props.pid, nm = props.name || '', mS = ktUse('pay_method/' + pid, null), m = mS[0] && mS[0].mode ? mS[0] : null;
+  var fS = React.useState({ mode: '', name: '' }), f = fS[0], setF = fS[1], eS = React.useState(false), edit = eS[0], setEdit = eS[1], gS = ktUse('paychecks/' + pid, {}), pend = Object.values(gS[0] || {}).filter(function (c) { return c && c.status === 'pending'; });
+  var sg = React.useState(''), msg = sg[0], setMsg = sg[1];
+  var opts = [['auto', '⚡ Automatic', 'My paycheck goes into my account by itself on payday.'], ['manual', '✋ Manual', 'My paycheck waits. I ask Mom or Dad to pay me, and they approve it.']];
+  function sign() {
+    if (!f.mode) { setMsg('Pick Automatic or Manual first.'); return; } if (f.name.trim().length < 2) { setMsg('Type your name to sign.'); return; }
+    try { syncSet('pay_method/' + pid, { mode: f.mode, signed: f.name.trim(), ts: Date.now(), by: pid, locked: false }); } catch (e) {} setEdit(false); setMsg('✅ Contract signed.');
+  }
+  function ask() { try { if (window._addNotifFn) window._addNotifFn('paycheck', 'laurel', '🙋 ' + (nm || pid) + ' is asking to be paid', (nm || pid) + ' chose manual pay and has ' + pend.length + ' paycheck' + (pend.length > 1 ? 's' : '') + ' waiting. Open Payroll to approve.', {}); } catch (e) {} setMsg('✅ Asked Mom & Dad.'); }
+  var card = { background: 'rgba(255,213,79,.1)', border: '2px solid #FFD54F', borderRadius: 16, padding: 14, marginBottom: 12 };
+  if (m && !edit) return h('div', { style: Object.assign({}, card, { background: 'rgba(255,255,255,.05)', borderColor: 'rgba(255,255,255,.18)' }) },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, '✍️ MY PAY CONTRACT'),
+    h('div', { style: { fontSize: 15, color: '#fff', fontWeight: 800, margin: '4px 0' } }, m.mode === 'auto' ? '⚡ I am paid automatically' : '✋ I am paid manually'),
+    h('div', { style: { fontSize: 12, color: '#b8b8c8' } }, 'Signed ' + (m.signed ? 'by ' + m.signed + ' ' : '') + new Date(m.ts || Date.now()).toLocaleDateString() + (m.locked ? ' · 🔒 Set by a parent — it cannot be changed.' : '')),
+    msg && h('div', { style: { fontSize: 12, color: '#9be5bd', marginTop: 4 } }, msg),
+    h('div', { style: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } },
+      !m.locked && h('button', { onClick: function () { setF({ mode: m.mode === 'auto' ? 'manual' : 'auto', name: '' }); setEdit(true); }, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '9px 14px', fontWeight: 800, cursor: 'pointer' } }, 'Change how I get paid'),
+      m.mode === 'manual' && pend.length > 0 && h('button', { onClick: ask, style: { background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, padding: '9px 14px', fontWeight: 900, cursor: 'pointer' } }, '🙋 Ask to be paid (' + pend.length + ')')));
+  return h('div', { style: card },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, '✍️ PAY CONTRACT — ' + (m ? 'CHANGE' : 'SIGN IT')),
+    h('div', { style: { fontSize: 13, color: '#fff', lineHeight: 1.6, margin: '6px 0 8px' } }, 'Choose how you want to get paid for the work you do. You can change it later' + ' — unless Mom or Dad choose it for you, then it is final.'),
+    opts.map(function (o) { var on = f.mode === o[0]; return h('button', { key: o[0], onClick: function () { setF(Object.assign({}, f, { mode: o[0] })); }, style: { display: 'block', width: '100%', textAlign: 'left', background: on ? 'rgba(76,175,130,.3)' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), borderRadius: 14, padding: 12, marginBottom: 8, color: '#fff', cursor: 'pointer' } }, h('div', { style: { fontSize: 15, fontWeight: 900 } }, o[1]), h('div', { style: { fontSize: 12, color: '#d8d8e8', marginTop: 2 } }, o[2])); }),
+    h('div', { style: { fontSize: 12, color: '#d8d8e8', margin: '4px 0' } }, 'Type your name to sign:'),
+    h('input', { value: f.name, onChange: function (e) { setF(Object.assign({}, f, { name: e.target.value })); }, placeholder: nm || 'Your name', style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 12, color: '#fff', padding: 12, fontSize: 16, marginBottom: 8 } }),
+    msg && h('div', { style: { fontSize: 12, color: '#FFAB91', marginBottom: 6 } }, msg),
+    h('div', { style: { display: 'flex', gap: 8 } }, h('button', { onClick: sign, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✍️ Sign my contract'), m && h('button', { onClick: function () { setEdit(false); setMsg(''); }, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '13px 16px', fontWeight: 800, cursor: 'pointer' } }, 'Cancel')));
+}
 // ── The kids' "My Bethel Job" page ──
 function KidJob(props) {
   var h = React.createElement, pid = props.personId, name = props.name || '';
@@ -33950,6 +34013,7 @@ function KidJob(props) {
   var per = prPeriod(Date.now(), freq, cfg.anchor), fq = (PR_FREQ.filter(function (x) { return x[0] === freq; })[0] || [0, 'Weekly'])[1];
   var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: 14, marginBottom: 12 };
   return h('div', { style: { paddingTop: 6 } },
+    on && h(PayContract, { pid: pid, name: name }),
     h('div', { style: Object.assign({}, card, { background: 'linear-gradient(135deg,rgba(76,175,130,.22),rgba(76,175,130,.06))', borderColor: 'rgba(76,175,130,.5)' }) },
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#7be3ae', letterSpacing: 1 } }, '💼 MY BETHEL JOB'),
       h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', margin: '2px 0' } }, name ? name + ' — Bethel Family Team Member' : 'Bethel Family Team Member'),
@@ -33993,11 +34057,27 @@ function PayrollAdmin(props) {
       return h('div', { key: p.id, style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.08)' } },
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } }, h('b', { style: { color: '#fff', flex: 1 } }, (p.emoji || '') + ' ' + p.name), h('span', { style: { color: '#FFD54F', fontWeight: 900 } }, prFmt(tot) + ' earned this period')),
         h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } }, PR_FREQ.map(function (f) { return h('button', { key: f[0], onClick: function () { setP(p.id, { freq: f[0] }); }, style: chip(fq === f[0]) }, f[1]); }),
-          h('button', { onClick: function () { setP(p.id, { auto: !pp.auto }); }, style: chip(!!pp.auto) }, (pp.auto ? '✅ ' : '⬜ ') + 'Pay automatically'),
+          h(PayMethodAdmin, { key: 'pm' + p.id, p: p, who: who, legacyAuto: !!pp.auto }),
           prBtn('#FFB74D', '#000', function () { var pc = prCutNow(p, earn); setMsg(pc ? '✅ Made an early paycheck for ' + p.name + ': ' + prFmt(pc.raw) : 'Nothing to pay ' + p.name + ' yet.'); }, '✂️ Pay out now', { padding: '9px 11px', fontSize: 13 }))); }),
     recent.length > 0 && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#C5B8E8', letterSpacing: 1, marginBottom: 4 } }, 'RECENT PAYCHECKS'),
       recent.slice(0, 8).map(function (pc) { return h('div', { key: pc.pid + pc.id, style: { display: 'flex', gap: 8, fontSize: 13, padding: '4px 0', color: '#ddd' } }, h('div', { style: { flex: 1 } }, (pc.name || pc.pid) + ' · ' + pc.label), h('b', null, prFmt(pc.raw)), PrChip(pc.status)); })));
   return typeof Fold === 'function' ? h(Fold, { id: 'payroll', title: '💼 Payroll & paychecks', badge: pend.length ? String(pend.length) : null }, body) : body;
+}
+
+// Parent picks (or reads) how a child is paid. A parent's choice is FINAL — it locks and cannot be undone.
+function PayMethodAdmin(props) {
+  var h = React.createElement, p = props.p, mS = ktUse('pay_method/' + p.id, null), m = mS[0] && mS[0].mode ? mS[0] : null;
+  function set(mode) {
+    if (m && m.locked) return;
+    if (!(window._safeConfirm ? window._safeConfirm('Set ' + p.name + ' to ' + (mode === 'auto' ? 'AUTOMATIC' : 'MANUAL') + ' pay?\n\nThis is FINAL. A parent’s choice is locked and cannot be undone or changed by ' + p.name + '.') : true)) return;
+    try { syncSet('pay_method/' + p.id, { mode: mode, signed: 'Set by ' + (props.who || 'parent'), ts: Date.now(), by: props.who || 'parent', locked: true }); } catch (e) {}
+  }
+  var chipS = function (on) { return { background: on ? 'rgba(76,175,130,.3)' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), borderRadius: 12, padding: '9px 11px', fontWeight: 800, fontSize: 13, cursor: m && m.locked ? 'default' : 'pointer', opacity: m && m.locked && !on ? .45 : 1 }; };
+  var cur = m ? m.mode : (props.legacyAuto ? 'auto' : null);
+  return h('span', { style: { display: 'inline-flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
+    h('button', { onClick: function () { set('auto'); }, style: chipS(cur === 'auto') }, (cur === 'auto' ? '✅ ' : '⬜ ') + 'Automatic'),
+    h('button', { onClick: function () { set('manual'); }, style: chipS(cur === 'manual') }, (cur === 'manual' ? '✅ ' : '⬜ ') + 'Manual'),
+    h('span', { style: { fontSize: 11, color: '#b8b8c8' } }, m ? (m.locked ? '🔒 set by parent' : '✍️ signed by ' + (m.signed || p.name)) : 'not signed yet'));
 }
 
 </script>
@@ -34022,7 +34102,8 @@ function vcSchoolHours(now) {
 function vcOwn() { var v = parseInt(localStorage.getItem('alarm_vol')); return isNaN(v) ? 4 : v; }
 function vcFloor(pid, cfg) { var c = (cfg || {})[pid]; var v = c && c.floor != null ? parseInt(c.floor) : 0; return isNaN(v) ? 0 : v; }
 function vcEffective(pid, cfg) {
-  var own = vcOwn(), fl = vcFloor(pid, cfg), sc = ((cfg || {})._school !== false && vcSchoolHours()) ? VC_SCHOOL_MIN : 0;
+  if (((cfg || {})[pid] || {}).mute) return 0;
+  var own = vcOwn(), fl = vcFloor(pid, cfg), sc = ((cfg || {})._school !== false && window._vcSchoolKid !== false && vcSchoolHours()) ? VC_SCHOOL_MIN : 0;
   return Math.max(own, fl, sc);
 }
 function VolumeGuard(props) {
@@ -34030,7 +34111,7 @@ function VolumeGuard(props) {
   var st = React.useState(function () { try { return syncGet('volume_cfg') || {}; } catch (e) { return {}; } }), cfg = st[0], setCfg = st[1];
   var tick = React.useState(0), setTick = tick[1];
   React.useEffect(function () { var u = syncOn('volume_cfg', function (d) { setCfg(d || {}); }); var iv = setInterval(function () { setTick(function (x) { return x + 1; }); }, 30000); return function () { if (u) u(); clearInterval(iv); }; }, []);
-  window._volLocked = false;
+  window._volLocked = false; window._vcSchoolKid = props.schoolKid !== false;
   window._effVol = function () { return child ? vcEffective(pid, cfg) : null; };
   // when a parent turns a child's volume back ON, raise the child's own setting too so the button shows it
   React.useEffect(function () {
@@ -34065,8 +34146,9 @@ function VolumeAdmin(props) {
     try { syncSet('volume_cfg/' + pid, n[pid]); } catch (e) {}
     try { if (lv > 0) playSound('notif'); } catch (e) {}
   }
+  function setMute(pid, on) { var n = Object.assign({}, cfg); n[pid] = { floor: 0, mute: !!on, by: 'parent', ts: Date.now() }; setCfg(n); try { syncSet('volume_cfg/' + pid, n[pid]); } catch (e) {} }
   function setSchool(on) { var n = Object.assign({}, cfg); n._school = on; setCfg(n); try { syncSet('volume_cfg/_school', on); } catch (e) {} }
-  var kids = fam.filter(function (p) { return p.role === 'child'; });
+  var kids = fam.filter(function (p) { return !p.deleted && p.id !== 'laurel' && p.id !== 'eric'; });
   var school = cfg._school !== false;
   function lab(i) { return VC_LABELS[Math.max(0, Math.min(4, i))]; }
   function row(p) {
@@ -34077,13 +34159,13 @@ function VolumeAdmin(props) {
       React.createElement('div', { style: { fontSize: 11, marginBottom: 6, color: s && s.eff === 0 ? '#EF5350' : '#9ad' } },
         s ? ('Their volume: ' + (own[0] + ' ' + own[1]) + (s.eff !== s.own ? ' · playing at ' + lab(s.eff)[1] : '') + (fresh ? '' : ' · (last seen a while ago)')) : 'Their device hasn’t reported yet'),
       React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-        [[0, 'Let them control'], [2, '🔊 Turn ON (Normal)'], [3, '📢 Turn ON (Loud)'], [4, '📣 Turn ON (Ultra)']].map(function (o) {
-          var on = fl === o[0];
-          return React.createElement('button', { key: o[0], onClick: function () { setFloor(p.id, o[0]); }, style: { background: on ? (o[0] ? '#EF5350' : '#1A73E8') : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#bbb', border: 'none', borderRadius: 20, padding: '6px 11px', fontSize: 11, fontWeight: 800, cursor: 'pointer' } }, o[1]);
+        [[0, 'Let them control'], [2, '🔊 Turn ON (Normal)'], [3, '📢 Turn ON (Loud)'], [4, '📣 Turn ON (Ultra)'], [-1, '🔇 Mute them']].map(function (o) {
+          var on = o[0] === -1 ? !!((cfg[p.id] || {}).mute) : (fl === o[0] && !((cfg[p.id] || {}).mute));
+          return React.createElement('button', { key: o[0], onClick: function () { if (o[0] === -1) setMute(p.id, true); else setFloor(p.id, o[0]); }, style: { background: on ? (o[0] ? '#EF5350' : '#1A73E8') : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#bbb', border: 'none', borderRadius: 20, padding: '6px 11px', fontSize: 11, fontWeight: 800, cursor: 'pointer' } }, o[1]);
         })),
       fl > 0 ? React.createElement('div', { style: { fontSize: 10, color: '#FFB74D', marginTop: 5 } }, 'Override on: ' + p.name + ' can’t go quieter than ' + lab(fl)[1] + ' until you tap “Let them control”.') : null);
   }
-  return React.createElement(Fold, { id: 'volumes', title: '🔊 Member volume — turn a child back ON' },
+  return React.createElement(Fold, { id: 'volumes', title: '🔊 Member volume — let them control, keep it on, or mute' },
     React.createElement('div', { style: { fontSize: 11, color: '#bbb', lineHeight: 1.5, marginBottom: 8 } }, 'Children set their own volume. If someone isn’t responding, tap “Turn ON” for them — it reaches their device within seconds, plays a chime, and holds their volume up until you release it.'),
     React.createElement('label', { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#fff', marginBottom: 6, cursor: 'pointer' } },
       React.createElement('input', { type: 'checkbox', checked: school, onChange: function (e) { setSchool(e.target.checked); } }),
@@ -36480,6 +36562,174 @@ function MemberManager(props) {
     h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 10 } }, 'Tap a person to see and edit their name, age, phone, email and login PIN.'),
     requests.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '1px solid rgba(255,152,0,.4)', borderRadius: 10, padding: '8px 10px', fontSize: 12, color: '#FFCC80' } }, '🙋 ' + requests.map(function (r) { return r.personName || r.personId; }).join(', ') + (requests.length > 1 ? ' are' : ' is') + ' locked out — open their card and tap Reset PIN.'),
     fam.map(function (p) { return h(MemberCard, { key: p.id, p: p, readPin: readPin, setPin: props.setPin, onResolved: resolved }); }));
+}
+
+</script>
+<script>
+// ═══ DEVICE SETUP — one-time setup for each device: sound, alerts, safety agreement. Tap "Finish" and the banner is gone. ═══
+var DS_AGREE_TEXT = 'I agree that my parents (the family administrators) set up and manage safety controls on the devices I use, which are owned by E&L Services & Sales (our family business), such as web filters, app and screen-time limits, and device settings. I understand they do this to keep me safe, and that I will talk with them if I have a question or a concern. I agree to this one time, and I know the rules are explained in the family Terms & Conditions.';
+var DS_AGREE_CARE = 'I agree that my caregivers (the family administrators) may help manage my devices, such as limiting apps, filtering websites, and keeping settings simple, to help keep me safe and make things easier for me. We talked this over together, and I understand I can ask them to explain or change it at any time. I agree to this one time, and it will not be asked again.';
+function dsText(pid) { try { var f = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.id === pid; })[0]; if (f && f.role === 'elder') return [DS_AGREE_CARE, 'care-v2']; } catch (e) {} return [DS_AGREE_TEXT, 'child-v2']; }
+function dsDone(pid) { try { return !!localStorage.getItem('fm_devsetup_' + pid); } catch (e) { return false; } }
+function dsVolInfo(pid) {
+  var cfg = {}; try { cfg = syncGet('volume_cfg') || {}; } catch (e) {}
+  var c = cfg[pid] || {}; return { mute: !!c.mute, floor: c.floor != null ? parseInt(c.floor) || 0 : 0 };
+}
+// Home-screen banner: shows only until this device has been set up
+function SetupBanner(props) {
+  var h = React.createElement, pid = props.personId, oS = React.useState(false), open = oS[0], setOpen = oS[1], tS = React.useState(0), setT = tS[1];
+  if (!pid || props.isAdmin || dsDone(pid)) return open ? h(DeviceSetup, Object.assign({}, props, { onClose: function () { setOpen(false); setT(function (x) { return x + 1; }); } })) : null;
+  return h('div', null,
+    h('button', { onClick: function () { setOpen(true); }, style: { display: 'block', width: 'calc(100% - 28px)', margin: '8px 14px', background: 'linear-gradient(135deg,#FF9800,#F57C00)', color: '#000', border: 'none', borderRadius: 16, padding: '13px 16px', fontWeight: 900, fontSize: 15, cursor: 'pointer', textAlign: 'left' } }, '⚙️ Set up this device', h('span', { style: { display: 'block', fontSize: 11, fontWeight: 700, opacity: .8 } }, 'Sound, alerts and your safety agreement — tap, finish, and this goes away.')),
+    open && h(DeviceSetup, Object.assign({}, props, { onClose: function () { setOpen(false); setT(function (x) { return x + 1; }); } })));
+}
+function DeviceSetup(props) {
+  var h = React.createElement, pid = props.personId, name = props.name || '', admin = !!props.isAdmin;
+  var vS = ktUse('volume_cfg', {}), vcfg = vS[0] || {}, vc = vcfg[pid] || {}, locked = !!vc.mute, floor = vc.floor != null ? parseInt(vc.floor) || 0 : 0;
+  var aS = ktUse('device_agree/' + pid, null), agreed = aS[0] && aS[0].ts, sS = React.useState(0), setS = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], ckS = React.useState(false), ck = ckS[0], setCk = ckS[1];
+  var own = (typeof vcOwn === 'function') ? vcOwn() : 4, labels = (typeof VC_LABELS !== 'undefined') ? VC_LABELS : [['🔇', 'Mute'], ['🔈', 'Soft'], ['🔊', 'Normal'], ['📢', 'Loud'], ['📣', 'Ultra']];
+  function setVol(i) {
+    if (locked) { setMsg('🔇 Mom or Dad have muted the sound for you.'); return; }
+    if (i < floor) { setMsg('Mom or Dad are keeping the sound on. The quietest you can pick is ' + labels[floor][1] + '.'); return; }
+    try { localStorage.setItem('alarm_vol', String(i)); } catch (e) {} if (props.onVol) { try { props.onVol(i); } catch (e) {} }
+    try { if (i > 0 && typeof fmAudioUnlock === 'function') fmAudioUnlock(); if (i > 0 && typeof playSound === 'function') playSound('notif'); } catch (e) {} setS(function (x) { return x + 1; }); setMsg('');
+  }
+  var cgS = ktUse('conduct_agree/' + pid, null), cSigned = !!(cgS[0] && cgS[0].ts), needC = !admin && typeof cdIsElder === 'function' && !cdIsElder(pid);
+  function agree() { if (!ck) { setMsg('Tick the box to agree.'); return; } try { syncSet('device_agree/' + pid, { ts: Date.now(), device: typeof sfDeviceId === 'function' ? sfDeviceId() : '', text: dsText(pid)[1] }); } catch (e) {} setMsg('✅ Agreement saved.'); }
+  function finish() { if (!agreed && !admin) { setMsg('Please read and agree first — then tap Finish.'); return; } if (needC && !cSigned) { setMsg('Please sign the Conduct & Device Agreement (tick, type your name, Agree & Submit) — then tap Finish.'); return; } try { localStorage.setItem('fm_devsetup_' + pid, String(Date.now())); } catch (e) {} props.onClose && props.onClose(); }
+  var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: 14, marginBottom: 12 };
+  var head = function (n, t) { return h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, n + '. ' + t); };
+  return h('div', { style: { position: 'fixed', inset: 0, zIndex: 6000, background: 'linear-gradient(160deg,#0f0c29,#1a1a2e)', overflowY: 'auto', padding: 16 } },
+    h('div', { style: { maxWidth: 520, margin: '0 auto' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 10 } }, h('div', { style: { flex: 1, fontSize: 20, fontWeight: 900, color: '#fff' } }, '⚙️ Settings — set up this device'), h('button', { onClick: props.onClose, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '8px 14px', fontWeight: 800, cursor: 'pointer' } }, 'Close')),
+      msg && h('div', { style: { background: 'rgba(255,213,79,.15)', border: '1px solid #FFD54F', color: '#fff', borderRadius: 12, padding: 10, fontSize: 13, marginBottom: 10 } }, msg),
+      h('div', { style: card }, head(1, 'MY SOUND'),
+        locked && h('div', { style: { fontSize: 13, color: '#FF8A80', marginBottom: 8 } }, '🔇 Sound is muted by Mom & Dad.'),
+        !locked && floor > 0 && h('div', { style: { fontSize: 13, color: '#FFB74D', marginBottom: 8 } }, 'Mom & Dad are keeping the sound on — it can’t go quieter than ' + labels[floor][1] + '.'),
+        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6 } }, labels.map(function (l, i) { var on = own === i; return h('button', { key: i, onClick: function () { setVol(i); }, style: { padding: '10px 0', borderRadius: 14, background: on ? '#1A73E8' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), cursor: 'pointer', opacity: locked || i < floor ? .45 : 1 } }, h('div', { style: { fontSize: 22 } }, l[0]), h('div', { style: { fontSize: 10, fontWeight: 800 } }, l[1])); })),
+        h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Tap a level to hear it. iPhones also have a silent switch on the side — flip it so the dot is not orange.')),
+      h('div', { style: card }, head(2, 'ALERTS ON THIS DEVICE'), typeof AlertsSetup === 'function' ? h(AlertsSetup, { personId: pid, isAdmin: admin, family: props.family }) : h('div', { style: { color: '#bbb', fontSize: 13 } }, 'Alerts are not available in this version.')),
+      !admin && h('div', { style: card }, head(3, 'SAFETY AGREEMENT'),
+        h('div', { style: { fontSize: 13, color: '#e8e8f0', lineHeight: 1.6, marginBottom: 10 } }, dsText(pid)[0]),
+        agreed ? h('div', { style: { fontSize: 14, color: '#7be3ae', fontWeight: 800 } }, '✅ You agreed on ' + new Date(agreed).toLocaleDateString()) : h('div', null,
+          h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 10 } }, h('input', { type: 'checkbox', checked: ck, onChange: function (e) { setCk(e.target.checked); }, style: { width: 22, height: 22 } }), 'I have read this and I agree.'),
+          h('button', { onClick: agree, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✍️ I agree'))),
+      needC && typeof ConductAgree === 'function' && h(ConductAgree, { personId: pid, name: name, num: 4 }),
+      h('button', { onClick: finish, style: { width: '100%', background: agreed || admin ? '#FFD54F' : '#555', color: '#000', border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 17, cursor: 'pointer' } }, '✅ Finish — I’m all set'),
+      h('div', { style: { fontSize: 11, color: '#9a9ab0', textAlign: 'center', marginTop: 8 } }, 'After you finish, the “Set up this device” banner goes away on this device. You can always reopen this from ☰ Menu → Settings.')));
+}
+
+</script>
+<script>
+// Conduct & Device Agreement (sign once, saved for the admins) + admin list / print / review log
+var CD_VER = 'conduct-v1';
+var CD_TEXT = 'The devices and accounts I use are owned by E&L Services & Sales, and I agree to use them in line with Jehovah’s Witness Bible principles — keeping my words clean, kind and encouraging, with no sexual or lewd talk, nude pictures, pornography, bullying, or hateful speech. I understand the administrators (Mom and Dad) do not read my messages day to day, but if they have a real concern for my safety or well-being they may look over my messages and activity on these devices and accounts, and they will talk with me and show me what they found. I understand that every review is logged and I will be told when one happens, and by checking the box and typing my name I agree to this, and to the family Terms & Conditions, one time.';
+function cdEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function cdIsElder(pid) { try { var f = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.id === pid; })[0]; return !!(f && f.role === 'elder'); } catch (e) { return false; } }
+
+// Shown to each non-admin member inside Settings / Device Setup
+function ConductAgree(props) {
+  var h = React.createElement, pid = props.personId, name = props.name || '';
+  var aS = ktUse('conduct_agree/' + pid, null), a = aS[0], signed = a && a.ts;
+  var nS = React.useState(''), typed = nS[0], setTyped = nS[1], cS = React.useState(false), ck = cS[0], setCk = cS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  function sign() {
+    if (!ck) { setMsg('Tick the box to agree.'); return; }
+    if (typed.trim().length < 2) { setMsg('Please type your name.'); return; }
+    try { syncSet('conduct_agree/' + pid, { ts: Date.now(), name: typed.trim(), ver: CD_VER, text: CD_TEXT, device: typeof sfDeviceId === 'function' ? sfDeviceId() : '' }); } catch (e) {}
+    setMsg('✅ Saved.');
+  }
+  var box = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: 14, marginBottom: 12 };
+  return h('div', { style: box },
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, props.num + '. MY BETHEL CONDUCT & DEVICE AGREEMENT'),
+    h('div', { style: { fontSize: 13, color: '#e8e8f0', lineHeight: 1.6, marginBottom: 10 } }, CD_TEXT),
+    signed ? h('div', { style: { fontSize: 14, color: '#7be3ae', fontWeight: 800 } }, '✅ Signed by ' + (a.name || name) + ' on ' + new Date(a.ts).toLocaleDateString())
+      : h('div', null,
+        h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 8 } }, h('input', { type: 'checkbox', checked: ck, onChange: function (e) { setCk(e.target.checked); }, style: { width: 22, height: 22 } }), 'I have read this and I agree.'),
+        h('input', { value: typed, onChange: function (e) { setTyped(e.target.value); }, placeholder: 'Type your full name', style: { width: '100%', boxSizing: 'border-box', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', fontSize: 15, marginBottom: 8 } }),
+        h('button', { onClick: sign, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✍️ Agree & Submit')),
+    msg && h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 8 } }, msg));
+}
+
+// Admin side: who signed, print, and a review log that notifies the member
+function ConductAdmin(props) {
+  var h = React.createElement, fam = (props.fam || []).filter(function (p) { return p.id !== 'laurel' && p.id !== 'eric' && !cdIsElder(p.id); }), nameOf = props.nameOf || function (x) { return x; };
+  var gS = ktUse('conduct_agree', {}), ag = gS[0] || {}, rS = ktUse('conduct_reviews', {}), rv = rS[0] || {};
+  var sS = React.useState((fam[0] || {}).id || ''), sel = sS[0], setSel = sS[1], nS = React.useState(''), note = nS[0], setNote = nS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var by = (window._loginPersonId || 'laurel');
+  function printIt() {
+    var rows = fam.map(function (p) { var a = ag[p.id]; return '<tr><td>' + cdEsc(p.name) + '</td><td>' + (a && a.ts ? cdEsc(a.name) : '— not signed —') + '</td><td>' + (a && a.ts ? new Date(a.ts).toLocaleString() : '') + '</td></tr>'; }).join('');
+    var html = '<html><head><title>My Bethel Conduct & Device Agreement</title><style>body{font-family:Georgia,serif;max-width:720px;margin:30px auto;line-height:1.6}h1{font-size:20px}table{border-collapse:collapse;width:100%;margin-top:16px}td,th{border:1px solid #888;padding:8px;text-align:left}</style></head><body><h1>My Bethel Family — E&amp;L Services &amp; Sales<br>Conduct &amp; Device Agreement</h1><p>' + cdEsc(CD_TEXT) + '</p><table><tr><th>Member</th><th>Typed name</th><th>Date signed</th></tr>' + rows + '</table></body></html>';
+    try { var w = window.open('', '_blank'); if (!w) { setMsg('Allow pop-ups to print.'); return; } w.document.write(html); w.document.close(); w.focus(); setTimeout(function () { try { w.print(); } catch (e) {} }, 400); } catch (e) { setMsg('Could not open the print page.'); }
+  }
+  function logReview() {
+    if (!sel) return; if (note.trim().length < 3) { setMsg('Add a short reason for the review first.'); return; }
+    var id = 'r' + Date.now();
+    try { syncSet('conduct_reviews/' + id, { pid: sel, by: by, ts: Date.now(), note: note.trim() }); } catch (e) {}
+    try { if (window._addNotifFn) { window._addNotifFn('message', sel, '👀 A safety review was done', 'Mom or Dad looked over your messages and activity because: ' + note.trim() + '. They will talk with you about it.', { fromId: by }); ['laurel', 'eric'].forEach(function (a) { if (a !== by) window._addNotifFn('message', a, '👀 Review logged: ' + nameOf(sel), by + ' reviewed ' + nameOf(sel) + ': ' + note.trim(), { fromId: by }); }); } } catch (e) {}
+    setNote(''); setMsg('✅ Logged, and ' + nameOf(sel) + ' and the other admin were notified.');
+  }
+  var reviews = Object.keys(rv).map(function (k) { return rv[k]; }).filter(function (x) { return x && x.ts; }).sort(function (a, b) { return b.ts - a.ts; }).filter(function (x) { return Date.now() - x.ts < 60 * 86400000; });
+  var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,138,101,.5)', borderRadius: 14, padding: 12, marginBottom: 10 };
+  return h('div', { style: card },
+    h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFAB91', marginBottom: 4 } }, '📜 Conduct & Device Agreement — who signed'),
+    fam.map(function (p) { var a = ag[p.id]; return h('div', { key: p.id, style: { fontSize: 12, color: a && a.ts ? '#7be3ae' : '#FFB74D', padding: '2px 0' } }, (p.emoji || '') + ' ' + p.name + ' — ' + (a && a.ts ? '✅ signed “' + a.name + '” ' + new Date(a.ts).toLocaleDateString() : 'not yet')); }),
+    h('button', { onClick: printIt, style: { marginTop: 8, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '🖨️ Print agreement & signatures'),
+    h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFAB91', margin: '14px 0 4px' } }, '👀 Log a safety review (the member and the other admin are notified)'),
+    h('select', { value: sel, onChange: function (e) { setSel(e.target.value); }, style: { width: '100%', padding: 10, borderRadius: 10, marginBottom: 6, fontSize: 14 } }, fam.map(function (p) { return h('option', { key: p.id, value: p.id }, p.name); })),
+    h('input', { value: note, onChange: function (e) { setNote(e.target.value); }, placeholder: 'Why? (e.g. a worry about who they are talking to)', style: { width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', fontSize: 14, marginBottom: 6 } }),
+    h('button', { onClick: logReview, style: { width: '100%', background: '#FF8A65', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, 'Log review & notify'),
+    msg && h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 6 } }, msg),
+    reviews.length > 0 && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 11, color: '#bbb', marginBottom: 3 } }, 'Reviews from the last 60 days (all reviews stay saved)'), reviews.map(function (r, i) { return h('div', { key: i, style: { fontSize: 11, color: '#ddd', padding: '2px 0' } }, new Date(r.ts).toLocaleDateString() + ' — ' + nameOf(r.pid) + ' (by ' + r.by + '): ' + r.note); })));
+}
+
+</script>
+<script>
+// Family contacts — approved family list only (no search). Call / Text / WhatsApp buttons use the phone's own apps.
+function fcDigits(ph) { var d = String(ph || '').replace(/\D/g, ''); if (d.length === 10) d = '1' + d; return d; }
+function FcRow(props) {
+  var h = React.createElement, p = props.p, iS = ktUse('member_info/' + p.id, {}), info = iS[0] || {}, ph = info.phone || '', d = fcDigits(ph), age = parseInt(info.age);
+  var under13 = !isNaN(age) && age < 13;
+  var btn = function (bg, fg) { return { flex: 1, textAlign: 'center', textDecoration: 'none', background: bg, color: fg, borderRadius: 12, padding: '11px 4px', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'block' }; };
+  return h('div', { style: { background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: 12, marginBottom: 8 } },
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 2 } }, (p.emoji || '') + ' ' + p.name),
+    ph ? h('div', { style: { fontSize: 12, color: '#b8b8c8', marginBottom: 8 } }, ph) : h('div', { style: { fontSize: 12, color: '#FFB74D' } }, 'No phone number saved yet — an admin can add it in Admin → Family Members.'),
+    ph && h('div', { style: { display: 'flex', gap: 6 } },
+      h('a', { href: 'tel:+' + d, style: btn('#4CAF82', '#000') }, '📞 Call'),
+      h('a', { href: 'sms:+' + d, style: btn('#42A5F5', '#000') }, '💬 Text'),
+      !under13 && h('a', { href: 'https://wa.me/' + d, target: '_blank', rel: 'noopener', style: btn('#25D366', '#000') }, '🟢 WhatsApp')),
+    ph && under13 && h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'WhatsApp is for ages 13+ (under 13 needs a parent-managed WhatsApp account).'));
+}
+function FamilyContacts(props) {
+  var h = React.createElement, me = props.personId, list = (props.fam || []).filter(function (p) { return p && !p.deleted && p.id !== me; });
+  return h('div', { style: { position: 'fixed', inset: 0, zIndex: 6000, background: 'linear-gradient(160deg,#0f0c29,#1a1a2e)', overflowY: 'auto', padding: 16 } },
+    h('div', { style: { maxWidth: 520, margin: '0 auto' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 10 } }, h('div', { style: { flex: 1, fontSize: 20, fontWeight: 900, color: '#fff' } }, '📞 Family contacts'), h('button', { onClick: props.onClose, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '8px 14px', fontWeight: 800, cursor: 'pointer' } }, 'Close')),
+      h('div', { style: { fontSize: 12, color: '#b8b8c8', marginBottom: 10 } }, 'Only the people in our family are listed here. Tap a button to open your phone’s Phone, Messages or WhatsApp.'),
+      list.map(function (p) { return h(FcRow, { key: p.id, p: p }); })));
+}
+
+</script>
+<script>
+// Screen Time passcode rotation reminder (admins). The passcode itself is never stored here — only the date it was changed.
+function PasscodeRotate(props) {
+  var h = React.createElement, rS = ktUse('passcode_rotation', {}), r = rS[0] || {}, every = parseInt(r.every) || 14, last = r.last || 0;
+  var dueIn = last ? Math.ceil((last + every * 86400000 - Date.now()) / 86400000) : 0, overdue = dueIn <= 0;
+  var mS = React.useState(''), msg = mS[0], setMsg = mS[1], by = (window._loginPersonId || 'laurel');
+  React.useEffect(function () {
+    if (!overdue) return; var k = 'fm_pcrot_' + (typeof todayKey === 'function' ? todayKey() : new Date().toDateString());
+    try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) {}
+    try { if (window._addNotifFn) ['laurel', 'eric'].forEach(function (a) { window._addNotifFn('message', a, '🔑 Change the Screen Time passcode', 'It is time to change the kids’ Screen Time passcode on each device (every ' + every + ' days). Open Safety → VPN & lock-down and tap “I changed it”.', { fromId: 'system' }); }); } catch (e) {}
+  }, [overdue]);
+  function done() { try { syncSet('passcode_rotation/last', Date.now()); syncSet('passcode_rotation/by', by); if (!r.every) syncSet('passcode_rotation/every', 14); } catch (e) {} setMsg('✅ Saved. Next change is due in ' + every + ' days.'); }
+  function setEvery(n) { try { syncSet('passcode_rotation/every', n); } catch (e) {} }
+  return h('div', { style: { background: 'rgba(255,255,255,.06)', border: '1px solid ' + (overdue ? '#EF5350' : 'rgba(255,213,79,.5)'), borderRadius: 14, padding: 12, marginBottom: 10 } },
+    h('div', { style: { fontSize: 12, fontWeight: 800, color: overdue ? '#FF8A80' : '#FFD54F', marginBottom: 4 } }, '🔑 Screen Time passcode — change every ' + every + ' days'),
+    h('div', { style: { fontSize: 13, color: '#fff', marginBottom: 6 } }, !last ? 'Not recorded yet. Change it now, then tap the button.' : (overdue ? '⚠️ Overdue by ' + Math.abs(dueIn) + ' day(s). Last changed ' + new Date(last).toLocaleDateString() + (r.by ? ' by ' + r.by : '') + '.' : 'Last changed ' + new Date(last).toLocaleDateString() + (r.by ? ' by ' + r.by : '') + '. Next change in ' + dueIn + ' day(s).')),
+    h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 8 } }, 'On your phone: Settings → Screen Time → [child] → Change Screen Time Passcode (repeat for each child and each device). Use a new number every time, and don’t let anyone watch you type it. This app never stores the passcode.'),
+    h('div', { style: { display: 'flex', gap: 6 } },
+      h('button', { onClick: done, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '✅ I changed it'),
+      [7, 14].map(function (n) { return h('button', { key: n, onClick: function () { setEvery(n); }, style: { background: every === n ? '#FFD54F' : 'rgba(255,255,255,.1)', color: every === n ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '0 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, n + ' days'); })),
+    msg && h('div', { style: { fontSize: 12, color: '#7be3ae', marginTop: 6 } }, msg));
 }
 
 </script>
