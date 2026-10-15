@@ -351,6 +351,16 @@ function startVersionCheck() {
   }, 60000);
 }
 </script>
+<script>
+/* Startup check: shows a red message instead of a blank blue screen if a file is missing or broken */
+(function(){var miss=[],errs=[];
+function show(){var b=document.getElementById('fm-diag');if(!miss.length&&!errs.length){if(b)b.remove();return;}
+if(!b){b=document.createElement('div');b.id='fm-diag';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#B71C1C;color:#fff;font:12px/1.5 sans-serif;padding:10px 12px;max-height:50vh;overflow:auto';document.body.appendChild(b);}
+b.innerHTML='<b>⚠ The app could not start.</b> '+(miss.length?'<br>Missing file(s) on GitHub: <b>'+miss.join(', ')+'</b><br>Upload them into the <b>js</b> folder.':'')+(errs.length?'<br>Error: '+errs.slice(0,3).join(' | '):'');}
+window.addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='SCRIPT'&&(t.getAttribute('src')||'').indexOf('js/')===0){miss.push(t.getAttribute('src').slice(3).split('?')[0]);}else if(e.message&&e.message!=='Script error.'){errs.push(e.message+' ('+String(e.filename||'').split('/').pop().split('?')[0]+':'+e.lineno+')');}if(document.body)show();},true);
+window.addEventListener('load',function(){setTimeout(function(){var r=document.getElementById('root');if(r&&!r.children.length&&!miss.length&&!errs.length){errs.push('The app did not draw. Reload; if it stays blue, a file is out of date.');}show();},2500);});
+})();
+</script>
 <script src="js/01-core-hooks-login.js"></script>
 <script src="js/02-curriculum-data-school.js"></script>
 <script src="js/02a-lessons.js"></script>
