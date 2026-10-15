@@ -32377,10 +32377,10 @@ function pciGuess(running) {
   if (a === 'fun') return 'friends'; if (a === 'free') return 'home'; if (a === 'driving') return 'out'; return 'work';
 }
 function ParentCheckIn(props) {
-  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : dflt, name = props.name || pid, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
-  var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : (props.role === 'child' || props.role === 'teen' || props.role === 'kid');
+  var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : true;
   var ciS = ktUse('checkins/' + dayK + '/' + pid, {}), done = Object.values(ciS[0] || {}).filter(function (r) { return !r.missed; });
   var tS = React.useState(0), setT = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
   var fS = React.useState({ status: null, ctx: '', aff: '', mood: null, help: false, who: dflt }), f = fS[0], setF = fS[1];
@@ -32394,6 +32394,15 @@ function ParentCheckIn(props) {
   var now = Date.now(), next = 0; try { next = +localStorage.getItem(nk) || 0; } catch (e) {}
   if (active && !next) { next = (done.length ? now : t0) + (lo + Math.random() * (hi - lo)) * 60000; if (!done.length) next = now; try { localStorage.setItem(nk, String(next)); } catch (e) {} }
   var due = active && next && now >= next;
+  var live = React.useRef({}); live.current = { active: active, done: done, open: open, sent: sent, running: running };
+  // pop up when the app is opened (after saved data has loaded), unless they checked in within the last 20 minutes
+  React.useEffect(function () {
+    var tm = setTimeout(function () {
+      var L = live.current, last = L.done.reduce(function (m, r) { return Math.max(m, r.ts || 0); }, 0);
+      if (L.active && !L.open && !L.sent && (!last || Date.now() - last > 20 * 60000)) { setSent(false); setOpen(true); setF({ status: pciGuess(L.running), ctx: '', aff: '', mood: null, help: false, who: dflt }); try { playSound('reminder'); } catch (e) {} }
+    }, 2200);
+    return function () { clearTimeout(tm); };
+  }, []);
   React.useEffect(function () { if (due && !open) { setSent(false); setOpen(true); setF({ status: pciGuess(running), ctx: '', aff: '', mood: null, help: false, who: dflt }); try { playSound('reminder'); fireBrowserNotif('Check in with Mom & Dad', 'Tap to tell them where you are'); } catch (e) {} } });
   // missed check-in: popup came up and was not answered within the grace time -> one deduction per check-in
   React.useEffect(function () {
@@ -32458,7 +32467,7 @@ function PciSettings() {
     h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '👋 Check-ins with the kids'),
     h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 8, lineHeight: 1.5 } }, 'While the app is open and their day is running, each child gets a loud check-in pop-up at a random time between these minutes. It asks where they are, what they are working on, an affirmation question and how they feel, and sends it to you.'),
     h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff', margin: '6px 0 4px' } }, 'Who has to check in? (pops up as soon as they open the app, then a few times a day)'),
-    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 } }, fam0.map(function (p) { var on = ppl0[p.id] != null ? !!ppl0[p.id] : p.role === 'child'; return h('button', { key: p.id, onClick: function () { setP(p.id, !on); }, style: { background: on ? '#4CAF82' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: '1px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.3)'), borderRadius: 20, padding: '7px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, (on ? '✓ ' : '') + (p.emoji || '') + ' ' + p.name); })),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 } }, fam0.map(function (p) { var on = ppl0[p.id] != null ? !!ppl0[p.id] : true; return h('button', { key: p.id, onClick: function () { setP(p.id, !on); }, style: { background: on ? '#4CAF82' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: '1px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.3)'), borderRadius: 20, padding: '7px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, (on ? '✓ ' : '') + (p.emoji || '') + ' ' + p.name); })),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } }, 'Every', h('input', { type: 'number', defaultValue: c.min != null ? c.min : 45, onBlur: function (e) { set('min', e.target.value); }, style: inp }), 'to', h('input', { type: 'number', defaultValue: c.max != null ? c.max : 90, onBlur: function (e) { set('max', e.target.value); }, style: inp }), 'minutes',
       h('label', { style: { fontSize: 13, color: '#fff', marginLeft: 8 } }, h('input', { type: 'checkbox', checked: !c.off, onChange: function (e) { set('off', !e.target.checked); } }), ' On')),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8, fontSize: 12, color: '#c8c8d8' } }, 'Deduct if not answered within', h('input', { type: 'number', defaultValue: c.grace != null ? c.grace : 10, onBlur: function (e) { set('grace', e.target.value); }, style: inp }), 'min · $', h('input', { type: 'number', step: '0.25', defaultValue: c.cash != null ? c.cash : 0.25, onBlur: function (e) { set('cash', e.target.value); }, style: inp }), '/ pts', h('input', { type: 'number', defaultValue: c.pts != null ? c.pts : 3, onBlur: function (e) { set('pts', e.target.value); }, style: inp }),
