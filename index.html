@@ -19,6 +19,8 @@
 <script>
 /* startup watchdog: if the app has not drawn anything, show what went wrong + a one-tap clean reload */
 window.__fmErrs=[];
+/* iPhone Safari (not installed to home screen) has no Notification API — provide a harmless stand-in so nothing crashes */
+if (typeof window.Notification === 'undefined') { var _N = function () {}; _N.permission = 'denied'; _N.requestPermission = function (cb) { if (typeof cb === 'function') { try { cb('denied'); } catch (e) {} } return Promise.resolve('denied'); }; window.Notification = _N; window.__fmNoNotif = true; }
 window.addEventListener('error',function(e){try{window.__fmErrs.push((e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:''));}catch(x){}});
 window.addEventListener('unhandledrejection',function(e){try{window.__fmErrs.push('promise: '+(e.reason&&e.reason.message||e.reason));}catch(x){}});
 setTimeout(function(){
