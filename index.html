@@ -30689,6 +30689,7 @@ function SafetyCenter(props) {
   var selS = React.useState((fam[0] || {}).id), sel = selS[0], setSel = selS[1];
   var mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var wS = React.useState({ days: [1, 2, 3, 4, 5], start: '08:00', end: '12:00', mode: 'apponly' }), w = wS[0], setW = wS[1];
+  var edS = React.useState(null), ed = edS[0], setEd = edS[1], muS = React.useState([]), multi = muS[0], setMulti = muS[1];
   var say = function (t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3500); };
   var nameOf = function (id) { if (id === '__all') return 'Everyone'; return (fam.find(function (p) { return p.id === id; }) || {}).name || id; };
   var ago = function (ts) { var m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
@@ -30697,13 +30698,22 @@ function SafetyCenter(props) {
   var rules = function (pid) { var r = rulesAll[pid]; return Array.isArray(r) ? r : Object.values(r || {}); };
   function cmd(d, type) { var labels = { signout: 'Sign this device out', wipe: 'Erase this app’s saved data on that device', unlink: 'UNLINK that device from the family (it must be set up again)', refresh: 'Reload the app on that device' }; if (!ok(labels[type] + '?')) return; syncSet('devices/' + d.id + '/cmd', { type: type, ts: Date.now(), by: window._currentPersonId }); say('Command sent — it runs the next time that device is online with the app open.'); }
   function lock(d, v) { syncSet('devices/' + d.id + '/locked', v ? true : null); say(v ? 'Locked.' : 'Unlocked.'); }
-  function addWin() { var list = rules(sel).slice(); if (!w.label) { say('Give the window a name.'); return; } list.push(Object.assign({ id: sfUid('w') }, w)); sfWrite('safety/rules/' + sel, list, 'Added window "' + w.label + '" for ' + nameOf(sel)); setW(Object.assign({}, w, { label: '' })); }
+  function addWin() {
+    if (!w.label) { say('Give the window a name.'); return; }
+    var targets = [sel].concat(multi.filter(function (x) { return x !== sel; }));
+    targets.forEach(function (t) {
+      var list = rules(t).slice(), rec = Object.assign({}, w, { id: (ed && t === sel) ? ed : sfUid('w') });
+      if (ed && t === sel) list = list.map(function (x) { return x.id === ed ? rec : x; }); else list.push(rec);
+      sfWrite('safety/rules/' + t, list, (ed && t === sel ? 'Edited window "' : 'Added window "') + w.label + '" for ' + nameOf(t));
+    });
+    say(ed ? 'Window saved.' : 'Window added' + (targets.length > 1 ? ' for ' + targets.length + ' people.' : '.')); setEd(null); setMulti([]); setW({ days: [1, 2, 3, 4, 5], start: '08:00', end: '12:00', mode: 'apponly', label: '' });
+  }
   function delWin(id) { sfWrite('safety/rules/' + sel, rules(sel).filter(function (x) { return x.id !== id; }), 'Removed a window for ' + nameOf(sel)); }
   function panic() {
     if (!ok('RESET Safety to empty? This turns off all consents, deletes all check-in locations and all device rules. You can still UNDO each step from the Undo tab.')) return;
     ['safety/consent', 'safety/checkins', 'safety/rules'].forEach(function (p) { sfWrite(p, null, 'RESET: cleared ' + p.split('/')[1]); }); say('Everything reset. Use Undo to bring any of it back.');
   }
-  var tabs = [['people', '👥 People'], ['devices', '📱 Devices'], ['rules', '⏰ Rules'], ['web', '🌐 Sites'], ['words', '🔤 Words'], ['focus', '🎯 On-Task'], ['terms', '📜 Terms'], ['lock', '🔧 Lock-down'], ['undo', '↩️ Undo']];
+  var tabs = [['people', '👥 People'], ['devices', '📱 Devices'], ['rules', '⏰ Rules'], ['manage', '🧹 Clear & Reset'], ['web', '🌐 Sites'], ['words', '🔤 Words'], ['focus', '🎯 On-Task'], ['terms', '📜 Terms'], ['lock', '🔧 Lock-down'], ['undo', '↩️ Undo']];
   var btn = function (bg, fg, fn, t) { return sfBtn(bg, fg, fn, t, true); };
   return h('div', { style: { paddingBottom: 60 } },
     h('div', { style: { padding: '12px 14px 4px' } }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff' } }, '🛡 Safety Center'), h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.45)', lineHeight: 1.5 } }, 'Consent-based. Everything here syncs through the family database and can be undone.')),
@@ -30733,15 +30743,19 @@ function SafetyCenter(props) {
         sfChips(fam, sel, setSel, true, true),
         sel === '__all' && h('div', { style: { fontSize: 10, color: '#FFB74D', marginBottom: 6 } }, 'Windows added under Everyone apply to every child and to Grandpa, on top of their own.'),
         rules(sel).length === 0 && h('div', { style: { color: '#999', fontSize: 12, marginBottom: 8 } }, 'No windows yet for ' + nameOf(sel) + '.'),
-        rules(sel).map(function (x) { return h('div', { key: x.id, style: SF_CARD }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff' } }, x.label + ' · ' + x.start + '–' + x.end), h('div', { style: { fontSize: 10, color: '#aaa' } }, (x.days || []).map(function (d) { return SF_DAYS[d]; }).join(' ') + ' · ' + (SF_MODES.find(function (m) { return m[0] === x.mode; }) || ['', ''])[1]), h('div', { style: { marginTop: 6 } }, btn('rgba(239,83,80,.25)', '#EF9A9A', function () { delWin(x.id); }, 'Remove'))); }),
+        rules(sel).map(function (x) { return h('div', { key: x.id, style: SF_CARD }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff' } }, x.label + ' · ' + x.start + '–' + x.end), h('div', { style: { fontSize: 10, color: '#aaa' } }, (x.days || []).map(function (d) { return SF_DAYS[d]; }).join(' ') + ' · ' + (SF_MODES.find(function (m) { return m[0] === x.mode; }) || ['', ''])[1]), h('div', { style: { marginTop: 6 } }, btn('rgba(66,165,245,.3)', '#90CAF9', function () { setW(Object.assign({}, x)); setEd(x.id); }, 'Edit') , ' ', btn('rgba(239,83,80,.25)', '#EF9A9A', function () { delWin(x.id); }, 'Remove'))); }),
         h('div', { style: SF_CARD },
           h('input', { type: 'text', placeholder: 'Window name (School time, Free time, Bedtime…)', value: w.label || '', onChange: function (e) { setW(Object.assign({}, w, { label: e.target.value })); }, style: SF_INP }),
           h('div', { style: { display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 } }, SF_DAYS.map(function (n, i) { var on = (w.days || []).includes(i); return h('button', { key: n, onClick: function () { setW(Object.assign({}, w, { days: on ? w.days.filter(function (x) { return x !== i; }) : w.days.concat([i]) })); }, style: { padding: '6px 9px', borderRadius: 20, border: 'none', background: on ? '#81C784' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#ccc', fontWeight: 700, fontSize: 11, cursor: 'pointer' } }, n); })),
           h('div', { style: { display: 'flex', gap: 6 } }, h('input', { type: 'time', value: w.start, onChange: function (e) { setW(Object.assign({}, w, { start: e.target.value })); }, style: SF_INP }), h('input', { type: 'time', value: w.end, onChange: function (e) { setW(Object.assign({}, w, { end: e.target.value })); }, style: SF_INP })),
           h('select', { value: w.mode, onChange: function (e) { setW(Object.assign({}, w, { mode: e.target.value })); }, style: SF_INP }, SF_MODES.map(function (m) { return h('option', { key: m[0], value: m[0], style: { color: '#000' } }, m[1]); })),
-          sfBtn('#81C784', '#000', addWin, 'Add window')),
+          ed && h('div', { style: { fontSize: 11, color: '#90CAF9', marginBottom: 6 } }, 'Editing a window \u2014 change it above, then tap Save.'),
+          !ed && h('div', { style: { fontSize: 11, color: '#bbb', marginBottom: 4 } }, 'Also add this window to:'),
+          !ed && h('div', { style: { display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 } }, fam.filter(function (p) { return p.id !== sel && p.role !== 'parent'; }).map(function (p) { var on = multi.indexOf(p.id) >= 0; return h('button', { key: p.id, onClick: function () { setMulti(on ? multi.filter(function (x) { return x !== p.id; }) : multi.concat([p.id])); }, style: { padding: '5px 9px', borderRadius: 20, border: 'none', background: on ? '#81C784' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#ccc', fontWeight: 700, fontSize: 11, cursor: 'pointer' } }, (on ? '\u2713 ' : '') + p.name); })),
+          sfBtn('#81C784', '#000', addWin, ed ? 'Save changes' : 'Add window'), ed && sfBtn('rgba(255,255,255,.12)', '#fff', function () { setEd(null); setW({ days: [1, 2, 3, 4, 5], start: '08:00', end: '12:00', mode: 'apponly', label: '' }); }, 'Cancel edit')),
         h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)', lineHeight: 1.5 } }, 'These windows show on the child’s home screen as "Right now." To actually enforce them, set the same times in Screen Time (iPhone) or Family Link (Android). On iPhone, Guided Access locks the screen to just this app.')),
 
+      tab === 'manage' && typeof SF_Manage === 'function' && h(SF_Manage, { fam: fam, nameOf: nameOf }),
       tab === 'focus' && h(SF_Focus, { fam: fam, nameOf: nameOf, sel: sel, setSel: setSel }),
       tab === 'terms' && h(SF_Terms, { fam: fam, nameOf: nameOf }),
       tab === 'words' && h(SF_Words, { fam: fam, nameOf: nameOf, sel: sel, setSel: setSel }),
@@ -36730,6 +36744,47 @@ function PasscodeRotate(props) {
       h('button', { onClick: done, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '✅ I changed it'),
       [7, 14].map(function (n) { return h('button', { key: n, onClick: function () { setEvery(n); }, style: { background: every === n ? '#FFD54F' : 'rgba(255,255,255,.1)', color: every === n ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '0 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, n + ' days'); })),
     msg && h('div', { style: { fontSize: 12, color: '#7be3ae', marginTop: 6 } }, msg));
+}
+
+</script>
+<script>
+// Safety Center — clear check-ins and reset / copy rules per person or several people at once. Every change goes through sfWrite so it shows in the Undo tab.
+function SF_Manage(props) {
+  var h = React.createElement, fam = props.fam || [], nameOf = props.nameOf || function (x) { return x; };
+  var cS = ktUse('safety/checkins', {}), ci = cS[0] || {}, rS = ktUse('safety/rules', {}), ru = rS[0] || {};
+  var sS = React.useState([]), sel = sS[0], setSel = sS[1], srcS = React.useState(''), src = srcS[0], setSrc = srcS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], evS = React.useState(false), withAll = evS[0], setWithAll = evS[1];
+  var say = function (t) { setMsg(t); setTimeout(function () { setMsg(''); }, 5000); };
+  var ok = function (m) { return window._safeConfirm ? window._safeConfirm(m) : confirm(m); };
+  var cnt = function (pid) { var v = ci[pid]; return v ? Object.keys(v).length : 0; };
+  var rl = function (pid) { var r = ru[pid]; return Array.isArray(r) ? r : Object.values(r || {}); };
+  function toggle(id) { setSel(sel.indexOf(id) >= 0 ? sel.filter(function (x) { return x !== id; }) : sel.concat([id])); }
+  var names = sel.map(nameOf).join(', ');
+  function needSel() { if (!sel.length) { say('Pick at least one person first.'); return true; } return false; }
+  function clearCheckins() { if (needSel()) return; if (!ok('Clear the saved check-ins (locations) for ' + names + '? Their rules and consent stay as they are. You can undo this from the Undo tab.')) return; sel.forEach(function (pid) { sfWrite('safety/checkins/' + pid, null, 'Cleared check-ins for ' + nameOf(pid)); }); say('✅ Check-ins cleared for ' + names + '. Rules were not touched.'); }
+  function clearAllCheckins() { if (!ok('Clear EVERY saved check-in for the whole family? Rules and consent stay. You can undo this from the Undo tab.')) return; sfWrite('safety/checkins', null, 'Cleared ALL check-ins'); say('✅ All check-ins cleared. Rules were not touched.'); }
+  function clearRules() { if (needSel()) return; if (!ok('Remove all time windows for ' + names + (withAll ? ' and the Everyone rules' : '') + '? Check-ins stay. You can undo this from the Undo tab.')) return; sel.forEach(function (pid) { sfWrite('safety/rules/' + pid, null, 'Cleared rules for ' + nameOf(pid)); }); if (withAll) sfWrite('safety/rules/__all', null, 'Cleared the Everyone rules'); say('✅ Rules cleared for ' + names + '. Check-ins were not touched.'); }
+  function copyRules() {
+    if (needSel()) return; if (!src) { say('Pick whose rules to copy.'); return; }
+    var from = rl(src); if (!ok('Replace the rules for ' + names + ' with a copy of ' + nameOf(src) + '’s ' + from.length + ' window(s)? You can undo this from the Undo tab.')) return;
+    sel.filter(function (pid) { return pid !== src; }).forEach(function (pid) { sfWrite('safety/rules/' + pid, from.map(function (x) { return Object.assign({}, x, { id: sfUid('w') }); }), 'Copied ' + nameOf(src) + '’s rules to ' + nameOf(pid)); }); say('✅ Rules copied to ' + names + '.');
+  }
+  var card = SF_CARD, chipRow = h('div', { style: { display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 } },
+    fam.map(function (p) { var on = sel.indexOf(p.id) >= 0; return h('button', { key: p.id, onClick: function () { toggle(p.id); }, style: { padding: '6px 11px', borderRadius: 20, border: 'none', background: on ? (p.color || '#81C784') : 'rgba(255,255,255,.1)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, (on ? '✓ ' : '') + (p.emoji || '') + ' ' + p.name + ' (' + cnt(p.id) + ' check-ins, ' + rl(p.id).length + ' rules)'); }),
+    h('button', { onClick: function () { setSel(fam.map(function (p) { return p.id; })); }, style: { padding: '6px 11px', borderRadius: 20, border: '1px dashed #888', background: 'transparent', color: '#ccc', fontSize: 12, cursor: 'pointer' } }, 'Select all'),
+    h('button', { onClick: function () { setSel([]); }, style: { padding: '6px 11px', borderRadius: 20, border: '1px dashed #888', background: 'transparent', color: '#ccc', fontSize: 12, cursor: 'pointer' } }, 'None'));
+  return h('div', null,
+    h('div', { style: { fontSize: 12, color: '#bbb', marginBottom: 6 } }, 'Pick one person or several, then choose what to clear. Check-ins and rules are cleared separately, so clearing one never touches the other.'),
+    chipRow,
+    msg && h('div', { style: { background: 'rgba(255,213,79,.15)', border: '1px solid #FFD54F', color: '#fff', borderRadius: 10, padding: 8, fontSize: 12, marginBottom: 8 } }, msg),
+    h('div', { style: card }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 } }, '📍 Clear check-ins'), h('div', { style: { fontSize: 11, color: '#aaa', marginBottom: 8 } }, 'Removes the saved check-in locations only. Consent and rules stay.'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, sfBtn('#FFB74D', '#000', clearCheckins, 'Clear for selected', true), sfBtn('rgba(239,83,80,.25)', '#EF9A9A', clearAllCheckins, 'Clear everyone’s', true))),
+    h('div', { style: card }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 } }, '⏰ Reset rules (time windows)'), h('div', { style: { fontSize: 11, color: '#aaa', marginBottom: 8 } }, 'Removes the school / free-time / bedtime windows for the people picked. Check-ins and consent stay. To edit a single window, use the Rules tab.'),
+      h('label', { style: { display: 'flex', gap: 8, alignItems: 'center', color: '#ddd', fontSize: 12, marginBottom: 8 } }, h('input', { type: 'checkbox', checked: withAll, onChange: function (e) { setWithAll(e.target.checked); } }), 'Also clear the “Everyone” rules'),
+      sfBtn('#FFB74D', '#000', clearRules, 'Reset rules for selected', true)),
+    h('div', { style: card }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 } }, '📋 Copy one person’s rules to others'), h('div', { style: { fontSize: 11, color: '#aaa', marginBottom: 8 } }, 'Set up one child’s windows, then copy them to the people picked above (their old windows are replaced).'),
+      h('select', { value: src, onChange: function (e) { setSrc(e.target.value); }, style: SF_INP }, [h('option', { key: '', value: '', style: { color: '#000' } }, 'Copy rules from…')].concat(fam.map(function (p) { return h('option', { key: p.id, value: p.id, style: { color: '#000' } }, p.name + ' (' + rl(p.id).length + ' rules)'); }))),
+      sfBtn('#81C784', '#000', copyRules, 'Copy to selected', true)),
+    h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)' } }, 'Every change is recorded and can be reversed from the Undo tab.'));
 }
 
 </script>
