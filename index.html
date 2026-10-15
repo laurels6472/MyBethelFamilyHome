@@ -15,6 +15,26 @@
 <title>MyBethelFamilyHome</title>
 <meta name="apple-mobile-web-app-title" content="MyBethelFamilyHome">
 <meta name="application-name" content="MyBethelFamilyHome">
+<script>
+/* startup watchdog: if the app has not drawn anything, show what went wrong + a one-tap clean reload */
+window.__fmErrs=[];
+window.addEventListener('error',function(e){try{window.__fmErrs.push((e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:''));}catch(x){}});
+window.addEventListener('unhandledrejection',function(e){try{window.__fmErrs.push('promise: '+(e.reason&&e.reason.message||e.reason));}catch(x){}});
+setTimeout(function(){
+  var r=document.getElementById('root'); if(r&&r.children.length&&r.innerText&&r.innerText.trim().length>3) return;
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;z-index:99999;background:#0f0c29;color:#fff;font-family:sans-serif;padding:28px;overflow:auto';
+  d.innerHTML='<h2 style="margin:0 0 8px">The app did not finish loading</h2><p style="opacity:.75;font-size:14px">Tap the button to clear the saved copy and reload. If this screen comes back, take a screenshot of it and send it to Claude.</p>'
+   +'<button id="fmFix" style="background:#C0CA33;color:#000;border:none;border-radius:22px;padding:14px 24px;font-weight:800;font-size:16px">Clear saved copy &amp; reload</button>'
+   +'<pre style="white-space:pre-wrap;font-size:11px;color:#ff9b9b;margin-top:18px">'+String((window.__fmErrs||[]).slice(0,8).join('\n')||'(no error recorded)').replace(/</g,'&lt;')+'\nReact: '+(typeof React)+'  ReactDOM: '+(typeof ReactDOM)+'  firebase: '+(typeof firebase)+'</pre>';
+  document.body.appendChild(d);
+  document.getElementById('fmFix').onclick=function(){
+    var p=[]; try{ if(navigator.serviceWorker) p.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(x){return x.unregister();}));})); }catch(x){}
+    try{ if(window.caches) p.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));})); }catch(x){}
+    Promise.all(p).then(function(){location.reload(true);},function(){location.reload(true);});
+  };
+},7000);
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
