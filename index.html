@@ -7534,7 +7534,7 @@ function Dashboard({
     onClick: () => setTab(t.id),
     style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, lineHeight: 1.15, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', wordBreak: 'break-word',
       background: on ? effectivePerson.color : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#cfd3e0', border: `1px solid ${on ? effectivePerson.color : 'rgba(255,255,255,.12)'}` }
-  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && !(isAdmin || isOwner) && effectiveRole !== 'elder' && typeof PciParentsNow === 'function') ? React.createElement(PciParentsNow, { key: 'pcinow' }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { family: fam, personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && typeof PresenceBeat === 'function') ? /*#__PURE__*/React.createElement(PresenceBeat, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof LiveWhoIn === 'function') ? /*#__PURE__*/React.createElement(LiveWhoIn, { sessions: sessions, family: fam }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && !(isAdmin || isOwner) && effectiveRole !== 'elder' && typeof PciParentsNow === 'function') ? React.createElement(PciParentsNow, { key: 'pcinow' }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { family: fam, personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
     family: fam,
     sessions: sessions,
     currentPersonId: personId,
@@ -8007,19 +8007,18 @@ function App() {
   })), [family]);
   useEffect(() => {
     askNotifPerm();
-    const u1 = syncOn('sessions/' + todayKey(), d => {
-      if (d) setSessions(d);
-    });
     const u2 = syncOn('reminders', d => {
       if (d) setReminders(d);
     });
     // Privacy: never stay signed in — everyone enters their PIN each time the app opens
     localStorage.removeItem('last_user');
     return () => {
-      u1();
       u2();
     };
   }, []);
+  const [sessDay, setSessDay] = useState(todayKey());
+  useEffect(() => { const iv = setInterval(() => { const k = todayKey(); setSessDay(p => p === k ? p : k); }, 30000); return () => clearInterval(iv); }, []);
+  useEffect(() => { setSessions({}); const u = syncOn('sessions/' + sessDay, d => setSessions(d || {}), true); return () => u(); }, [sessDay]);
   useAlerts(sessions, addNotif);
   useReminders(reminders, addNotif);
   function login(id, role) {
@@ -31782,8 +31781,11 @@ function rtHash(s) { var h = 5381; s = String(s); for (var i = 0; i < s.length; 
 function rtDay() { return typeof planDayKey === 'function' ? planDayKey() : new Date().toISOString().split('T')[0]; }
 var RT_PERIODS = [['morning', '☀️ Morning'], ['afternoon', '🌤 Afternoon'], ['evening', '🌙 Evening']];
 var RT_AFTERNOON = ['Put your school things away', 'Clean up after your snack or lunch — dish to the sink', 'Tidy the space you used — desk, table, floor', 'Move your body — go outside or stretch', 'Check your schedule for what is next'];
-// 9 glasses of water a day, 3 in each part of the day (they also count on the hydration chart)
+// Water is no longer part of the 15-minute routines. It has its own schedule through the day (see WaterTimes below).
 function rtWithWater(list, period) {
+  return list.slice();
+}
+function rtWithWaterOLD(list, period) {
   var base = period === 'morning' ? 0 : period === 'afternoon' ? 3 : 6, n = list.length, out = list.slice();
   for (var i = 2; i >= 0; i--) { var pos = Math.min(n, Math.floor((i + 1) * (n + 1) / 4)); out.splice(pos, 0, 'Drink a glass of water (' + (base + i + 1) + ' of 9) | 1'); }
   return out;
@@ -31798,7 +31800,8 @@ function rtDefaults(name, period) {
 }
 function rtList(v) { return Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === 'object' ? Object.values(v).filter(Boolean) : null); }
 function rtHabits(name, pid, period, own, all) {
-  return rtList(own && own[period]) || rtList(all && all[period]) || rtDefaults(name, period);
+  var L = rtList(own && own[period]) || rtList(all && all[period]) || rtDefaults(name, period);
+  return L.filter(function (x) { return !/glass of water/i.test(String(x)); });
 }
 var RT_CARD = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 14, marginBottom: 12 };
 
@@ -32070,6 +32073,44 @@ function RtLibEditor(props) {
         h('button', { onClick: function () { save(m.key); }, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: '6px 12px', fontWeight: 800, cursor: 'pointer', marginRight: 8 } }, 'Save'),
         h('button', { onClick: function () { reset(m.key); }, style: { background: 'transparent', color: '#c8c8d8', border: '1px solid rgba(255,255,255,.3)', borderRadius: 14, padding: '6px 12px', cursor: 'pointer' } }, 'Use default'));
     }));
+}
+
+// ═══ WATER THROUGH THE DAY — a glass every 90 minutes, not all in the morning routine ═══
+function wtCfg(c) { c = c || {}; return { start: c.start != null && c.start !== '' ? +c.start : 450, every: c.every != null && c.every !== '' ? Math.max(30, +c.every) : 90, count: c.count != null && c.count !== '' ? Math.max(1, Math.min(14, +c.count)) : 9, gap: c.gap != null && c.gap !== '' ? +c.gap : 30 }; }
+function WaterTimes(props) {
+  var h = React.createElement, pid = props.personId, day = rtDay(), cfg = wtCfg(ktUse('water_cfg', null)[0]);
+  var dS = ktUse('waterdone/' + day + '/' + pid, {}), done = dS[0] || {}, tS = React.useState(0), setT = tS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(iv); }; }, []);
+  var d = new Date(), nowM = d.getHours() * 60 + d.getMinutes(), slots = [];
+  for (var i = 0; i < cfg.count; i++) slots.push(cfg.start + i * cfg.every);
+  var lastTs = Object.keys(done).reduce(function (m, k) { return Math.max(m, +done[k] || 0); }, 0);
+  var firstOpen = -1; for (var q = 0; q < slots.length; q++) { if (!done[q]) { firstOpen = q; break; } }
+  var dueNow = firstOpen >= 0 && nowM >= slots[firstOpen];
+  var fmt = function (m) { var hh = Math.floor(m / 60), mm = m % 60; return (hh % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + (hh < 12 ? 'a' : 'p'); };
+  var nDone = Object.keys(done).filter(function (k) { return done[k]; }).length;
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3500); }
+  function drink(i) {
+    if (done[i]) { try { syncSet('waterdone/' + day + '/' + pid + '/' + i, null); syncSet('health_log/' + pid + '/hl_wtr_' + day.replace(/-/g, '') + '_' + i, null); } catch (e) {} if (typeof mdRevoke === 'function') mdRevoke(pid, 'water_' + i, 'water'); return; }
+    if (nowM < slots[i] - 15) { say('Not yet — your glass #' + (i + 1) + ' is at ' + fmt(slots[i]) + '. Sip it slowly through the day.'); return; }
+    var wait = Math.ceil((cfg.gap * 60000 - (Date.now() - lastTs)) / 60000);
+    if (lastTs && wait > 0) { say('You just had a glass. Wait about ' + wait + ' more minute' + (wait > 1 ? 's' : '') + ' — a little at a time is best for your body.'); return; }
+    try { syncSet('waterdone/' + day + '/' + pid + '/' + i, Date.now()); syncSet('health_log/' + pid + '/hl_wtr_' + day.replace(/-/g, '') + '_' + i, { id: 'hl_wtr_' + day.replace(/-/g, '') + '_' + i, type: 'water', ts: Date.now(), loggedBy: pid, amount: '8', note: 'Water #' + (i + 1) }); } catch (e) {}
+    if (typeof mdAward === 'function') { try { var c = mdCfgDefaults((typeof syncGet === 'function' && syncGet('points_cfg')) || null), sc = (typeof syncGet === 'function' && syncGet('store/cfg')) || {}; mdAward(pid, 'water_' + i, c.habitPts, null, '💧 Glass of water ' + (i + 1) + ' of ' + cfg.count, mdPtsPerB(sc)); } catch (e) {} }
+    say('💧 Glass ' + (i + 1) + ' of ' + cfg.count + ' — great!');
+  }
+  // once per slot, a gentle alert
+  React.useEffect(function () {
+    if (!dueNow) return; var key = 'fm_water_alert_' + pid + '_' + day + '_' + firstOpen;
+    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); if (typeof playSound === 'function') playSound('reminder'); if (typeof fireBrowserNotif === 'function') fireBrowserNotif('💧 Time for a glass of water', 'Glass ' + (firstOpen + 1) + ' of ' + cfg.count); } catch (e) {}
+  }, [dueNow, firstOpen]);
+  return h('div', { style: { background: dueNow ? 'rgba(3,155,229,.22)' : 'rgba(3,155,229,.1)', border: '2px solid ' + (dueNow ? '#4FC3F7' : 'rgba(79,195,247,.35)'), borderRadius: 14, padding: 12, margin: '4px 0 10px' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, h('div', { style: { flex: 1, fontSize: 16, fontWeight: 900, color: '#fff' } }, '💧 Water through the day'), h('div', { style: { fontSize: 14, fontWeight: 900, color: '#4FC3F7' } }, nDone + '/' + cfg.count)),
+    h('div', { style: { fontSize: 12, color: '#cfe8f5', margin: '3px 0 8px', lineHeight: 1.5 } }, dueNow ? '⏰ Time for glass #' + (firstOpen + 1) + '! Drink it slowly, then tap it.' : firstOpen >= 0 ? 'Next glass at ' + fmt(slots[firstOpen]) + '. One about every ' + (cfg.every % 60 === 0 ? cfg.every / 60 + ' hour' + (cfg.every > 60 ? 's' : '') : cfg.every + ' minutes') + ' — never all at once.' : '🎉 All your water is done for today!'),
+    h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, slots.map(function (m, i) {
+      var on = !!done[i], due = !on && nowM >= m;
+      return h('button', { key: i, onClick: function () { drink(i); }, style: { flex: '1 1 30%', minWidth: 88, padding: '7px 4px', borderRadius: 12, border: '2px solid ' + (on ? '#4CAF82' : due ? '#4FC3F7' : 'rgba(255,255,255,.2)'), background: on ? 'rgba(76,175,130,.3)' : due ? 'rgba(79,195,247,.25)' : 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer' } }, h('div', { style: { fontSize: 18 } }, on ? '✅' : '💧'), h('div', { style: { fontSize: 11, fontWeight: 800 } }, fmt(m)));
+    })),
+    msg && h('div', { style: { background: '#039BE5', color: '#fff', borderRadius: 10, padding: 8, fontSize: 13, fontWeight: 800, marginTop: 8 } }, msg));
 }
 
 </script>
@@ -33549,6 +33590,7 @@ function MyDayList(props) {
   var running = (typeof clockActiveList === 'function') ? clockActiveList((props.sessions || {})[pid] || {}).map(function (x) { return x.activity; }) : [];
   function tl(m) { if (m >= 9000) return ''; var hh = Math.floor(m / 60), mm = Math.floor(m % 60); return (hh % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + (hh < 12 ? 'a' : 'p'); }
   return h('div', { style: { padding: '0 0 10px' } },
+    typeof WaterTimes === 'function' && h(WaterTimes, { personId: pid }),
     typeof PlanRightNow === 'function' && h(PlanRightNow, { schedHook: props.schedHook, personId: pid, sessions: props.sessions, onUpdate: props.onUpdate }),
     h('div', { style: { background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', borderRadius: 14, padding: 12, margin: '4px 0 10px' } },
       h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' } }, h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', flex: 1 } }, '✅ My day, in order'), h('div', { style: { fontSize: 14, fontWeight: 900, color: '#7be3ae' } }, doneN + '/' + rows.length + ' done')),
@@ -37028,6 +37070,61 @@ function CatchUpPlanner(props) {
             h('div', { style: { fontSize: 12, color: '#b8c0d0' } }, byDay[d].map(function (m) { return m.sub.l; }).join(' · ')));
         }));
     }));
+}
+
+</script>
+<script>
+// ═══ LIVE PRESENCE — each device reports "I'm clocked in" every 45 seconds, so the parents' board is live and shows when a device went quiet ═══
+function PresenceBeat(props) {
+  var pid = props.personId, ref = React.useRef({});
+  var on = (typeof clockActiveList === 'function' ? clockActiveList((props.sessions || {})[pid]) : []).map(function (a) { return { activity: a.activity, label: a.label || '', startTime: a.startTime }; });
+  ref.current = { on: on, sig: on.map(function (a) { return a.activity + a.startTime; }).join('|') };
+  function beat(force) {
+    var R = ref.current, hid = typeof document !== 'undefined' && document.hidden;
+    if (hid && !force) return;
+    var had = ref.last && ref.last.length > 0;
+    if (!R.on.length && !had && !force) return;
+    ref.last = R.on;
+    try { syncSet('presence/' + pid, { ts: Date.now(), on: R.on.length ? R.on : null, name: props.name || pid }); } catch (e) {}
+  }
+  // the moment a clock-in / clock-out happens, report right away
+  React.useEffect(function () { beat(true); }, [ref.current.sig]);
+  React.useEffect(function () {
+    var iv = setInterval(function () { beat(false); }, 45000);
+    function vis() { if (!document.hidden) beat(true); }
+    document.addEventListener('visibilitychange', vis);
+    return function () { clearInterval(iv); document.removeEventListener('visibilitychange', vis); };
+  }, []);
+  return null;
+}
+function LiveWhoIn(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return p && !p.deleted && p.role !== 'elder' && p.id !== 'grandpa'; });
+  var pS = ktUse('presence', {}), pres = pS[0] || {}, tS = React.useState(0), setT = tS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 5000); return function () { clearInterval(iv); }; }, []);
+  var now = Date.now(), sess = props.sessions || {};
+  var actName = function (a) { if (a.label) return a.label; return typeof planActLabel === 'function' ? planActLabel(a.activity) : (typeof CLOCK_ACTS !== 'undefined' ? (CLOCK_ACTS.filter(function (x) { return x.id === a.activity; })[0] || {}).label : null) || a.activity; };
+  var tm = function (ts) { return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  var ago = function (ms) { var s = Math.round(ms / 1000); return s < 60 ? s + ' sec ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' hr ago'; };
+  var rows = fam.map(function (p) {
+    var pr = pres[p.id] || {}, onP = pr.on ? (Array.isArray(pr.on) ? pr.on : Object.values(pr.on)) : [], sOn = typeof clockActiveList === 'function' ? clockActiveList(sess[p.id]) : [];
+    var list = onP.length ? onP : sOn, seen = pr.ts ? now - pr.ts : null;
+    var state = !list.length ? 'out' : (seen != null && seen < 120000) ? 'live' : (seen != null && seen < 600000) ? 'quiet' : seen == null ? 'live' : 'asleep';
+    return { p: p, list: list, seen: seen, state: state };
+  });
+  var inN = rows.filter(function (r) { return r.list.length; }).length;
+  var COL = { live: '#4CAF82', quiet: '#FFB74D', asleep: '#EF5350', out: 'rgba(255,255,255,.25)' };
+  return h('div', { style: { margin: '10px 14px', background: 'rgba(76,175,130,.08)', border: '1px solid rgba(76,175,130,.45)', borderRadius: 16, padding: 12 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } }, h('div', { style: { width: 10, height: 10, borderRadius: 5, background: '#4CAF82', boxShadow: '0 0 8px #4CAF82' } }), h('div', { style: { flex: 1, fontSize: 14, fontWeight: 900, color: '#fff' } }, '🟢 Live: who is clocked in'), h('div', { style: { fontSize: 13, fontWeight: 900, color: inN ? '#7be3ae' : '#b8b8c8' } }, inN + ' in')),
+    rows.map(function (r) {
+      return h('div', { key: r.p.id, style: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 0', borderTop: '1px solid rgba(255,255,255,.07)' } },
+        h('div', { style: { width: 10, height: 10, borderRadius: 5, background: COL[r.state], marginTop: 6, flexShrink: 0 } }),
+        h('div', { style: { fontSize: 18 } }, r.p.emoji || '🙂'),
+        h('div', { style: { flex: 1 } },
+          h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff' } }, r.p.name),
+          r.list.length ? r.list.map(function (a, i) { return h('div', { key: i, style: { fontSize: 12, color: '#d8e6dc' } }, '⏱ ' + actName(a) + ' · since ' + tm(a.startTime) + ' (' + Math.round((now - a.startTime) / 60000) + ' min)'); }) : h('div', { style: { fontSize: 12, color: '#9aa' } }, 'Not clocked in'),
+          r.list.length > 0 && r.state !== 'live' && h('div', { style: { fontSize: 11, color: COL[r.state], fontWeight: 700 } }, r.state === 'quiet' ? '📱 Device quiet — last heard ' + ago(r.seen) : '😴 Device asleep or closed — last heard ' + ago(r.seen) + '. They may have forgotten to clock out.')));
+    }),
+    h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)', marginTop: 6 } }, 'Each device reports every 45 seconds while the app is open. Green = live, orange = quiet for 2+ minutes, red = quiet for 10+ minutes.'));
 }
 
 </script>
