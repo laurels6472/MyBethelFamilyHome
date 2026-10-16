@@ -5456,10 +5456,12 @@ function AdminControl({
     }
   }, "\u26A0\uFE0F Reset Today's Data"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (window._safeConfirm('NUCLEAR RESET — delete ALL data? Cannot be undone.')) {
-        ['sessions', 'notifs', 'wallets', 'tasks', 'people', 'reminders', 'settings'].forEach(k => syncSet(k, null));
-        window.location.reload();
-      }
+      window._lockedAction({
+        title: 'NUCLEAR RESET — delete the app data',
+        detail: 'Erases clock sessions, notifications, wallets, tasks, people, reminders and settings.',
+        paths: ['sessions', 'notifs', 'wallets', 'tasks', 'people', 'reminders', 'settings'],
+        run: function () { ['sessions', 'notifs', 'wallets', 'tasks', 'people', 'reminders', 'settings'].forEach(k => syncSet(k, null)); window.location.reload(); }
+      });
     },
     style: {
       display: 'block',
@@ -7674,6 +7676,7 @@ function Dashboard({
     (isAdmin || isOwner) && typeof PasscodeRotate === 'function' && React.createElement(PasscodeRotate, null),
     typeof PciSettings === 'function' && React.createElement(PciSettings, null),
     typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, null),
+    typeof ErasedBackups === 'function' && React.createElement(ErasedBackups, null),
     typeof CheckInSettings === 'function' && React.createElement(CheckInSettings, null),
     typeof PointsSettings === 'function' && React.createElement(PointsSettings, null),
     typeof ReadyTimerSettings === 'function' && React.createElement(ReadyTimerSettings, null)),
@@ -11050,16 +11053,21 @@ function SubjectCard({
     }
   }, "⟳ Reset"), (prog.attempts || []).length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (window._safeConfirm('Clear ALL history for this subject?')) {
-        syncSet('school/progress/' + `${studentId}_d${day}_${subject.id}`, {
-          done: false,
-          actualMins: 0,
-          attempts: [],
-          status: 'not_started',
-          ts: Date.now()
-        });
-        setStartTime(null);
-      }
+      window._lockedAction({
+        title: 'Clear ALL history for ' + subject.l,
+        detail: 'This wipes every attempt, the time and the status for this subject on day ' + day + ', back to blank.',
+        paths: ['school/progress/' + `${studentId}_d${day}_${subject.id}`],
+        run: function () {
+          syncSet('school/progress/' + `${studentId}_d${day}_${subject.id}`, {
+            done: false,
+            actualMins: 0,
+            attempts: [],
+            status: 'not_started',
+            ts: Date.now()
+          });
+          setStartTime(null);
+        }
+      });
     },
     style: {
       background: 'rgba(239,83,80,.1)',
@@ -36576,7 +36584,7 @@ function PrincipleBox(props) {
 // ═══ RESET THE WHOLE APP AS NEW (owner only) ═══
 // Wipes all shared family data (wallets, history, schedules, check-ins, logs…) and every device's saved copy.
 // Keeps only the PINs (so nobody gets locked out) and the app-version marker.
-var RS_KEEP = { pins: 1, app_version: 1 };
+var RS_KEEP = { pins: 1, app_version: 1, erase_backup: 1, reset_backup: 1, reset_backup_last: 1 };
 function rsClearLocal() {
   try { var ep = localStorage.getItem('fm_reset_epoch'); localStorage.clear(); if (ep) localStorage.setItem('fm_reset_epoch', ep); } catch (e) {}
   try { sessionStorage.clear(); } catch (e) {}
@@ -36602,8 +36610,8 @@ function ResetWatcher() {
 function ResetAppCard(props) {
   var h = React.createElement, oS = React.useState(false), open = oS[0], setOpen = oS[1], tS = React.useState(''), txt = tS[0], setTxt = tS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], bS = React.useState(false), busy = bS[0], setBusy = bS[1];
   if (window._currentPersonId !== 'laurel') return null;
-  function doReset() {
-    if (txt.trim().toUpperCase() !== 'RESET' || busy) return;
+  function doResetGo() {
+    if (busy) return;
     if (typeof db === 'undefined' || !db) { setMsg('Not connected to the family database — try again when online.'); return; }
     setBusy(true); setMsg('Resetting…');
     db.ref('argilan').once('value').then(function (snap) {
@@ -36613,6 +36621,10 @@ function ResetAppCard(props) {
       return db.ref('argilan').update(ups);
     }).then(function () { rsClearLocal(); setMsg('✅ Reset. Reloading as a brand-new app…'); setTimeout(function () { location.reload(); }, 900); })
       .catch(function (e) { setBusy(false); setMsg('Could not reset: ' + (e && e.message || e)); });
+  }
+  function doReset() {
+    if (txt.trim().toUpperCase() !== 'RESET' || busy) return;
+    window._lockedAction({ title: 'Erase the WHOLE app', detail: 'Every wallet, history, check-in, schedule, grade, log, plan and setting on every device goes back to brand-new. Only login PINs are kept.', backupAll: true, word: 'RESET', run: doResetGo });
   }
   return h('div', { style: { margin: '10px 14px', padding: 12, background: 'rgba(229,57,53,.1)', border: '1px solid rgba(229,57,53,.6)', borderRadius: 14 } },
     h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '🧨 Reset the whole app as new ' + (open ? '▲' : '▼')),
@@ -37540,6 +37552,96 @@ function ClockControl(props) {
       h(CcReset, { family: props.family, sessions: sessions }),
       typeof ReadyTimerSettings === 'function' && h(ReadyTimerSettings, null),
       typeof PciSettings === 'function' && h(PciSettings, null)));
+}
+
+</script>
+<script>
+// ═══ ERASE PROTECTION: every "are you sure?" now needs a second tap; big resets need a 3-step lock and are backed up first ═══
+(function () {
+  var pend = {}, banner = null, bt = null;
+  function showBanner(msg) {
+    try {
+      if (!banner) { banner = document.createElement('div'); banner.style.cssText = 'position:fixed;left:10px;right:10px;top:10px;z-index:99999;background:#B71C1C;color:#fff;border:2px solid #fff;border-radius:14px;padding:12px 14px;font:800 14px/1.4 -apple-system,system-ui,sans-serif;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5)'; document.body.appendChild(banner); }
+      banner.textContent = '⚠️ ' + msg; banner.style.display = 'block'; clearTimeout(bt); bt = setTimeout(hide, 7000);
+    } catch (e) {}
+  }
+  function hide() { try { if (banner) banner.style.display = 'none'; } catch (e) {} }
+  // Same button tapped twice within 7 seconds = yes
+  window._safeConfirm = function (msg) {
+    var k = String(msg), now = Date.now();
+    if (pend[k] && now - pend[k] < 7000) { delete pend[k]; hide(); return true; }
+    pend[k] = now; showBanner(String(msg) + '  —  Tap the same button again within 7 seconds to confirm.');
+    return false;
+  };
+})();
+
+function lkBackup(o) {
+  var ts = Date.now(), by = window._currentPersonName || 'admin';
+  function put(items) {
+    var rec = { ts: ts, title: o.title, by: by, n: items.length, items: items };
+    syncSet('erase_backup/' + ts, rec);
+    try { var all = syncGet('erase_backup') || {}, ks = Object.keys(all).sort(); while (ks.length > 12) { syncSet('erase_backup/' + ks.shift(), null); } } catch (e) {}
+    return ts;
+  }
+  if (o.backupAll) {
+    if (typeof db === 'undefined' || !db) return Promise.reject(new Error('Not connected — cannot back up'));
+    return db.ref('argilan').once('value').then(function (s) {
+      var v = s.val() || {}, items = [];
+      Object.keys(v).forEach(function (k) { if (k !== 'erase_backup' && k !== 'reset_backup') items.push({ p: k, v: v[k] }); });
+      return put(items);
+    });
+  }
+  var items = [];
+  (o.paths || []).forEach(function (p) { var v = null; try { v = syncGet(p); } catch (e) {} if (v != null) items.push({ p: p, v: v }); });
+  try { return Promise.resolve(put(items)); } catch (e) { return Promise.reject(e); }
+}
+
+function LockedConfirm(props) {
+  var h = React.createElement, o = props.o, word = o.word || 'ERASE';
+  var sS = React.useState(1), step = sS[0], setStep = sS[1], tS = React.useState(''), typed = tS[0], setTyped = tS[1];
+  var cS = React.useState(6), cd = cS[0], setCd = cS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], bS = React.useState(false), busy = bS[0], setBusy = bS[1];
+  React.useEffect(function () { if (step !== 3) return; setCd(6); var iv = setInterval(function () { setCd(function (x) { return x > 0 ? x - 1 : 0; }); }, 1000); return function () { clearInterval(iv); }; }, [step]);
+  var btn = function (bg, fg, on, label, dis) { return h('button', { onClick: on, disabled: !!dis, style: { display: 'block', width: '100%', background: dis ? '#555' : bg, color: dis ? '#999' : fg, border: 'none', borderRadius: 14, padding: 15, fontWeight: 900, fontSize: 16, cursor: dis ? 'default' : 'pointer', marginTop: 10 } }, label); };
+  function go() {
+    setBusy(true); setMsg('Saving a backup first…');
+    lkBackup(o).then(function (ts) { setMsg('Backup saved. Erasing…'); try { o.run(ts); } catch (e) { setMsg('Error: ' + (e && e.message || e)); setBusy(false); return; } props.onClose(); })
+      .catch(function (e) { setMsg('Nothing was erased — the backup failed: ' + (e && e.message || e)); setBusy(false); });
+  }
+  return h('div', { style: { position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0,0,0,.88)', overflowY: 'auto', padding: 18 } },
+    h('div', { style: { maxWidth: 440, margin: '30px auto', background: '#1c1020', border: '3px solid #E53935', borderRadius: 20, padding: 18, color: '#fff' } },
+      h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FF8A80', letterSpacing: 1 } }, 'STEP ' + step + ' OF 3 — SAFETY LOCK'),
+      h('div', { style: { fontSize: 20, fontWeight: 900, margin: '6px 0' } }, '🛑 ' + o.title),
+      h('div', { style: { fontSize: 14, lineHeight: 1.5, color: '#e8e8f0' } }, o.detail || ''),
+      step === 1 && h('div', null, h('div', { style: { fontSize: 13, color: '#FFD54F', marginTop: 10 } }, 'A backup is saved automatically before anything is erased, and you can restore it from Admin → Erase backups.'), btn('#E53935', '#fff', function () { setStep(2); }, 'Continue'), btn('#4CAF82', '#000', props.onClose, 'Cancel — keep everything')),
+      step === 2 && h('div', null, h('div', { style: { fontSize: 14, marginTop: 12 } }, 'Type the word ', h('b', { style: { color: '#FFD54F' } }, word), ' to go on:'),
+        h('input', { value: typed, onChange: function (e) { setTyped(e.target.value); }, autoCapitalize: 'characters', style: { width: '100%', boxSizing: 'border-box', marginTop: 8, padding: 12, fontSize: 18, borderRadius: 12, border: '2px solid #fff', background: 'rgba(255,255,255,.1)', color: '#fff', textAlign: 'center', letterSpacing: 3 } }),
+        btn('#E53935', '#fff', function () { setStep(3); }, 'Continue', typed.trim().toUpperCase() !== word.toUpperCase()), btn('#4CAF82', '#000', props.onClose, 'Cancel — keep everything')),
+      step === 3 && h('div', null, h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginTop: 12 } }, 'Last chance. A backup will be saved, then this is erased.'),
+        btn('#E53935', '#fff', go, busy ? 'Working…' : (cd > 0 ? 'Wait ' + cd + '…' : 'Yes — back it up and erase it'), busy || cd > 0), btn('#4CAF82', '#000', props.onClose, 'No — cancel and keep everything', busy)),
+      msg && h('div', { style: { fontSize: 13, color: '#FFD54F', marginTop: 12 } }, msg)));
+}
+// Open the lock: window._lockedAction({ title, detail, paths:[...] or backupAll:true, word, run })
+window._lockedAction = function (o) {
+  try {
+    var d = document.createElement('div'); document.body.appendChild(d); var root = ReactDOM.createRoot(d);
+    var close = function () { try { root.unmount(); d.remove(); } catch (e) {} };
+    root.render(React.createElement(LockedConfirm, { o: o, onClose: close }));
+  } catch (e) { alert('Could not open the safety lock, so nothing was erased.'); }
+};
+
+// ── Admin: restore anything that was erased ──
+function ErasedBackups() {
+  var h = React.createElement, bS = ktUse('erase_backup', {}), b = bS[0] || {}, oS = React.useState(false), open = oS[0], setOpen = oS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var list = Object.keys(b).map(function (k) { return b[k]; }).filter(function (x) { return x && x.ts; }).sort(function (a, c) { return c.ts - a.ts; });
+  function restore(x) { (x.items || []).forEach(function (it) { try { syncSet(it.p, it.v); } catch (e) {} }); setMsg('↩ Restored: ' + x.title + '. Reload the app to see it everywhere.'); }
+  return h('div', { style: { margin: '10px 14px' } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.5)', borderRadius: 14, padding: 12, color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '🛟 Erase backups — restore anything (' + list.length + ') ' + (open ? '▾' : '▸')),
+    open && h('div', { style: { marginTop: 8, padding: 12, background: 'rgba(255,255,255,.05)', borderRadius: 14 } },
+      !list.length && h('div', { style: { fontSize: 12, color: '#b8b8c8' } }, 'Nothing has been erased yet. Every big reset saves a backup here first.'),
+      list.map(function (x) { return h('div', { key: x.ts, style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.08)' } },
+        h('div', { style: { fontSize: 13, fontWeight: 800 } }, x.title), h('div', { style: { fontSize: 11, color: '#9a9ab0' } }, new Date(x.ts).toLocaleString() + ' · by ' + (x.by || '?') + ' · ' + (x.n || 0) + ' item(s)'),
+        h(DcConfirm, { onConfirm: function () { restore(x); }, label: '↩ Restore this', sure: 'Tap again — puts it back', style: { background: 'rgba(255,213,79,.15)', color: '#FFD54F', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: '9px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 6 } })); }),
+      msg && h('div', { style: { fontSize: 12, color: '#81C784', marginTop: 8 } }, msg)));
 }
 
 </script>
