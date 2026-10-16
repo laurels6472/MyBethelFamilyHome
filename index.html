@@ -32423,6 +32423,10 @@ function CheckInSettings() {
 
 // ── Check in with the parents: where am I, what am I doing, how am I — at random times through the day ──
 var PCI_STATUS = [['school', '📚', 'On school work'], ['chores', '🧹', 'Doing chores'], ['home', '🏠', 'Home — free time'], ['friends', '🎉', 'Fun / with friends'], ['out', '🚗', 'Out and about'], ['eating', '🍽', 'Eating'], ['spiritual', '🙏', 'Spiritual time'], ['work', '💼', 'Working'], ['nap', '😴', 'Taking a nap']];
+function pciMoodList(m) { return m ? String(m).split(',').filter(Boolean) : []; }
+function pciMoodToggle(m, k) { var a = pciMoodList(m), i = a.indexOf(k); if (i >= 0) a.splice(i, 1); else a.push(k); return a.length ? a.join(',') : null; }
+function pciMoodText(m) { return pciMoodList(m).join(', '); }
+function pciMoodEmoji(m) { return pciMoodList(m).map(function (k) { return PCI_MOODE[k] || ''; }).join(''); }
 var PCI_MOODS = [['🤩', 'excited', 'Excited'], ['😀', 'happy', 'Happy'], ['😌', 'calm', 'Calm'], ['🙂', 'okay', 'Okay'], ['😐', 'meh', 'Meh'], ['😴', 'tired', 'Tired'], ['😟', 'worried', 'Worried'], ['😢', 'sad', 'Sad'], ['😡', 'frustrated', 'Frustrated'], ['🤒', 'sick', 'Not feeling good']];
 var PCI_PROMPTS = ['What is one good thing you can say about yourself right now? (your affirmation)', 'What is one thing you finished since the last check-in?', 'What is one thing you are proud of today?', 'Is anything hard right now? What kind of help would make it easier?', 'What are you thankful for today?', 'What is your next step after this?', 'Tell Mom or Dad something fun or interesting you learned or saw.', 'What is something kind you did for someone today?'];
 var PCI_CONTEXT = { school: 'What are you working on right now? (subject and what part)', chores: 'Which chore are you on and how far along are you?', work: 'What are you working on right now?', spiritual: 'What are you reading, studying or doing right now?', friends: 'Who are you with, and where are you?', out: 'Where are you and who are you with?', eating: 'What are you eating? Is it a meal or a snack?', home: 'What are you doing with your free time?', nap: 'Where are you resting, and when will you be up? (optional)' };
@@ -32487,7 +32491,7 @@ function ParentCheckIn(props) {
     var id = 'ci' + Date.now().toString(36), rec = { id: id, ts: Date.now(), who: f.who || dflt, status: f.status, statusLabel: st ? st[2] : f.status, ctx: f.ctx.trim(), ctxQ: ctxQ, aff: f.aff.trim(), affQ: aff, mood: f.mood, help: f.help, clocked: curLabel };
     try { syncSet('checkins/' + dayK + '/' + pid + '/' + id, rec); } catch (e) {}
     if (isP) { try { syncSet('parent_status/' + pid, { ts: Date.now(), name: name, who: f.who || dflt, status: f.status, statusLabel: st ? st[2] : f.status, emoji: st ? st[1] : '', ctx: f.ctx.trim(), share: f.share !== false }); } catch (e) {} var tgt = pFam.filter(function (p) { return p.name === f.who && p.role !== 'parent'; })[0]; if (tgt && typeof window._addNotifFn === 'function') { try { window._addNotifFn('message', tgt.id, '📍 ' + name + ' shared an update', (st ? st[1] + ' ' + st[2] : '') + (f.ctx.trim() ? ': ' + f.ctx.trim() : ''), { fromId: pid }); } catch (e) {} } }
-    var bits = ['With ' + (f.who || dflt), (st ? st[1] + ' ' + st[2] : f.status), rec.ctx && ('“' + rec.ctx + '”'), rec.aff && ('Affirmation: “' + rec.aff + '”'), f.mood && ('Feeling ' + f.mood), 'Clocked into: ' + curLabel].filter(Boolean);
+    var bits = ['With ' + (f.who || dflt), (st ? st[1] + ' ' + st[2] : f.status), rec.ctx && ('“' + rec.ctx + '”'), rec.aff && ('Affirmation: “' + rec.aff + '”'), f.mood && ('Feeling ' + pciMoodText(f.mood)), 'Clocked into: ' + curLabel].filter(Boolean);
     if (props.addNotif) { try { props.addNotif(f.help ? 'alert' : 'checkin', pid, (f.help ? '🆘 ' : '👋 ') + name + (f.help ? ' needs help' : ' checked in'), bits.join(' · '), { requiresApproval: false, adminOnly: isP }); } catch (e) {} }
     try { playSound('success'); localStorage.removeItem('fm_pci_due_' + pid + '_' + dayK); } catch (e) {}
     setSent(true); schedule(lo + Math.random() * (hi - lo)); setTimeout(function () { setOpen(false); setT(function (x) { return x + 1; }); }, 1800);
@@ -32506,8 +32510,8 @@ function ParentCheckIn(props) {
         ctxQ && h('div', null, h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, '2. ' + ctxQ), h('textarea', { rows: 2, value: f.ctx, onChange: function (e) { setF(Object.assign({}, f, { ctx: e.target.value })); }, style: Object.assign({}, big, { marginBottom: 12 }) })),
         !isP && h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, (ctxQ ? '3. ' : '2. ') + aff),
         !isP && h('textarea', { rows: 2, value: f.aff, onChange: function (e) { setF(Object.assign({}, f, { aff: e.target.value })); }, style: Object.assign({}, big, { marginBottom: 12 }) }),
-        h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, 'How are you feeling?'),
-        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 12 } }, PCI_MOODS.map(function (m) { var on = f.mood === m[1]; return h('button', { key: m[1], onClick: function () { setF(Object.assign({}, f, { mood: m[1] })); }, style: { padding: '6px 0', background: on ? '#FF1493' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, cursor: 'pointer', color: '#fff' } }, h('div', { style: { fontSize: 26 } }, m[0]), h('div', { style: { fontSize: 9, fontWeight: 800 } }, m[2])); })),
+        h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, 'How are you feeling? (tap all that fit)'),
+        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 12 } }, PCI_MOODS.map(function (m) { var on = pciMoodList(f.mood).indexOf(m[1]) >= 0; return h('button', { key: m[1], onClick: function () { setF(Object.assign({}, f, { mood: pciMoodToggle(f.mood, m[1]) })); }, style: { padding: '6px 0', background: on ? '#FF1493' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, cursor: 'pointer', color: '#fff' } }, h('div', { style: { fontSize: 26 } }, m[0]), h('div', { style: { fontSize: 9, fontWeight: 800 } }, m[2])); })),
         h('button', { onClick: function () { setF(Object.assign({}, f, { help: !f.help })); }, style: { width: '100%', background: f.help ? '#E53935' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (f.help ? '#fff' : 'rgba(255,255,255,.25)'), borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginBottom: 12 } }, f.help ? '🆘 I need help — Mom & Dad will be alerted loudly' : '🆘 I need help with something'),
         isP && h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 12 } }, h('input', { type: 'checkbox', checked: f.share !== false, onChange: function (e) { setF(Object.assign({}, f, { share: e.target.checked })); }, style: { width: 22, height: 22 } }), 'Let the kids see this on their home screen'),
         h('button', { onClick: submit, disabled: !f.status, style: { width: '100%', background: f.status ? '#4CAF82' : '#555', color: f.status ? '#000' : '#aaa', border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 18, cursor: f.status ? 'pointer' : 'default' } }, f.status ? '📨 Send check-in' : 'Pick where you are first'),
@@ -32533,19 +32537,19 @@ function PciSettings() {
 function PciRecent(props) {
   var h = React.createElement, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey(), cS = ktUse('checkins/' + dayK + '/' + props.pid, {}), arr = Object.values(cS[0] || {}).sort(function (a, b) { return b.ts - a.ts; });
   if (!arr.length) return h('div', { style: { color: '#888' } }, 'No check-ins yet today.');
-  return h('div', null, arr.slice(0, 5).map(function (r) { return h('div', { key: r.id, style: { padding: '3px 0', borderTop: '1px solid rgba(255,255,255,.06)' } }, h('b', null, dcTime(r.ts) + ' · ' + r.statusLabel + (r.help ? ' · 🆘 NEEDS HELP' : '') + (r.mood ? ' · ' + r.mood : '')), r.ctx && h('div', { style: { color: '#b8b8c8' } }, '“' + r.ctx + '”'), r.aff && h('div', { style: { color: '#b8b8c8' } }, 'Affirmation: “' + r.aff + '”')); }));
+  return h('div', null, arr.slice(0, 5).map(function (r) { return h('div', { key: r.id, style: { padding: '3px 0', borderTop: '1px solid rgba(255,255,255,.06)' } }, h('b', null, dcTime(r.ts) + ' · ' + r.statusLabel + (r.help ? ' · 🆘 NEEDS HELP' : '') + (r.mood ? ' · ' + pciMoodText(r.mood) : '')), r.ctx && h('div', { style: { color: '#b8b8c8' } }, '“' + r.ctx + '”'), r.aff && h('div', { style: { color: '#b8b8c8' } }, 'Affirmation: “' + r.aff + '”')); }));
 }
 // ═══ My day in review — every check-in's feeling + affirmation, for the child (and parents) ═══
 var PCI_MOODN = { excited: 5, happy: 5, calm: 4, okay: 4, meh: 3, tired: 2, worried: 2, sad: 1, frustrated: 1, sick: 1 }, PCI_MOODE = { excited: '🤩', happy: '😀', calm: '😌', okay: '🙂', meh: '😐', tired: '😴', worried: '😟', sad: '😢', frustrated: '😡', sick: '🤒' };
 function PciDayReview(props) {
   var h = React.createElement, dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey(), cS = ktUse('checkins/' + dayK + '/' + props.pid, {}),
     arr = Object.values(cS[0] || {}).sort(function (a, b) { return a.ts - b.ts; });
-  var rated = arr.filter(function (r) { return PCI_MOODN[r.mood]; }), avg = rated.length ? rated.reduce(function (s, r) { return s + PCI_MOODN[r.mood]; }, 0) / rated.length : 0;
+  var rv = function (r) { var l = pciMoodList(r.mood).filter(function (k) { return PCI_MOODN[k]; }); return l.length ? l.reduce(function (s, k) { return s + PCI_MOODN[k]; }, 0) / l.length : 0; }, rated = arr.filter(function (r) { return rv(r) > 0; }), avg = rated.length ? rated.reduce(function (s, r) { return s + rv(r); }, 0) / rated.length : 0;
   var face = avg ? PCI_MOODE[['sad', 'worried', 'meh', 'okay', 'happy'][Math.max(0, Math.min(4, Math.round(avg) - 1))]] : '—';
   return h('div', { style: { margin: '10px 14px', padding: 14, background: 'rgba(171,71,188,.12)', border: '1px solid rgba(171,71,188,.5)', borderRadius: 16 } },
     h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginBottom: 4 } }, '🌙 My day in review ' + face),
     h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 8 } }, arr.length ? arr.length + ' check-in' + (arr.length > 1 ? 's' : '') + ' today. Look back at how your day went and the good things you said about yourself.' : 'No check-ins yet today. They pop up a few times a day.'),
-    h('div', { style: { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' } }, arr.map(function (r) { return h('div', { key: r.id, style: { textAlign: 'center', fontSize: 11, color: '#bbb' } }, h('div', { style: { fontSize: 26 } }, PCI_MOODE[r.mood] || '•'), dcTime(r.ts)); })),
+    h('div', { style: { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' } }, arr.map(function (r) { return h('div', { key: r.id, style: { textAlign: 'center', fontSize: 11, color: '#bbb' } }, h('div', { style: { fontSize: 26 } }, pciMoodEmoji(r.mood) || '•'), dcTime(r.ts)); })),
     arr.filter(function (r) { return r.aff; }).map(function (r) { return h('div', { key: r.id, style: { padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.08)', fontSize: 12.5, color: '#fff' } }, h('div', { style: { color: '#FFD54F', fontSize: 11, fontWeight: 800 } }, dcTime(r.ts) + ' · ' + (r.affQ || 'Affirmation')), '“' + r.aff + '”'); }));
 }
 
@@ -32565,7 +32569,7 @@ function PciWhereRow(props) {
     h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff' } }, props.p.name + (r && r.help ? ' 🆘' : '')),
       r ? h('div', { style: { fontSize: 12, color: '#d8d8e8' } }, (r.statusLabel || r.status) + (r.who ? ' · with ' + r.who : '') + (r.ctx ? ' — “' + r.ctx + '”' : ''), h('span', { style: { color: '#9a9ab0' } }, ' · ' + dcTime(r.ts) + (arr.length > 1 ? ' · ' + arr.length + ' check-ins' : '')))
         : h('div', { style: { fontSize: 12, color: '#7d7d92' } }, 'No check-in yet today')),
-    r && r.mood && h('div', { style: { fontSize: 22 } }, PCI_MOODE[r.mood] || ''));
+    r && r.mood && h('div', { style: { fontSize: 22 } }, pciMoodEmoji(r.mood)));
 }
 function PciWhereBoard() {
   var h = React.createElement, fam = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (p) { return !p.deleted; });
@@ -34884,14 +34888,30 @@ function FpConvert(props) {
       h('button', { onClick: function () { ask('real'); }, style: fpBtn('#FFA000') }, '→ Real cash' + (pts > 0 ? ' ($' + (Math.round(pts / cv.real * 100) / 100).toFixed(2) + ')' : ''))),
     msg ? h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 6 } }, msg) : null);
 }
+// Team discount: doing it together (siblings, or a guest over) lowers what a reward costs. Parents can change the numbers in finplan/cfg/team.
+function fpTeam(c) { c = (c && c.team) || {}; return { per: +c.per >= 0 && c.per !== '' && c.per != null ? +c.per : 15, guest: +c.guest >= 0 && c.guest !== '' && c.guest != null ? +c.guest : 15, max: +c.max > 0 ? +c.max : 50 }; }
 function FpFun(props) {
-  var h = React.createElement, pid = props.pid, p = props.p, put = props.put, pts = fpPts(p), red = (p.redeem || {}), RWD = fmRewards();
-  function ask(r) { if (pts < r[2]) return; var id = 'r' + Date.now(); put('redeem/' + id, { key: r[0], label: r[1], cost: r[2], ts: Date.now(), status: 'pending' }); fpNotify('laurel', '🎉 Reward request: ' + props.name, props.name + ' wants: ' + r[1] + ' (' + r[2] + ' pts). Open Money Skills to approve.'); }
+  var h = React.createElement, pid = props.pid, p = props.p, put = props.put, pts = fpPts(p), red = (p.redeem || {}), RWD = fmRewards(), TD = fpTeam(fpDoc('finplan/cfg', {})[0]);
+  var tS = React.useState({}), team = tS[0], setTeam = tS[1], gS = React.useState(false), guest = gS[0], setGuest = gS[1];
+  var sibs = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.role === 'child' && m.id !== pid; });
+  var mates = sibs.filter(function (m) { return team[m.id]; });
+  var pct = Math.min(TD.max, mates.length * TD.per + (guest ? TD.guest : 0));
+  function disc(c) { return pct > 0 ? Math.max(1, Math.round(c * (100 - pct) / 100)) : c; }
+  function ask(r) { var cost = disc(r[2]); if (pts - hold < cost) return; var id = 'r' + Date.now(); var tag = pct > 0 ? ' [team discount ' + pct + '%: ' + (mates.length ? 'with ' + mates.map(function (m) { return m.name; }).join(', ') : '') + (mates.length && guest ? ' + ' : '') + (guest ? 'guest over' : '') + ' — was ' + r[2] + ' pts]' : '';
+    put('redeem/' + id, { key: r[0], label: r[1] + tag, cost: cost, was: r[2], team: mates.map(function (m) { return m.id; }), guest: !!guest, ts: Date.now(), status: 'pending' }); fpNotify('laurel', '🎉 Reward request: ' + props.name, props.name + ' wants: ' + r[1] + ' (' + cost + ' pts' + tag + '). Open Money Skills to approve.'); }
   var hold = 0; Object.keys(red).forEach(function (k) { if (red[k].status === 'pending') hold += red[k].cost; });
+  var chip = function (on) { return { padding: '6px 12px', borderRadius: 16, border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.25)'), background: on ? '#4CAF82' : 'rgba(255,255,255,.08)', color: on ? '#000' : '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }; };
   return h('div', null,
     h('div', { style: { fontSize: 22, fontWeight: 900, color: '#FFD54F' } }, '⭐ ' + pts + ' bonus points'),
     h('div', { style: fpNote }, 'Earn points for a finished school day (+1), a perfect-order job (+1 a day) and extra effort a parent awards. Turn them into rewards. A parent says yes.'),
-    RWD.map(function (r) { var can = pts - hold >= r[2]; return h('div', { key: r[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 13, color: '#eee' } }, r[1]), h('button', { onClick: function () { ask(r); }, disabled: !can, style: Object.assign({}, fpBtn(can ? '#FFA000' : 'rgba(255,255,255,.1)'), { opacity: can ? 1 : 0.5 }) }, r[2] + ' pts')); }),
+    h('div', { style: { background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.5)', borderRadius: 12, padding: 10, margin: '8px 0' } },
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#9be5bd' } }, '👥 Do it together and pay fewer points!'),
+      h('div', { style: Object.assign({}, fpNote, { marginBottom: 6 }) }, 'Each brother or sister joining you takes ' + TD.per + '% off, and having a guest or company over takes ' + TD.guest + '% off (up to ' + TD.max + '% total). A parent still approves.'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+        sibs.map(function (m) { return h('button', { key: m.id, onClick: function () { var t = Object.assign({}, team); t[m.id] = !t[m.id]; setTeam(t); }, style: chip(!!team[m.id]) }, (team[m.id] ? '✔ ' : '') + (m.emoji || '') + ' ' + m.name); }),
+        h('button', { onClick: function () { setGuest(!guest); }, style: chip(guest) }, (guest ? '✔ ' : '') + '🏡 Guest / company over')),
+      pct > 0 ? h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginTop: 6 } }, '🎉 ' + pct + '% team discount applied') : null),
+    RWD.map(function (r) { var c = disc(r[2]), can = pts - hold >= c; return h('div', { key: r[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 13, color: '#eee' } }, r[1]), h('button', { onClick: function () { ask(r); }, disabled: !can, style: Object.assign({}, fpBtn(can ? '#FFA000' : 'rgba(255,255,255,.1)'), { opacity: can ? 1 : 0.5 }) }, c < r[2] ? h('span', null, h('s', { style: { opacity: .6 } }, r[2]), ' ' + c + ' pts') : r[2] + ' pts')); }),
     h(FpConvert, { pid: pid, put: put, name: props.name, free: Math.max(0, pts - hold) }),
     Object.keys(red).length ? h('div', { style: { marginTop: 8 } }, Object.keys(red).sort().reverse().slice(0, 6).map(function (k) { var x = red[k]; return h('div', { key: k, style: { fontSize: 12, color: x.status === 'ok' ? '#81C784' : x.status === 'no' ? '#EF9A9A' : '#FFD54F' } }, (x.status === 'ok' ? '✅ ' : x.status === 'no' ? '✖ ' : '⏳ ') + x.label); })) : null);
 }
