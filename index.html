@@ -31552,15 +31552,35 @@ function StartMyDay(props) {
   var penAmt = mode === 'points' ? (cfg.pts != null && cfg.pts !== '' ? +cfg.pts : 5) : (cfg.cash != null && cfg.cash !== '' ? +cfg.cash : 0.5);
   var tkS = React.useState(0), setTk = tkS[1];
   React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
+  var graceMs = (cfg.grace != null && cfg.grace !== '' ? +cfg.grace : 7) * 60000, freeEx = cfg.freeEx != null && cfg.freeEx !== '' ? +cfg.freeEx : 3;
   var deadline = sd.dayStart ? sd.dayStart + limMin * 60000 : 0, left = deadline ? Math.round((deadline - Date.now()) / 1000) : 0;
   var lateNow = !!deadline && left < 0 && !ready;
-  React.useEffect(function () {
-    if (!deadline || sd.penalized || sd.readyAt && sd.readyAt <= deadline || Date.now() <= deadline) return;
-    var applied = null;
-    if (penOn && penAmt > 0 && typeof window._deductFn === 'function') { try { window._deductFn(pid, penAmt, '⏰ Not ready for the day on time'); applied = { amt: penAmt, mode: mode }; } catch (e) {} }
-    try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { penalized: true, penalty: applied, lateAt: Date.now() })); } catch (e) {}
-    if (props.addNotif) { try { props.addNotif('info', pid, '⏰ ' + (nm || pid) + ' was not ready on time', applied ? 'Deducted ' + (mode === 'points' ? applied.amt + ' pts' : '$' + applied.amt.toFixed(2)) : 'No deduction set', { id: 'late_' + todayKey() + '_' + pid }); } catch (e) {} }
-  });
+  var llS = ktUse('late_log/' + pid, {}), ll = llS[0] || {}, llA = Object.keys(ll).map(function (k) { return ll[k]; });
+  var usedEx = llA.filter(function (x) { return x && x.kind === 'unforeseen' && Date.now() - x.ts < 7 * 86400000; }).length;
+  var lnS = React.useState(''), lateNote = lnS[0], setLateNote = lnS[1], lhS = React.useState(3), lateHrs = lhS[0], setLateHrs = lhS[1];
+  var lateEnd = sd.readyAt || Date.now();
+  var askWhy = !!deadline && !sd.penalized && !sd.lateReason && lateEnd > deadline + graceMs && Date.now() > deadline + graceMs;
+  function answerLate(kind, reason) {
+    var deduct = kind === 'mismanaged' || (kind === 'unforeseen' && usedEx >= freeEx), applied = null, id = 'l' + Date.now().toString(36);
+    if (deduct && penOn && penAmt > 0 && typeof window._deductFn === 'function') { try { window._deductFn(pid, penAmt, '⏰ Not ready for the day on time' + (kind === 'unforeseen' ? ' (excuse #' + (usedEx + 1) + ')' : '')); applied = { amt: penAmt, mode: mode }; } catch (e) {} }
+    try { syncSet('late_log/' + pid + '/' + id, { ts: Date.now(), day: todayKey(), kind: kind, reason: reason, deducted: !!applied }); } catch (e) {}
+    try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { penalized: true, penalty: applied, lateAt: Date.now(), lateReason: reason, lateKind: kind })); } catch (e) {}
+    if (kind === 'excused' && typeof pciPause === 'function') { pciPause(pid, nm || pid, reason, lateHrs, props.addNotif); }
+    if (props.addNotif) { try { props.addNotif('info', pid, '⏰ ' + (nm || pid) + ' was late getting ready', reason + ' · ' + (applied ? 'Deducted ' + (mode === 'points' ? applied.amt + ' pts' : '$' + applied.amt.toFixed(2)) : kind === 'unforeseen' ? 'Excuse ' + (usedEx + 1) + ' of ' + freeEx + ' free this week — no deduction' : 'No deduction'), { id: 'late_' + todayKey() + '_' + pid, adminOnly: true }); } catch (e) {} }
+  }
+  var lateModal = askWhy && h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 5500, overflowY: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 12px' } },
+    h('div', { style: { width: '100%', maxWidth: 520, background: 'linear-gradient(160deg,#2b1055,#1a1a2e)', border: '3px solid #FFD54F', borderRadius: 22, padding: 18 } },
+      h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '⏰ What happened, ' + (nm || 'friend') + '?'),
+      h('div', { style: { fontSize: 13, color: '#d8d8e8', margin: '4px 0 10px', lineHeight: 1.5 } }, 'It has been more than ' + Math.round(graceMs / 60000) + ' minutes since your get-ready time ran out. Pick the one that is true.'),
+      h('div', { style: { background: 'rgba(255,213,79,.12)', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: 10, fontSize: 13, color: '#FFE082', marginBottom: 12, lineHeight: 1.5 } }, '📖 “…time and unforeseen occurrence befall them all.” — Ecclesiastes 9:11. Things we could not see coming do happen to everyone. But we also plan ahead and leave extra time, and we try to be on time instead of making excuses.'),
+      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#9be5bd', marginBottom: 6 } }, '🚗 I am with a parent (no deduction, no check-ins for a while)'),
+      h('div', { style: { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' } }, [1, 2, 3, 4, 6].map(function (n) { return h('button', { key: n, onClick: function () { setLateHrs(n); }, style: { flex: 1, minWidth: 48, padding: 8, borderRadius: 10, border: '2px solid ' + (lateHrs === n ? '#fff' : 'rgba(255,255,255,.25)'), background: lateHrs === n ? '#4CAF82' : 'rgba(255,255,255,.08)', color: lateHrs === n ? '#000' : '#fff', fontWeight: 800, cursor: 'pointer' } }, n + 'h'); })),
+      ['out with Mom', 'out with Dad', 'excused — Mom or Dad approved'].map(function (w) { return h('button', { key: w, onClick: function () { answerLate('excused', w); }, style: { display: 'block', width: '100%', textAlign: 'left', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, 'I am ' + w); }),
+      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFB74D', margin: '12px 0 4px' } }, '⌛ Time and unforeseen occurrence (' + usedEx + ' of ' + freeEx + ' free excuses used this week)'),
+      h('textarea', { rows: 2, value: lateNote, onChange: function (e) { setLateNote(e.target.value); }, placeholder: 'What happened that you could not have planned for?', style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 12, color: '#fff', padding: 10, fontSize: 15, fontFamily: 'inherit', marginBottom: 6 } }),
+      h('button', { onClick: function () { if (lateNote.trim().length < 3) return; answerLate('unforeseen', 'Unforeseen: ' + lateNote.trim()); setLateNote(''); }, disabled: lateNote.trim().length < 3, style: { display: 'block', width: '100%', textAlign: 'left', background: lateNote.trim().length < 3 ? '#555' : '#FFB74D', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, usedEx >= freeEx ? 'Send this excuse (a deduction applies — all ' + freeEx + ' free excuses are used)' : 'Send this excuse'),
+      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#EF9A9A', margin: '12px 0 4px' } }, '🕒 I did not manage my time well'),
+      h('button', { onClick: function () { answerLate('mismanaged', 'Did not manage my time well'); }, style: { display: 'block', width: '100%', textAlign: 'left', background: '#EF5350', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, 'That is honest — I was late' + (penOn && penAmt > 0 ? ' (' + (mode === 'points' ? penAmt + ' pts' : '$' + penAmt.toFixed(2)) + ' comes out)' : ''))));
   var step = !clocked ? 1 : !ready ? 2 : 3;
   var cur = openStep || step;
   var hour = new Date().getHours(), greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -31578,15 +31598,16 @@ function StartMyDay(props) {
   return h('div', { style: { padding: '8px 14px 24px' } },
     h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff' } }, greet + (nm ? ', ' + nm : '') + '! 👋'),
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 14px' } }, new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) + ' — do these 3 steps in order.'),
+    lateModal,
     props.topEl,
     props.safetyEl,
     box(1, s1, h('div', null, head(1, '⏱', 'Start my day', s1, clocked ? 'Your day is running ✔' : 'Tap the green button'), (cur === 1 || clocked) && h('div', { style: { marginTop: 10 } }, props.dayEl))),
     box(2, s2, h('div', null, head(2, '🌱', 'My daily habits', s2, s2 === 'lock' ? 'Start your day first' : ready ? 'Ready for the day ✔ — habits stay here all day' : 'Morning, afternoon & evening — one step at a time'),
       s2 !== 'lock' && (cur === 2) && h('div', { style: { marginTop: 10 } },
         !ready && deadline > 0 && h('div', { style: { textAlign: 'center', padding: 12, marginBottom: 10, borderRadius: 14, background: lateNow ? 'rgba(239,83,80,.2)' : 'rgba(255,213,79,.12)', border: '2px solid ' + (lateNow ? '#EF5350' : '#FFD54F') } },
-          h('div', { style: { fontSize: 12, fontWeight: 900, color: lateNow ? '#FF8A80' : '#FFD54F', letterSpacing: 1 } }, lateNow ? '⏰ TIME IS UP' : '⏳ GET READY — YOU HAVE ' + limMin + ' MINUTES'),
+          h('div', { style: { fontSize: 12, fontWeight: 900, color: lateNow ? '#FF8A80' : '#FFD54F', letterSpacing: 1 } }, lateNow ? '⏰ PAST TIME — ' + Math.round(graceMs / 60000) + ' MIN GRACE' : '⏳ GET READY — YOU HAVE ' + limMin + ' MINUTES'),
           h('div', { style: { fontSize: 36, fontWeight: 900, color: '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, (left < 0 ? '+' : '') + Math.floor(Math.abs(left) / 60) + ':' + ('0' + (Math.abs(left) % 60)).slice(-2)),
-          h('div', { style: { fontSize: 12, color: '#e0e0ee' } }, lateNow ? (sd.penalty ? 'Late — ' + (sd.penalty.mode === 'points' ? sd.penalty.amt + ' pts' : '$' + sd.penalty.amt.toFixed(2)) + ' was taken from your account.' : 'You are late. A parent will see this.') : (penOn && penAmt > 0 ? 'Finish before it hits 0:00 or ' + (mode === 'points' ? penAmt + ' pts' : '$' + penAmt.toFixed(2)) + ' comes out of your account.' : 'Finish before it hits 0:00.'))),
+          h('div', { style: { fontSize: 12, color: '#e0e0ee' } }, lateNow ? (sd.lateReason ? 'Late: ' + sd.lateReason + (sd.penalty ? ' — ' + (sd.penalty.mode === 'points' ? sd.penalty.amt + ' pts' : '$' + sd.penalty.amt.toFixed(2)) + ' was taken.' : '') : 'Hurry — you have a few minutes of grace. After that you will be asked what happened.') : 'Finish before it hits 0:00. You get a few minutes of grace after that, but let’s be on time!')),
         ready && sd.lateAt && h('div', { style: { fontSize: 12, color: '#FF8A80', marginBottom: 8 } }, '⏰ You finished late today.'),
         props.habitsAllEl,
         !ready && big('#4CAF82', '#000', function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: Date.now() })); } catch (e) {} setOpen(null); }, "✅ I'm ready for the day"),
@@ -32241,9 +32262,12 @@ function ReadyTimerSettings() {
         lab('Minutes to get ready', h('input', { type: 'number', defaultValue: c.mins != null ? c.mins : 15, onBlur: function (e) { set('mins', e.target.value); }, style: inp })),
         lab('Late deduction $ (cash mode)', h('input', { type: 'number', step: '0.25', defaultValue: c.cash != null ? c.cash : 0.5, onBlur: function (e) { set('cash', e.target.value); }, style: inp })),
         lab('Late deduction pts', h('input', { type: 'number', defaultValue: c.pts != null ? c.pts : 5, onBlur: function (e) { set('pts', e.target.value); }, style: inp }))),
+      h('div', { style: { display: 'flex', gap: 8, marginBottom: 8 } },
+        lab('Grace minutes after time is up (then “why are you late?” pops up)', h('input', { type: 'number', defaultValue: c.grace != null ? c.grace : 7, onBlur: function (e) { set('grace', e.target.value); }, style: inp })),
+        lab('Free excuses per week before a deduction', h('input', { type: 'number', defaultValue: c.freeEx != null ? c.freeEx : 3, onBlur: function (e) { set('freeEx', e.target.value); }, style: inp }))),
       h('div', { style: { marginBottom: 8 } }, lab('Length of the school/work day in hours (the day circle fills to this)', h('input', { type: 'number', step: '0.5', defaultValue: c.dayHours != null ? c.dayHours : 10, onBlur: function (e) { set('dayHours', e.target.value); }, style: inp }))),
-      h('label', { style: { fontSize: 13, color: '#fff' } }, h('input', { type: 'checkbox', checked: !c.off, onChange: function (e) { set('off', !e.target.checked); } }), ' Deduct automatically when time runs out'),
-      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginTop: 6 } }, 'The timer starts when the child taps Start my day. The deduction happens once, only while their app is open.')));
+      h('label', { style: { fontSize: 13, color: '#fff' } }, h('input', { type: 'checkbox', checked: !c.off, onChange: function (e) { set('off', !e.target.checked); } }), ' Deduct when they are late without a good reason'),
+      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginTop: 6 } }, 'The timer starts when the child taps Start my day. After the grace time the child is asked why. Out with Mom/Dad is excused; “time and unforeseen occurrence” is excused up to the free number each week; poor time management is deducted.')));
 }
 
 // ── Parent editor: change/delete/add the day clock, task times, habit check-offs, late deduction ──
@@ -32423,6 +32447,13 @@ function CheckInSettings() {
 
 // ── Check in with the parents: where am I, what am I doing, how am I — at random times through the day ──
 var PCI_STATUS = [['school', '📚', 'On school work'], ['chores', '🧹', 'Doing chores'], ['home', '🏠', 'Home — free time'], ['friends', '🎉', 'Fun / with friends'], ['out', '🚗', 'Out and about'], ['eating', '🍽', 'Eating'], ['spiritual', '🙏', 'Spiritual time'], ['work', '💼', 'Working'], ['nap', '😴', 'Taking a nap']];
+// Out with Mom/Dad or a parent said "no check-ins": pause check-ins (and their missed-check-in deductions) for a few hours
+function pciPause(pid, name, who, hours, addNotif) {
+  var until = Date.now() + (hours || 3) * 3600000, dk = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  try { syncSet('checkin_pause/' + pid, { until: until, who: who, ts: Date.now() }); } catch (e) {}
+  try { localStorage.removeItem('fm_pci_due_' + pid + '_' + dk); localStorage.setItem('fm_pci_next_' + pid + '_' + dk, String(until)); } catch (e) {}
+  try { if (addNotif) addNotif('info', pid, '🚗 ' + name + ' is ' + who, 'No check-ins needed for ' + hours + ' hour' + (hours === 1 ? '' : 's') + ' (until ' + new Date(until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ').', { adminOnly: true }); } catch (e) {}
+}
 function pciMoodList(m) { return m ? String(m).split(',').filter(Boolean) : []; }
 function pciMoodToggle(m, k) { var a = pciMoodList(m), i = a.indexOf(k); if (i >= 0) a.splice(i, 1); else a.push(k); return a.length ? a.join(',') : null; }
 function pciMoodText(m) { return pciMoodList(m).join(', '); }
@@ -32436,10 +32467,11 @@ function pciGuess(running) {
   if (a === 'fun') return 'friends'; if (a === 'free') return 'home'; if (a === 'driving') return 'out'; return 'work';
 }
 function ParentCheckIn(props) {
-  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = ['Mom & Dad', 'Mom', 'Dad'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; })), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
   var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : !isP;
+  var pzS = ktUse('checkin_pause/' + pid, null), pz = pzS[0], paused = !!(pz && pz.until > Date.now()), pcS = React.useState(false), pcOpen = pcS[0], setPcOpen = pcS[1], phS = React.useState(3), pcHrs = phS[0], setPcHrs = phS[1];
   var ciS = ktUse('checkins/' + dayK + '/' + pid, {}), done = Object.values(ciS[0] || {}).filter(function (r) { return !r.missed; });
   var tS = React.useState(0), setT = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
   var fS = React.useState({ status: null, ctx: '', aff: '', mood: null, help: false, who: dflt }), f = fS[0], setF = fS[1];
@@ -32449,7 +32481,7 @@ function ParentCheckIn(props) {
   var nk = 'fm_pci_next_' + pid + '_' + dayK, lo = cfg.min != null && cfg.min !== '' ? +cfg.min : 40, hi = Math.max(lo, cfg.max != null && cfg.max !== '' ? +cfg.max : 75);
   var running = typeof clockActiveList === 'function' ? clockActiveList((props.sessions || {})[pid] || {}) : [];
   var bk = 'fm_pci_base_' + pid + '_' + dayK, base = 0; try { base = +localStorage.getItem(bk) || 0; if (!base) { base = Date.now(); localStorage.setItem(bk, String(base)); } } catch (e) { base = Date.now(); }
-  var t0 = sd.dayStart || base, active = required && !sd.dayEnd && !cfg.off && !props.manualOnly;
+  var t0 = sd.dayStart || base, active = required && !paused && !sd.dayEnd && !cfg.off && !props.manualOnly;
   var now = Date.now(), next = 0; try { next = +localStorage.getItem(nk) || 0; } catch (e) {}
   if (active && !next) { next = (done.length ? now : t0) + (lo + Math.random() * (hi - lo)) * 60000; if (!done.length) next = now; try { localStorage.setItem(nk, String(next)); } catch (e) {} }
   var due = active && next && now >= next;
@@ -32491,6 +32523,7 @@ function ParentCheckIn(props) {
     var id = 'ci' + Date.now().toString(36), rec = { id: id, ts: Date.now(), who: f.who || dflt, status: f.status, statusLabel: st ? st[2] : f.status, ctx: f.ctx.trim(), ctxQ: ctxQ, aff: f.aff.trim(), affQ: aff, mood: f.mood, help: f.help, clocked: curLabel };
     try { syncSet('checkins/' + dayK + '/' + pid + '/' + id, rec); } catch (e) {}
     if (isP) { try { syncSet('parent_status/' + pid, { ts: Date.now(), name: name, who: f.who || dflt, status: f.status, statusLabel: st ? st[2] : f.status, emoji: st ? st[1] : '', ctx: f.ctx.trim(), share: f.share !== false }); } catch (e) {} var tgt = pFam.filter(function (p) { return p.name === f.who && p.role !== 'parent'; })[0]; if (tgt && typeof window._addNotifFn === 'function') { try { window._addNotifFn('message', tgt.id, '📍 ' + name + ' shared an update', (st ? st[1] + ' ' + st[2] : '') + (f.ctx.trim() ? ': ' + f.ctx.trim() : ''), { fromId: pid }); } catch (e) {} } }
+    if (!isP) { var ktgt = pFam.filter(function (p) { return p.name === f.who && p.role !== 'parent'; })[0]; if (ktgt && typeof window._addNotifFn === 'function') { try { window._addNotifFn('message', ktgt.id, '👋 ' + name + ' checked in with you', (st ? st[1] + ' ' + st[2] : '') + (f.ctx.trim() ? ': ' + f.ctx.trim() : ''), { fromId: pid }); } catch (e) {} } }
     var bits = ['With ' + (f.who || dflt), (st ? st[1] + ' ' + st[2] : f.status), rec.ctx && ('“' + rec.ctx + '”'), rec.aff && ('Affirmation: “' + rec.aff + '”'), f.mood && ('Feeling ' + pciMoodText(f.mood)), 'Clocked into: ' + curLabel].filter(Boolean);
     if (props.addNotif) { try { props.addNotif(f.help ? 'alert' : 'checkin', pid, (f.help ? '🆘 ' : '👋 ') + name + (f.help ? ' needs help' : ' checked in'), bits.join(' · '), { requiresApproval: false, adminOnly: isP }); } catch (e) {} }
     try { playSound('success'); localStorage.removeItem('fm_pci_due_' + pid + '_' + dayK); } catch (e) {}
@@ -32503,8 +32536,8 @@ function ParentCheckIn(props) {
       : h('div', null,
         h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, (isP ? '📍 Share where I am & what I’m working on' : '👋 Check in with ' + dflt)),
         h('div', { style: { fontSize: 13, color: '#d8d8e8', margin: '2px 0 12px' } }, 'You are clocked into: ' + curLabel),
-        h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, (isP ? 'Who are you reporting to?' : 'Who are you checking in with?')),
-        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 } }, (isP ? pWho : ['Mom', 'Dad', 'Mom & Dad']).map(function (w) { var on = f.who === w; return h('button', { key: w, onClick: function () { setF(Object.assign({}, f, { who: w })); }, style: { flex: '1 1 30%', background: on ? '#FF1493' : 'rgba(255,255,255,.1)', color: '#fff', border: '2px solid ' + (on ? '#FF1493' : 'rgba(255,255,255,.25)'), borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, w); })),
+        h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, 'Who are you reporting to?'),
+        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 } }, (isP ? pWho : kWho).map(function (w) { var on = f.who === w; return h('button', { key: w, onClick: function () { setF(Object.assign({}, f, { who: w })); }, style: { flex: '1 1 30%', background: on ? '#FF1493' : 'rgba(255,255,255,.1)', color: '#fff', border: '2px solid ' + (on ? '#FF1493' : 'rgba(255,255,255,.25)'), borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, w); })),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, '1. What are you doing? Where are you in your day?'),
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 } }, PCI_STATUS.map(function (x) { var on = f.status === x[0]; return h('button', { key: x[0], onClick: function () { setF(Object.assign({}, f, { status: x[0] })); }, style: { background: on ? '#FF1493' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, padding: '12px 6px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, x[1] + ' ' + x[2]); })),
         ctxQ && h('div', null, h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, '2. ' + ctxQ), h('textarea', { rows: 2, value: f.ctx, onChange: function (e) { setF(Object.assign({}, f, { ctx: e.target.value })); }, style: Object.assign({}, big, { marginBottom: 12 }) })),
@@ -32515,6 +32548,12 @@ function ParentCheckIn(props) {
         h('button', { onClick: function () { setF(Object.assign({}, f, { help: !f.help })); }, style: { width: '100%', background: f.help ? '#E53935' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (f.help ? '#fff' : 'rgba(255,255,255,.25)'), borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginBottom: 12 } }, f.help ? '🆘 I need help — Mom & Dad will be alerted loudly' : '🆘 I need help with something'),
         isP && h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 12 } }, h('input', { type: 'checkbox', checked: f.share !== false, onChange: function (e) { setF(Object.assign({}, f, { share: e.target.checked })); }, style: { width: 22, height: 22 } }), 'Let the kids see this on their home screen'),
         h('button', { onClick: submit, disabled: !f.status, style: { width: '100%', background: f.status ? '#4CAF82' : '#555', color: f.status ? '#000' : '#aaa', border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 18, cursor: f.status ? 'pointer' : 'default' } }, f.status ? '📨 Send check-in' : 'Pick where you are first'),
+        !isP && h('div', { style: { marginTop: 6 } },
+          h('button', { onClick: function () { setPcOpen(!pcOpen); }, style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: '2px dashed rgba(255,255,255,.35)', borderRadius: 14, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🚗 I’m with Mom or Dad — no check-ins for a while ' + (pcOpen ? '▾' : '▸')),
+          pcOpen && h('div', { style: { background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10, marginTop: 6 } },
+            h('div', { style: { fontSize: 12, color: '#d8d8e8', marginBottom: 6 } }, 'For how long? Mom and Dad are told right away.'),
+            h('div', { style: { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' } }, [1, 2, 3, 4, 6].map(function (n) { return h('button', { key: n, onClick: function () { setPcHrs(n); }, style: { flex: 1, minWidth: 50, padding: 8, borderRadius: 10, border: '2px solid ' + (pcHrs === n ? '#fff' : 'rgba(255,255,255,.25)'), background: pcHrs === n ? '#FF1493' : 'rgba(255,255,255,.08)', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, n + 'h'); })),
+            ['I’m out with Mom', 'I’m out with Dad', 'Mom or Dad said I don’t have to check in'].map(function (w) { return h('button', { key: w, onClick: function () { pciPause(pid, name, w.replace('I’m ', '').replace('I’m', ''), pcHrs, props.addNotif); setOpen(false); setT(function (x) { return x + 1; }); }, style: { display: 'block', width: '100%', textAlign: 'left', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, w); }))),
         h('button', { onClick: function () { close(true); }, style: { width: '100%', background: 'transparent', color: '#c8c8d8', border: 'none', padding: 12, fontSize: 13, cursor: 'pointer', marginTop: 4 } }, 'Remind me in 10 minutes'))));
 }
 function pciOpen() { try { window.dispatchEvent(new CustomEvent('fm-checkin-open')); } catch (e) {} }
