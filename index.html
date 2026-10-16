@@ -7258,7 +7258,6 @@ function Dashboard({
     if (effectiveRole === 'parent' && adminMode && isOwner) {
       return [
         {id:'clock',    l:'⏱ My Day Time Tracker'},
-        {id:'start',    l:'🌅 Start My Day (1-2-3)'},
         {id:'admin',    l:'🔧 Admin'+(pending>0?' ('+pending+')':'')},
         {id:'money',    l:'💰 Money'},
         {id:'safety',   l:'🛡 Safety'},
@@ -7273,7 +7272,6 @@ function Dashboard({
     if (effectiveRole === 'parent') {
       return [
         {id:'clock',    l:'⏱ My Day Time Tracker'},
-        {id:'start',    l:'🌅 Start My Day (1-2-3)'},
         {id:'habits',  l:'🏆 Habit Leaders'},
         {id:'work',     l:'💼 Work & School'},
         {id:'money',    l:'💰 Money'},
@@ -7550,7 +7548,7 @@ function Dashboard({
       flex: 1,
       padding: '4px 14px 120px'
     }
-  }, (tab !== homeNow && typeof BackBar === 'function') && React.createElement(BackBar, { onBack: goBack, onHome: () => { setTab(homeNow); try { window.scrollTo(0, 0); } catch (e) {} }, homeLabel: effectiveRole === 'child' ? 'My Day' : 'Home' }), tab === 'start' && typeof StartMyDay === 'function' && /*#__PURE__*/React.createElement(StartMyDay, {
+  }, (tab !== homeNow && typeof BackBar === 'function') && React.createElement(BackBar, { onBack: goBack, onHome: () => { setTab(homeNow); try { window.scrollTo(0, 0); } catch (e) {} }, homeLabel: effectiveRole === 'child' ? 'My Day' : 'Home' }), (tab === 'start' || (tab === 'clock' && effectiveRole !== 'child')) && typeof StartMyDay === 'function' && /*#__PURE__*/React.createElement(StartMyDay, {
     personId: effectiveId,
     name: effectivePerson && effectivePerson.name,
     sessions: sessions,
@@ -7593,11 +7591,8 @@ function Dashboard({
     isTeacher: isLaurel,
     syncSet: syncSet
   }), tab === 'clock' && /*#__PURE__*/React.createElement("div", null,
-  typeof AttendanceCard === 'function' && /*#__PURE__*/React.createElement("div", {style:{padding:'0 14px'}}, /*#__PURE__*/React.createElement(AttendanceCard, { personId: effectiveId, name: effectivePerson && effectivePerson.name, isAdmin: !viewingAs && (isAdmin || isOwner), sessions: sessions, onUpdate: onUpdate })),
-  typeof SafetyCard !== 'undefined' && /*#__PURE__*/React.createElement(SafetyCard, { personId: effectiveId, name: (effectivePerson && effectivePerson.name) }),
   React.createElement(Fold, { id: 'operations', title: '🏠 My Bethel Operations' },
     React.createElement('div', {style:{fontSize:12,color:'rgba(255,255,255,.55)',lineHeight:1.5,padding:'2px 4px 8px'}}, 'Routines, schedule, tasks and chores all live here. Every approved piece of work earns points toward the paycheck.'),
-    typeof DayClock === 'function' && React.createElement(Fold, { id: 'dayclock', title: '🕐 My Day Clock' }, React.createElement(DayClock, { personId: effectiveId, sessions: sessions, onUpdate: onUpdate, canReset: !!(isAdmin || isOwner), inside: /*#__PURE__*/React.createElement(typeof ClockDepartments === 'function' ? ClockDepartments : ClockPanel, { personId: effectiveId, role: effectiveRole, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, getPerson: getPerson }) })),
     React.createElement(Fold, { id: 'clockinout', title: '🕐 Clock In / Out — ' + (effectivePerson && effectivePerson.name) },
   typeof MorningRoutine !== 'undefined' && /*#__PURE__*/React.createElement(MorningRoutine, {
     personId: effectiveId,
@@ -37462,6 +37457,17 @@ function CcRow(props) {
     try { if (att && !att.end && att.start) { var d = new Date(), pad = function (x) { return (x < 10 ? '0' : '') + x; }; syncSet('attendance/' + iso + '/' + p.id, Object.assign({}, att, { end: pad(d.getHours()) + ':' + pad(d.getMinutes()), auto: true })); } } catch (e) {}
   }
   function reset() { dcResetDay(p.id, sessions, window._clockApi && window._clockApi.onUpdate); try { syncSet('attendance/' + iso + '/' + p.id, null); syncSet('checkin_pause/' + p.id, null); } catch (e) {} }
+  var eS = React.useState(false), ed = eS[0], setEd = eS[1], tS = React.useState({}), tf = tS[0], setTf = tS[1], mS = React.useState(''), em = mS[0], setEm = mS[1];
+  var hmOf = function (ts) { if (!ts) return ''; var d = new Date(ts), z = function (n) { return (n < 10 ? '0' : '') + n; }; return z(d.getHours()) + ':' + z(d.getMinutes()); };
+  var toTs = function (t) { var m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); if (!m) return null; var d = new Date(); d.setHours(+m[1], +m[2], 0, 0); return d.getTime(); };
+  function saveTimes() {
+    var s0 = tf.s != null ? tf.s : hmOf(sd.dayStart), e0 = tf.e != null ? tf.e : hmOf(sd.dayEnd), a = toTs(s0), b = toTs(e0);
+    if (!a) { setEm('Enter a start time.'); return; }
+    try { syncSet('startday/' + tk + '/' + p.id, Object.assign({}, sd, { dayStart: a, dayEnd: b || null, clockedAt: sd.clockedAt || a, setBy: 'admin' })); } catch (e) {}
+    try { var pad = function (ts) { return hmOf(ts); }; syncSet('attendance/' + iso + '/' + p.id, Object.assign({ status: 'present', note: '', by: 'admin', at: Date.now() }, att || {}, { start: pad(a), end: b ? pad(b) : (att && att.end) || '' })); } catch (e) {}
+    setEm('✅ Saved. Attendance matches.'); setTf({});
+  }
+  var inpT = { background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, color: '#fff', padding: 8, fontSize: 14 };
   var st = sd.dayStart ? (sd.dayEnd ? '🏁 Day ended ' + ccHm(sd.dayEnd) + ' (started ' + ccHm(sd.dayStart) + ')' : '🟢 Day started ' + ccHm(sd.dayStart)) : '⚪ Has not started the day';
   return h('div', { style: { padding: '9px 0', borderTop: '1px solid rgba(255,255,255,.08)' } },
     h('div', { style: { fontWeight: 800, fontSize: 13 } }, (p.emoji || '') + ' ' + p.name),
@@ -37469,7 +37475,19 @@ function CcRow(props) {
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 } },
       !sd.dayStart || sd.dayEnd ? h('button', { onClick: startDay, style: CC_BTN('#4CAF82', '#000') }, '▶ Start their day') : null,
       (act.length || (sd.dayStart && !sd.dayEnd)) ? h('button', { onClick: outAll, style: CC_BTN('#FFB74D', '#000') }, '⏹ Clock out & end day') : null,
-      h(DcConfirm, { onConfirm: reset, label: '↺ Reset', sure: 'Tap again', style: CC_BTN('rgba(239,83,80,.2)', '#EF9A9A') })));
+      h('button', { onClick: function () { setEd(!ed); setEm(''); }, style: CC_BTN('#039BE5', '#fff') }, ed ? 'Close' : '✏️ Enter / edit times'),
+      h(DcConfirm, { onConfirm: reset, label: '↺ Reset', sure: 'Tap again', style: CC_BTN('rgba(239,83,80,.2)', '#EF9A9A') })),
+    ed && h('div', { style: { marginTop: 8, padding: 10, background: 'rgba(0,0,0,.2)', borderRadius: 12 } },
+      h('div', { style: { fontWeight: 800, fontSize: 12, marginBottom: 6 } }, 'Day start & end (also fixes attendance)'),
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+        h('span', { style: { fontSize: 12 } }, 'Start'), h('input', { type: 'time', value: tf.s != null ? tf.s : hmOf(sd.dayStart), onChange: function (e) { setTf(Object.assign({}, tf, { s: e.target.value })); }, style: inpT }),
+        h('span', { style: { fontSize: 12 } }, 'End'), h('input', { type: 'time', value: tf.e != null ? tf.e : hmOf(sd.dayEnd), onChange: function (e) { setTf(Object.assign({}, tf, { e: e.target.value })); }, style: inpT }),
+        h('button', { onClick: saveTimes, style: CC_BTN('#4CAF82', '#000') }, 'Save')),
+      em && h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 6 } }, em),
+      h('div', { style: { fontWeight: 800, fontSize: 12, margin: '12px 0 4px' } }, 'Clock-in times — add, edit, delete'),
+      typeof AdminTimeEditor === 'function' && h(AdminTimeEditor, { sessions: sessions, family: [p], onUpdate: window._clockApi && window._clockApi.onUpdate, syncSet: syncSet }),
+      h('div', { style: { fontWeight: 800, fontSize: 12, margin: '12px 0 4px' } }, 'Habits & task times'),
+      typeof AdminDayEditor === 'function' && h(AdminDayEditor, { person: p })));
 }
 
 // ── Reset: timers (everyone, today) and payments (with a saved backup so it can be undone) ──
