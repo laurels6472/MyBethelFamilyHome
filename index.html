@@ -42,10 +42,11 @@ setTimeout(function(){
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
 <script>
 if (typeof firebase === 'undefined') {
-  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-app-compat.js"><\/script><script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-database-compat.js"><\/script>');
+  document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-app-compat.js"><\/script><script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-database-compat.js"><\/script><script src="https://cdn.jsdelivr.net/npm/firebase@9.22.0/firebase-auth-compat.js"><\/script>');
 }
 </script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -189,7 +190,7 @@ try{({})?._test;}catch(e){console.log('[FM] Updating for iOS compatibility');}
 <script>
 // Firebase
 var db=null;
-var FM_BUILD='b3-'+'20261009';var _fmFbErr='';function initFirebase(cfg){try{if(typeof firebase==='undefined')throw new Error('Firebase library did not load (firebase is not defined)');if(firebase.apps.length)firebase.app().delete();firebase.initializeApp(cfg);db=firebase.database();try{localStorage.setItem('fb_cfg',JSON.stringify(cfg));}catch(x){}return true;}catch(e){_fmFbErr=String((e&&e.message)||e);console.error(e);return false;}}
+var FM_BUILD='b3-'+'20261009';var _fmFbErr='';function initFirebase(cfg){try{if(typeof firebase==='undefined')throw new Error('Firebase library did not load (firebase is not defined)');if(firebase.apps.length)firebase.app().delete();firebase.initializeApp(cfg);db=firebase.database();try{if(typeof firebase.auth==='function'){window._fmAuthErr='';firebase.auth().onAuthStateChanged(function(u){window._fmUid=u?u.uid:null;});firebase.auth().signInAnonymously().catch(function(e){window._fmAuthErr=String((e&&e.code)||e);});}else{window._fmAuthErr='auth library not loaded';}}catch(ea){window._fmAuthErr=String(ea);}try{localStorage.setItem('fb_cfg',JSON.stringify(cfg));}catch(x){}return true;}catch(e){_fmFbErr=String((e&&e.message)||e);console.error(e);return false;}}
 // To hard-wire sync for EVERY device, paste your Firebase config object here (or use Admin > Sync Setup + a device link).
 var FM_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCeztnV2Kw2aImhrINlN1NbkinCdJpUS94",
@@ -5573,7 +5574,7 @@ function usePins() {
         // Merge Firebase data with localStorage — Firebase wins for each key
         setPins(prev => {
           const merged = { ...d };
-        try { const lp = JSON.parse(localStorage.getItem('argilan_pins') || '{}'); ['laurel', 'eric'].forEach(k => { if (lp[k]) merged[k] = lp[k]; else delete merged[k]; }); } catch {}
+        try { const lp = JSON.parse(localStorage.getItem('argilan_pins') || '{}'); ['laurel', 'eric'].forEach(k => { if (lp[k]) merged[k] = lp[k]; }); } catch {}
           try { localStorage.setItem('argilan_pins', JSON.stringify(merged)); } catch {}
           return merged;
         });
@@ -5666,7 +5667,7 @@ function PinEntry(props) {
   React.useEffect(function() {
     if (!noPin) return;
     setStep('create');
-    if (false && isAdmin && typeof db !== 'undefined' && db) {
+    if (typeof db !== 'undefined' && db) {
       setStep('checking');
       var done = false, to = setTimeout(function() { if (!done) { done = true; setStep('create'); } }, 4000);
       try {
@@ -5771,7 +5772,7 @@ function PinEntry(props) {
   });
 
   // No-pin non-admin screen
-  if (noPin && !isAdmin) {
+  if (false && noPin && !isAdmin) {
     return /*#__PURE__*/React.createElement("div", {style:{minHeight:'100vh',background:'linear-gradient(160deg,#0f0c29,#1a1a2e)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},
       /*#__PURE__*/React.createElement("div",{style:{width:72,height:72,borderRadius:'50%',background:person.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:38,marginBottom:16}},person.emoji),
       /*#__PURE__*/React.createElement("div",{style:{fontSize:16,fontWeight:800,color:'#fff',marginBottom:8}},person.name),
@@ -5782,7 +5783,7 @@ function PinEntry(props) {
     );
   }
 
-  var heading = step==='checking' ? 'Checking your family account…' : step==='create' ? (isAdmin ? 'Create your PIN' : 'Welcome! Make your own 4-digit passcode') : step==='confirm' ? 'Confirm your PIN' : 'Enter your PIN';
+  var heading = step==='checking' ? 'Checking your family account…' : step==='create' ? (isAdmin ? 'Create your PIN' : 'Welcome, ' + person.name + '! Pick your own 4-digit passcode. Choose numbers only you will remember, and do not share them.') : step==='confirm' ? 'Confirm your PIN' : 'Enter your PIN';
 
   var dots = /*#__PURE__*/React.createElement("div", {style:{display:'flex',gap:16,marginBottom:6}},
     [0,1,2,3].map(function(i) {
@@ -7334,6 +7335,7 @@ function Dashboard({
     React.createElement('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 12 } }, '☰ Menu — where do you want to go?'),
     tabs.map(t => React.createElement('button', { key: t.id, onClick: () => { setTab(t.id); setShowNav(false); try { window.scrollTo({ top: 0 }); } catch (e) {} }, style: { display: 'block', width: '100%', textAlign: 'left', background: tab === t.id ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.07)', border: '1px solid ' + (tab === t.id ? '#FFD54F' : 'rgba(255,255,255,.15)'), borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, t.l + (tab === t.id ? '  ✓' : ''))),
     isAdmin && React.createElement('button', { onClick: () => { setShowNav(false); setShowSwitch(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(3,155,229,.2)', border: '1px solid rgba(3,155,229,.6)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '👥 Switch to another family member'),
+    (!(isAdmin || isOwner) && effectiveRole !== 'elder') && React.createElement('button', { onClick: () => { window._tourReq = true; setShowNav(false); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '🎓 How this app works'),
     React.createElement('button', { onClick: () => { setShowNav(false); setShowContacts(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '📞 Family contacts — call, text, WhatsApp'),
     React.createElement('button', { onClick: () => { setShowNav(false); setShowSetup(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '⚙️ Settings — sound, alerts & device setup'),
     React.createElement('button', { onClick: () => { setShowNav(false); setShowNotifs(true); }, style: { display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, '🔔 Notifications' + (myUnread ? ' (' + myUnread + ')' : '')),
@@ -7532,7 +7534,7 @@ function Dashboard({
     onClick: () => setTab(t.id),
     style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, lineHeight: 1.15, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', wordBreak: 'break-word',
       background: on ? effectivePerson.color : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#cfd3e0', border: `1px solid ${on ? effectivePerson.color : 'rgba(255,255,255,.12)'}` }
-  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
     family: fam,
     sessions: sessions,
     currentPersonId: personId,
@@ -30838,6 +30840,7 @@ function SF_Hardening(props) {
     h('div', { style: Object.assign({}, SF_CARD, { borderColor: 'rgba(255,152,0,.5)' }) }, h('div', { style: { fontSize: 12, color: '#FFCC80', lineHeight: 1.6 } }, 'This app cannot lock a phone or act as a VPN — only the phone\u2019s own system can. These steps are what makes controls hard to switch off, even after a restart. No setting is 100% against a determined person, so test each one and keep Bark/monitoring on as a backstop. Get each person\u2019s agreement (or a guardian\u2019s) first.')),
     h('div', { style: { display: 'flex', gap: 5, overflowX: 'auto', marginBottom: 8 } }, fam.map(function (p) { return h('button', { key: p.id, onClick: function () { props.setSel(p.id); }, style: { flexShrink: 0, padding: '5px 10px', borderRadius: 20, border: 'none', background: pid === p.id ? p.color || '#81C784' : 'rgba(255,255,255,.1)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, p.emoji + ' ' + p.name); })),
     h('div', { style: { display: 'flex', gap: 5, marginBottom: 8 } }, [['lock', '🔒 VPN & lock-down'], ['ios', 'iPhone / iPad'], ['android', 'Android'], ['pc', 'Windows / Mac PC'], ['grandpa', 'Simple phone (Grandpa)']].map(function (k) { return h('button', { key: k[0], onClick: function () { setPlat(k[0]); }, style: { flex: 1, padding: '7px 4px', borderRadius: 20, border: '1px solid ' + (plat === k[0] ? '#81C784' : 'rgba(255,255,255,.2)'), background: plat === k[0] ? '#81C784' : 'transparent', color: plat === k[0] ? '#000' : '#ccc', fontWeight: 700, fontSize: 11, cursor: 'pointer' } }, k[1]); })),
+    plat === 'lock' && typeof DbLockCheck === 'function' && h(DbLockCheck, null),
     plat === 'lock' && typeof PasscodeRotate === 'function' && h(PasscodeRotate, null),
     plat === 'lock' && typeof ConductAdmin === 'function' && h(ConductAdmin, { fam: fam, nameOf: props.nameOf }),
     plat === 'lock' && h('div', { style: Object.assign({}, SF_CARD, { borderColor: 'rgba(66,165,245,.5)' }) }, h('div', { style: { fontSize: 12, fontWeight: 800, color: '#90CAF9', marginBottom: 4 } }, '✍️ Who has agreed to device safety management'), fam.filter(function (p) { return p.id !== 'laurel' && p.id !== 'eric'; }).map(function (p) { var a = dag[p.id]; return h('div', { key: p.id, style: { fontSize: 12, color: a && a.ts ? '#7be3ae' : '#FFB74D', padding: '2px 0' } }, (p.emoji || '') + ' ' + p.name + ' — ' + (a && a.ts ? '✅ agreed ' + new Date(a.ts).toLocaleDateString() : 'not yet')); })),
@@ -36667,7 +36670,7 @@ function ConductAgree(props) {
 // Admin side: who signed, print, and a review log that notifies the member
 function ConductAdmin(props) {
   var h = React.createElement, fam = (props.fam || []).filter(function (p) { return p.id !== 'laurel' && p.id !== 'eric' && !cdIsElder(p.id); }), nameOf = props.nameOf || function (x) { return x; };
-  var gS = ktUse('conduct_agree', {}), ag = gS[0] || {}, rS = ktUse('conduct_reviews', {}), rv = rS[0] || {};
+  var tdS = ktUse('tour_done', {}), tdone = tdS[0] || {}, gS = ktUse('conduct_agree', {}), ag = gS[0] || {}, rS = ktUse('conduct_reviews', {}), rv = rS[0] || {};
   var sS = React.useState((fam[0] || {}).id || ''), sel = sS[0], setSel = sS[1], nS = React.useState(''), note = nS[0], setNote = nS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var by = (window._loginPersonId || 'laurel');
   function printIt() {
@@ -36686,7 +36689,7 @@ function ConductAdmin(props) {
   var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,138,101,.5)', borderRadius: 14, padding: 12, marginBottom: 10 };
   return h('div', { style: card },
     h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFAB91', marginBottom: 4 } }, '📜 Conduct & Device Agreement — who signed'),
-    fam.map(function (p) { var a = ag[p.id]; return h('div', { key: p.id, style: { fontSize: 12, color: a && a.ts ? '#7be3ae' : '#FFB74D', padding: '2px 0' } }, (p.emoji || '') + ' ' + p.name + ' — ' + (a && a.ts ? '✅ signed “' + a.name + '” ' + new Date(a.ts).toLocaleDateString() : 'not yet')); }),
+    fam.map(function (p) { var a = ag[p.id]; return h('div', { key: p.id, style: { fontSize: 12, color: a && a.ts ? '#7be3ae' : '#FFB74D', padding: '2px 0' } }, (p.emoji || '') + ' ' + p.name + ' — ' + (a && a.ts ? '✅ signed “' + a.name + '” ' + new Date(a.ts).toLocaleDateString() : 'not yet') + (tdone[p.id] && tdone[p.id].ts ? ' · 🎓 tour done' : ' · tour not yet')); }),
     h('button', { onClick: printIt, style: { marginTop: 8, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '🖨️ Print agreement & signatures'),
     h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFAB91', margin: '14px 0 4px' } }, '👀 Log a safety review (the member and the other admin are notified)'),
     h('select', { value: sel, onChange: function (e) { setSel(e.target.value); }, style: { width: '100%', padding: 10, borderRadius: 10, marginBottom: 6, fontSize: 14 } }, fam.map(function (p) { return h('option', { key: p.id, value: p.id }, p.name); })),
@@ -36785,6 +36788,66 @@ function SF_Manage(props) {
       h('select', { value: src, onChange: function (e) { setSrc(e.target.value); }, style: SF_INP }, [h('option', { key: '', value: '', style: { color: '#000' } }, 'Copy rules from…')].concat(fam.map(function (p) { return h('option', { key: p.id, value: p.id, style: { color: '#000' } }, p.name + ' (' + rl(p.id).length + ' rules)'); }))),
       sfBtn('#81C784', '#000', copyRules, 'Copy to selected', true)),
     h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)' } }, 'Every change is recorded and can be reversed from the Undo tab.'));
+}
+
+</script>
+<script>
+// "Start here" tour for kids — shows once per person, replay from ☰ Menu → How this app works. Read-aloud button for younger children.
+var KT_PAGES = [
+  ['👋', 'Welcome to our family app!', 'This is our family’s home on your device. It helps your day go smoothly, helps you learn, and helps you earn. This tour takes about two minutes. You can replay it any time.'],
+  ['⏱', '1. Start your day', 'Open My Day Clock-In and tap the big green button to start your day. Then do your morning habits. Tap “I’m ready for the day” before the get-ready timer runs out. If you run late, a small amount can be taken from your account.'],
+  ['📋', '2. Follow your schedule', 'After you are ready, “Follow my schedule” shows what is next: school blocks, chores, and breaks. In “Coming up”, tap Go and it takes you right to it.'],
+  ['💼', '3. School & Jobs', 'School & Jobs is where your lessons and your chores are. Do the work, then check it off. Some jobs you pick up yourself. Mom or Dad look at finished work and approve it.'],
+  ['💬', '4. Check-ins', 'A check-in pops up a few times a day. Tell us who you are with, what you are doing, and how you feel. It also asks for one good thing you can say about yourself. Answer honestly — that is how we know you are safe and doing well.'],
+  ['💰', '5. Money & Habit Leaders', 'You earn money and points for finishing your day, your habits, and your jobs. Money shows your balance. Habit Leaders shows how you are growing. Missing a check-in or being late can take a small amount away.'],
+  ['☰', '6. The Menu button', 'The ☰ Menu button at the top is your map. It takes you to every page. It also has Settings (sound and alerts), Family contacts (call or text your family), and your Notifications.'],
+  ['🍎', '7. Kitchen & Health', 'In Kitchen you can plan meals, and take a photo of your food to see what is in it. In Health, medicine reminders ping you — tap “I took it” when you do.'],
+  ['🤝', '8. Our family rules', 'We use kind, clean words, and we do not send or look at anything unkind or inappropriate. These devices belong to our family business. Mom and Dad keep your passcode safe, and if they are ever worried they may look over your messages — and they will talk with you first. You can always ask them anything.'],
+  ['🌟', 'You are ready!', 'Start with Step 1 tomorrow morning. If you get stuck, ask Mom or Dad. To see this tour again, open ☰ Menu and tap “How this app works.”']
+];
+function ktDoneLocal(pid) { try { return !!localStorage.getItem('fm_tour_' + pid); } catch (e) { return false; } }
+function KidsTour(props) {
+  var h = React.createElement, pid = props.personId, dS = ktUse('tour_done/' + pid, null), done = dS[0] && dS[0].ts;
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1], pS = React.useState(0), page = pS[0], setPage = pS[1];
+  var doneRef = React.useRef(done); doneRef.current = done;
+  React.useEffect(function () {
+    if (window._tourReq) { window._tourReq = false; setPage(0); setOpen(true); return; }
+    if (!pid || ktDoneLocal(pid)) return;
+    var t = setTimeout(function () { if (!doneRef.current && !ktDoneLocal(pid)) setOpen(true); }, 2500);
+    return function () { clearTimeout(t); };
+  }, [pid]);
+  function stopSpeak() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+  function finish() { stopSpeak(); try { localStorage.setItem('fm_tour_' + pid, String(Date.now())); } catch (e) {} try { syncSet('tour_done/' + pid, { ts: Date.now() }); } catch (e) {} setOpen(false); }
+  function go(n) { stopSpeak(); setPage(Math.max(0, Math.min(KT_PAGES.length - 1, n))); }
+  function speak() { try { stopSpeak(); var u = new SpeechSynthesisUtterance(KT_PAGES[page][1] + '. ' + KT_PAGES[page][2]); u.rate = 0.95; window.speechSynthesis.speak(u); } catch (e) {} }
+  if (!open) return null;
+  var p = KT_PAGES[page], last = page === KT_PAGES.length - 1;
+  var big = function (bg, fg, fn, t, flex) { return h('button', { onClick: fn, style: { flex: flex || 1, background: bg, color: fg, border: 'none', borderRadius: 16, padding: '15px 10px', fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, t); };
+  return h('div', { style: { position: 'fixed', inset: 0, zIndex: 7000, background: 'linear-gradient(160deg,#0f0c29,#1a1a2e,#24243e)', display: 'flex', flexDirection: 'column', padding: 18, overflowY: 'auto' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 8 } }, h('div', { style: { flex: 1, fontSize: 12, fontWeight: 800, color: '#FFD54F', letterSpacing: 1 } }, 'START HERE · ' + (page + 1) + ' of ' + KT_PAGES.length), h('button', { onClick: finish, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '8px 14px', fontWeight: 800, cursor: 'pointer' } }, 'Skip')),
+    h('div', { style: { display: 'flex', gap: 4, marginBottom: 14 } }, KT_PAGES.map(function (x, i) { return h('div', { key: i, style: { flex: 1, height: 5, borderRadius: 3, background: i <= page ? '#4CAF82' : 'rgba(255,255,255,.18)' } }); })),
+    h('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', maxWidth: 480, margin: '0 auto', width: '100%' } },
+      h('div', { style: { fontSize: 84, marginBottom: 10 } }, p[0]),
+      h('div', { style: { fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 12, lineHeight: 1.2 } }, p[1]),
+      h('div', { style: { fontSize: 18, color: '#e8e8f0', lineHeight: 1.6 } }, p[2]),
+      h('button', { onClick: speak, style: { marginTop: 16, background: 'rgba(66,165,245,.25)', color: '#90CAF9', border: '1px solid rgba(66,165,245,.6)', borderRadius: 20, padding: '10px 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🔊 Read it to me')),
+    h('div', { style: { display: 'flex', gap: 8, maxWidth: 480, margin: '16px auto 0', width: '100%' } },
+      page > 0 && big('rgba(255,255,255,.12)', '#fff', function () { go(page - 1); }, '← Back'),
+      last ? big('#4CAF82', '#000', finish, '✅ Let’s go!', 2) : big('#4CAF82', '#000', function () { go(page + 1); }, 'Next →', 2)));
+}
+
+</script>
+<script>
+// Database lock-down check (admins). Step 1: confirm this device signs in to Firebase. Rules are changed by hand in the Firebase console.
+function DbLockCheck(props) {
+  var h = React.createElement, tS = React.useState(0), tick = tS[1];
+  React.useEffect(function () { var i = setInterval(function () { tick(function (x) { return x + 1; }); }, 1500); return function () { clearInterval(i); }; }, []);
+  var uid = window._fmUid, err = window._fmAuthErr || '', ok = !!uid;
+  var card = { background: 'rgba(255,255,255,.06)', border: '1px solid ' + (ok ? 'rgba(123,227,174,.6)' : 'rgba(255,183,77,.6)'), borderRadius: 14, padding: 12, marginBottom: 10 };
+  return h('div', { style: card },
+    h('div', { style: { fontSize: 12, fontWeight: 800, color: ok ? '#7be3ae' : '#FFB74D', marginBottom: 4 } }, '🔐 Database lock-down check'),
+    h('div', { style: { fontSize: 13, color: '#fff', marginBottom: 6 } }, ok ? '✅ This device is signed in to Firebase (step 1 works).' : '⚠️ This device is not signed in to Firebase yet.' + (err ? ' (' + err + ')' : '')),
+    h('div', { style: { fontSize: 11, color: '#b8b8c8', lineHeight: 1.6 } }, !ok ? 'In the Firebase console: Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save. Then reload this page. Do not change the database rules until this says ✅ on your phone AND on one other device.' : 'Do NOT change the database rules yet. Check this card on a second device as well. When both show ✅, tell Claude and we do step 2 (the app waits for sign-in before reading, then you switch the rules).'));
 }
 
 </script>
