@@ -36795,7 +36795,7 @@ function SetupBanner(props) {
 function DeviceSetup(props) {
   var h = React.createElement, pid = props.personId, name = props.name || '', admin = !!props.isAdmin;
   var vS = ktUse('volume_cfg', {}), vcfg = vS[0] || {}, vc = vcfg[pid] || {}, locked = !!vc.mute, floor = vc.floor != null ? parseInt(vc.floor) || 0 : 0;
-  var aS = ktUse('device_agree/' + pid, null), agreed = aS[0] && aS[0].ts, sS = React.useState(0), setS = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], ckS = React.useState(false), ck = ckS[0], setCk = ckS[1];
+  var aS = ktUse('device_agree/' + pid, null), agreedDb = aS[0] && aS[0].ts, lcS = React.useState(0), lc = lcS[0], setLc = lcS[1], agreed = agreedDb || lc || (function () { try { return +localStorage.getItem('fm_devagree_' + pid) || 0; } catch (e) { return 0; } })(), sS = React.useState(0), setS = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], ckS = React.useState(false), ck = ckS[0], setCk = ckS[1];
   var own = (typeof vcOwn === 'function') ? vcOwn() : 4, labels = (typeof VC_LABELS !== 'undefined') ? VC_LABELS : [['🔇', 'Mute'], ['🔈', 'Soft'], ['🔊', 'Normal'], ['📢', 'Loud'], ['📣', 'Ultra']];
   function setVol(i) {
     if (locked) { setMsg('🔇 Mom or Dad have muted the sound for you.'); return; }
@@ -36803,9 +36803,9 @@ function DeviceSetup(props) {
     try { localStorage.setItem('alarm_vol', String(i)); } catch (e) {} if (props.onVol) { try { props.onVol(i); } catch (e) {} }
     try { if (i > 0 && typeof fmAudioUnlock === 'function') fmAudioUnlock(); if (i > 0 && typeof playSound === 'function') playSound('notif'); } catch (e) {} setS(function (x) { return x + 1; }); setMsg('');
   }
-  var cgS = ktUse('conduct_agree/' + pid, null), cSigned = !!(cgS[0] && cgS[0].ts), needC = !admin && typeof cdIsElder === 'function' && !cdIsElder(pid);
-  function agree() { if (!ck) { setMsg('Tick the box to agree.'); return; } try { syncSet('device_agree/' + pid, { ts: Date.now(), device: typeof sfDeviceId === 'function' ? sfDeviceId() : '', text: dsText(pid)[1] }); } catch (e) {} setMsg('✅ Agreement saved.'); }
-  function finish() { if (!agreed && !admin) { setMsg('Please read and agree first — then tap Finish.'); return; } if (needC && !cSigned) { setMsg('Please sign the Conduct & Device Agreement (tick, type your name, Agree & Submit) — then tap Finish.'); return; } try { localStorage.setItem('fm_devsetup_' + pid, String(Date.now())); } catch (e) {} props.onClose && props.onClose(); }
+  var cgS = ktUse('conduct_agree/' + pid, null), cSigned = !!(cgS[0] && cgS[0].ts) || (function () { try { return !!localStorage.getItem('fm_condagree_' + pid); } catch (e) { return false; } })(), needC = !admin && typeof cdIsElder === 'function' && !cdIsElder(pid);
+  function agree() { var t0 = Date.now(); setLc(t0); try { localStorage.setItem('fm_devagree_' + pid, String(t0)); } catch (e) {} try { syncSet('device_agree/' + pid, { ts: Date.now(), device: typeof sfDeviceId === 'function' ? sfDeviceId() : '', text: dsText(pid)[1] }); } catch (e) {} setMsg('✅ Agreement saved.'); }
+  function finish() { if (!agreed && !admin) { setMsg('Please read and agree first — then tap Finish.'); return; } var cNow = cSigned || (function () { try { return !!localStorage.getItem('fm_condagree_' + pid); } catch (e) { return false; } })(); if (needC && !cNow) { setMsg('Please sign the Conduct & Device Agreement (type your name, then tap Agree & Submit) — then tap Finish.'); return; } try { localStorage.setItem('fm_devsetup_' + pid, String(Date.now())); } catch (e) {} props.onClose && props.onClose(); }
   var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: 14, marginBottom: 12 };
   var head = function (n, t) { return h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, n + '. ' + t); };
   return h('div', { style: { position: 'fixed', inset: 0, zIndex: 6000, background: 'linear-gradient(160deg,#0f0c29,#1a1a2e)', overflowY: 'auto', padding: 16 } },
@@ -36821,9 +36821,10 @@ function DeviceSetup(props) {
       !admin && h('div', { style: card }, head(3, 'SAFETY AGREEMENT'),
         h('div', { style: { fontSize: 13, color: '#e8e8f0', lineHeight: 1.6, marginBottom: 10 } }, dsText(pid)[0]),
         agreed ? h('div', { style: { fontSize: 14, color: '#7be3ae', fontWeight: 800 } }, '✅ You agreed on ' + new Date(agreed).toLocaleDateString()) : h('div', null,
-          h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 10 } }, h('input', { type: 'checkbox', checked: ck, onChange: function (e) { setCk(e.target.checked); }, style: { width: 22, height: 22 } }), 'I have read this and I agree.'),
+          h('div', { style: { color: '#b8b8c8', fontSize: 12, marginBottom: 8 } }, 'Tapping the green button means you have read this and you agree.'),
           h('button', { onClick: agree, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✍️ I agree'))),
       needC && typeof ConductAgree === 'function' && h(ConductAgree, { personId: pid, name: name, num: 4 }),
+      msg && h('div', { style: { background: 'rgba(255,213,79,.15)', border: '1px solid #FFD54F', color: '#fff', borderRadius: 12, padding: 10, fontSize: 13, marginBottom: 10 } }, msg),
       h('button', { onClick: finish, style: { width: '100%', background: agreed || admin ? '#FFD54F' : '#555', color: '#000', border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 17, cursor: 'pointer' } }, '✅ Finish — I’m all set'),
       h('div', { style: { fontSize: 11, color: '#9a9ab0', textAlign: 'center', marginTop: 8 } }, 'After you finish, the “Set up this device” banner goes away on this device. You can always reopen this from ☰ Menu → Settings.')));
 }
@@ -36839,21 +36840,21 @@ function cdIsElder(pid) { try { var f = (typeof FAMILY !== 'undefined' ? FAMILY 
 // Shown to each non-admin member inside Settings / Device Setup
 function ConductAgree(props) {
   var h = React.createElement, pid = props.personId, name = props.name || '';
-  var aS = ktUse('conduct_agree/' + pid, null), a = aS[0], signed = a && a.ts;
+  var aS = ktUse('conduct_agree/' + pid, null), a = aS[0], signed = (a && a.ts) ? a : (function () { try { var t = localStorage.getItem('fm_condagree_' + pid); return t ? { ts: +t, name: name } : null; } catch (e) { return null; } })();
   var nS = React.useState(''), typed = nS[0], setTyped = nS[1], cS = React.useState(false), ck = cS[0], setCk = cS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   function sign() {
-    if (!ck) { setMsg('Tick the box to agree.'); return; }
     if (typed.trim().length < 2) { setMsg('Please type your name.'); return; }
     try { syncSet('conduct_agree/' + pid, { ts: Date.now(), name: typed.trim(), ver: CD_VER, text: CD_TEXT, device: typeof sfDeviceId === 'function' ? sfDeviceId() : '' }); } catch (e) {}
-    setMsg('✅ Saved.');
+    try { localStorage.setItem('fm_condagree_' + pid, String(Date.now())); } catch (e) {}
+    setMsg('✅ Saved.'); setTyped(function (x) { return x; });
   }
   var box = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 16, padding: 14, marginBottom: 12 };
   return h('div', { style: box },
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, props.num + '. MY BETHEL CONDUCT & DEVICE AGREEMENT'),
     h('div', { style: { fontSize: 13, color: '#e8e8f0', lineHeight: 1.6, marginBottom: 10 } }, CD_TEXT),
-    signed ? h('div', { style: { fontSize: 14, color: '#7be3ae', fontWeight: 800 } }, '✅ Signed by ' + (a.name || name) + ' on ' + new Date(a.ts).toLocaleDateString())
+    signed ? h('div', { style: { fontSize: 14, color: '#7be3ae', fontWeight: 800 } }, '✅ Signed by ' + (signed.name || name) + ' on ' + new Date(signed.ts).toLocaleDateString())
       : h('div', null,
-        h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 8 } }, h('input', { type: 'checkbox', checked: ck, onChange: function (e) { setCk(e.target.checked); }, style: { width: 22, height: 22 } }), 'I have read this and I agree.'),
+        h('div', { style: { color: '#b8b8c8', fontSize: 12, marginBottom: 8 } }, 'Type your name below and tap the green button — that means you have read this and you agree.'),
         h('input', { value: typed, onChange: function (e) { setTyped(e.target.value); }, placeholder: 'Type your full name', style: { width: '100%', boxSizing: 'border-box', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', fontSize: 15, marginBottom: 8 } }),
         h('button', { onClick: sign, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✍️ Agree & Submit')),
     msg && h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 8 } }, msg));
