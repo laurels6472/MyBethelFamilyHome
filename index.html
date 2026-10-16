@@ -12658,6 +12658,9 @@ function HomeschoolModule({
   }, {
     id: 'progress',
     l: '📊 Progress'
+  }, {
+    id: 'catchup',
+    l: '🧭 Catch-Up'
   }, ...(isAdmin ? [{
     id: 'teacherprep',
     l: '📋 Teacher Prep'
@@ -12864,7 +12867,16 @@ function HomeschoolModule({
       fontSize: 24,
       lineHeight: 1
     }
-  }, "›")), tab === 'today' && /*#__PURE__*/React.createElement(DailySchoolDay, {
+  }, "›")), tab === 'catchup' && typeof CatchUpPlanner === 'function' && /*#__PURE__*/React.createElement(CatchUpPlanner, {
+    student: student,
+    isAdmin: isAdmin,
+    todayDay: todayDay,
+    onGo: (st, d) => { setStudent(st); setDay(d); setTab('today'); }
+  }), tab === 'today' && typeof CatchUpBanner === 'function' && /*#__PURE__*/React.createElement(CatchUpBanner, {
+    student: student,
+    todayDay: todayDay,
+    onOpen: () => setTab('catchup')
+  }), tab === 'today' && /*#__PURE__*/React.createElement(DailySchoolDay, {
     day: day,
     student: student,
     hook: hook,
@@ -33456,6 +33468,8 @@ function MyDayList(props) {
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {}, ohS = ktUse('habits/' + pid, null), haS = ktUse('habits/__all', null);
   var odS = ktUse('opsdone', {}), odone = odS[0] || {}, opS = ktUse('opsprog', {}), oprog = opS[0] || {}, ocS = ktUse('ops/custom', null), olS = ktUse('ops/lib', {});
   var awS = ktUse('awards/' + rdy + '/' + pid, {}), awards = awS[0] || {};
+  var twS = React.useState(null), twOpen = twS[0], setTwOpen = twS[1], twmS = React.useState({}), twSel = twmS[0], setTwSel = twmS[1], trS = ktUse('teamwork_req', {}), treq = trS[0] || {};
+  var sibsT = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.role === 'child' && m.id !== pid && !m.deleted; });
   var xS = React.useState(null), ex = xS[0], setEx = xS[1], tS = React.useState(0), setT = tS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   React.useEffect(function () { window._ptsPerB = ppb; });
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(iv); }; }, []);
@@ -33518,6 +33532,13 @@ function MyDayList(props) {
       finish(r, it.pts || 0, rawC, '🧹 ' + it.label.slice(0, 60), saved3);
     }
   }
+  function sendTeam(r) {
+    var withIds = Object.keys(twSel).filter(function (k) { return twSel[k]; }); if (!withIds.length) { say('Pick who worked with you first.'); return; }
+    var it = r.it || {}, base = (window._payMode || 'pay') === 'points' ? (it.pts || r.pts || 0) : (+it.cash || mdRaw(r.pts || 0, ppb)), bonusPts = Math.round((r.pts || 0) * 25) / 100, id = 'tw_' + rdy.replace(/-/g, '') + '_' + pid + '_' + r.k.replace(/[^a-z0-9]/gi, '');
+    try { syncSet('teamwork_req/' + id, { day: rdy, by: pid, label: r.label.slice(0, 60), pts: bonusPts, raw: Math.round(base * 25) / 100, with: withIds, status: 'pending', ts: Date.now() }); } catch (e) {}
+    try { if (typeof fpNotify === 'function') fpNotify('laurel', '👥 Teamwork bonus request: ' + name, name + ' + ' + withIds.join(', ') + ' did \u201C' + r.label.slice(0, 40) + '\u201D together. Approve it in Approvals.'); } catch (e) {}
+    setTwOpen(null); setTwSel({}); say('👥 Sent to a parent — if approved, everyone who helped gets +25%!');
+  }
   function toggleStep(r, i) {
     var it = r.it; if (!r.prog && typeof tgGuard === 'function' && !tgGuard(pid, 'this job')) return;
     var p = r.prog || { period: rtPeriod(it.freq), start: Date.now(), by: pid, label: it.label, steps: {} }, st = Object.assign({}, p.steps || {});
@@ -33545,6 +33566,15 @@ function MyDayList(props) {
             h('div', { style: { fontSize: 15, fontWeight: 800, color: '#fff', textDecoration: r.on ? 'line-through' : 'none', opacity: r.on ? .7 : 1, lineHeight: 1.35 } }, r.icon + ' ' + r.label),
             h('div', { style: { fontSize: 12, color: '#b8c0d0', marginTop: 2 } }, (r.time || tl(r.t)) + (r.time || tl(r.t) ? ' · ' : '') + (r.mins ? r.mins + ' min · ' : '') + '+' + r.pts + ' pts' + (nS ? ' · ' + nS + ' steps' + (dn ? ' (' + dn + ' done)' : '') : '') + (aw ? ' · ✅ paid' : '') + (isNow ? ' · ⏱ NOW' : ''))),
           r.kind === 'block' && r.b.activity && !r.on && h('button', { onClick: function () { if (running.indexOf(r.b.activity) === -1 && typeof clockInActivity === 'function') clockInActivity(pid, props.sessions || {}, props.onUpdate, r.b.activity, { stack: true, label: r.label }); }, style: { background: running.indexOf(r.b.activity) !== -1 ? 'rgba(76,175,130,.3)' : '#039BE5', color: '#fff', border: 'none', borderRadius: 14, padding: '10px 11px', fontWeight: 800, fontSize: 12, cursor: 'pointer', flexShrink: 0 } }, running.indexOf(r.b.activity) !== -1 ? '⏱ Clocked in' : '▶ Clock in')),
+        r.kind === 'chore' && sibsT.length > 0 && h('div', { style: { padding: '0 12px 10px' } },
+          treq['tw_' + rdy.replace(/-/g, '') + '_' + pid + '_' + r.k.replace(/[^a-z0-9]/gi, '')] && treq['tw_' + rdy.replace(/-/g, '') + '_' + pid + '_' + r.k.replace(/[^a-z0-9]/gi, '')].status === 'ok' ? h('div', { style: { fontSize: 12, color: '#81C784', fontWeight: 800 } }, '👥 Teamwork bonus paid!')
+          : treq['tw_' + rdy.replace(/-/g, '') + '_' + pid + '_' + r.k.replace(/[^a-z0-9]/gi, '')] && treq['tw_' + rdy.replace(/-/g, '') + '_' + pid + '_' + r.k.replace(/[^a-z0-9]/gi, '')].status === 'pending' ? h('div', { style: { fontSize: 12, color: '#FFD54F', fontWeight: 800 } }, '👥 Teamwork bonus waiting for a parent')
+          : twOpen === r.k ? h('div', { style: { background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.5)', borderRadius: 12, padding: 10 } },
+              h('div', { style: { fontSize: 12, color: '#9be5bd', fontWeight: 800, marginBottom: 6 } }, 'Who worked on this with you? Many hands make the load light! Everyone who helps earns +25% more points.'),
+              h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, sibsT.map(function (m) { var on = !!twSel[m.id]; return h('button', { key: m.id, onClick: function () { var o = Object.assign({}, twSel); o[m.id] = !on; setTwSel(o); }, style: { padding: '6px 12px', borderRadius: 16, border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.25)'), background: on ? '#4CAF82' : 'rgba(255,255,255,.08)', color: on ? '#000' : '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, (on ? '✔ ' : '') + m.name); })),
+              h('button', { onClick: function () { sendTeam(r); }, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: '9px 14px', fontWeight: 900, fontSize: 13, cursor: 'pointer' } }, '📨 Ask for the +25% teamwork bonus'),
+              h('button', { onClick: function () { setTwOpen(null); setTwSel({}); }, style: { background: 'transparent', color: '#c8c8d8', border: 'none', padding: '9px 10px', fontSize: 12, cursor: 'pointer' } }, 'Cancel'))
+          : h('button', { onClick: function () { setTwOpen(r.k); setTwSel({}); }, style: { background: 'rgba(76,175,130,.15)', color: '#9be5bd', border: '1px dashed rgba(76,175,130,.6)', borderRadius: 12, padding: '6px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, '👥 We did this together (+25%)')),
         open && nS > 0 && h('div', { style: { padding: '0 12px 12px', borderTop: '1px solid rgba(255,255,255,.08)' } },
           !r.prog && h('button', { onClick: function () { if (typeof tgGuard === 'function' && !tgGuard(pid, 'this job')) return; try { syncSet('opsprog/' + r.it.id, { period: rtPeriod(r.it.freq), start: Date.now(), by: pid, label: r.it.label, steps: {} }); } catch (e) {} }, style: { background: '#039BE5', color: '#fff', border: 'none', borderRadius: 14, padding: '10px 14px', fontWeight: 800, fontSize: 13, margin: '10px 0 4px', cursor: 'pointer' } }, '▶ Start the timer'),
           steps.map(function (s, i) { var on = !!(r.prog && r.prog.steps && r.prog.steps[i]); return h('div', { key: i, onClick: function () { toggleStep(r, i); }, style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.05)', cursor: 'pointer' } }, h('div', { style: { width: 26, height: 26, borderRadius: 7, border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.4)'), background: on ? '#4CAF82' : 'transparent', color: '#000', fontWeight: 900, textAlign: 'center', lineHeight: '22px', flexShrink: 0 } }, on ? '✓' : ''), h('div', { style: { fontSize: 14, color: on ? '#8a8a9a' : '#fff', textDecoration: on ? 'line-through' : 'none', lineHeight: 1.4 } }, s)); }),
@@ -34928,16 +34958,18 @@ function FpConvert(props) {
     msg ? h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 6 } }, msg) : null);
 }
 // Team discount: doing it together (siblings, or a guest over) lowers what a reward costs. Parents can change the numbers in finplan/cfg/team.
+var FP_TEAM_EXTRAS = [['whole', '👨‍👩‍👧‍👦 The whole family is in on it', 10], ['serve', '💛 We served others together this week', 10], ['chores', '🧹 We finished our chores as a team today', 10], ['school', '📚 We had a full school week with no missing work', 10], ['worship', '🙏 We did family worship / Bible time together', 5], ['kind', '🤝 We solved a problem kindly with each other', 5]];
 function fpTeam(c) { c = (c && c.team) || {}; return { per: +c.per >= 0 && c.per !== '' && c.per != null ? +c.per : 15, guest: +c.guest >= 0 && c.guest !== '' && c.guest != null ? +c.guest : 15, max: +c.max > 0 ? +c.max : 50 }; }
 function FpFun(props) {
   var h = React.createElement, pid = props.pid, p = props.p, put = props.put, pts = fpPts(p), red = (p.redeem || {}), RWD = fmRewards(), TD = fpTeam(fpDoc('finplan/cfg', {})[0]);
-  var tS = React.useState({}), team = tS[0], setTeam = tS[1], gS = React.useState(false), guest = gS[0], setGuest = gS[1];
+  var xS = React.useState({}), ext = xS[0], setExt = xS[1], tS = React.useState({}), team = tS[0], setTeam = tS[1], gS = React.useState(false), guest = gS[0], setGuest = gS[1];
   var sibs = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.role === 'child' && m.id !== pid; });
   var mates = sibs.filter(function (m) { return team[m.id]; });
-  var pct = Math.min(TD.max, mates.length * TD.per + (guest ? TD.guest : 0));
+  var extPct = FP_TEAM_EXTRAS.reduce(function (n, x) { return n + (ext[x[0]] ? x[2] : 0); }, 0), extTxt = FP_TEAM_EXTRAS.filter(function (x) { return ext[x[0]]; }).map(function (x) { return x[1].replace(/^\S+\s/, ''); });
+  var pct = Math.min(TD.max, mates.length * TD.per + (guest ? TD.guest : 0) + extPct);
   function disc(c) { return pct > 0 ? Math.max(1, Math.round(c * (100 - pct) / 100)) : c; }
-  function ask(r) { var cost = disc(r[2]); if (pts - hold < cost) return; var id = 'r' + Date.now(); var tag = pct > 0 ? ' [team discount ' + pct + '%: ' + (mates.length ? 'with ' + mates.map(function (m) { return m.name; }).join(', ') : '') + (mates.length && guest ? ' + ' : '') + (guest ? 'guest over' : '') + ' — was ' + r[2] + ' pts]' : '';
-    put('redeem/' + id, { key: r[0], label: r[1] + tag, cost: cost, was: r[2], team: mates.map(function (m) { return m.id; }), guest: !!guest, ts: Date.now(), status: 'pending' }); fpNotify('laurel', '🎉 Reward request: ' + props.name, props.name + ' wants: ' + r[1] + ' (' + cost + ' pts' + tag + '). Open Money Skills to approve.'); }
+  function ask(r) { var cost = disc(r[2]); if (pts - hold < cost) return; var id = 'r' + Date.now(); var tag = pct > 0 ? ' [team discount ' + pct + '%: ' + (mates.length ? 'with ' + mates.map(function (m) { return m.name; }).join(', ') : '') + (mates.length && guest ? ' + ' : '') + (guest ? 'guest over' : '') + (extTxt.length ? ((mates.length || guest) ? ' + ' : '') + extTxt.join(', ') : '') + ' — was ' + r[2] + ' pts]' : '';
+    put('redeem/' + id, { key: r[0], label: r[1] + tag, cost: cost, was: r[2], team: mates.map(function (m) { return m.id; }), guest: !!guest, extras: Object.keys(ext).filter(function (k) { return ext[k]; }), ts: Date.now(), status: 'pending' }); fpNotify('laurel', '🎉 Reward request: ' + props.name, props.name + ' wants: ' + r[1] + ' (' + cost + ' pts' + tag + '). Open Money Skills to approve.'); }
   var hold = 0; Object.keys(red).forEach(function (k) { if (red[k].status === 'pending') hold += red[k].cost; });
   var chip = function (on) { return { padding: '6px 12px', borderRadius: 16, border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.25)'), background: on ? '#4CAF82' : 'rgba(255,255,255,.08)', color: on ? '#000' : '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }; };
   return h('div', null,
@@ -34945,10 +34977,12 @@ function FpFun(props) {
     h('div', { style: fpNote }, 'Earn points for a finished school day (+1), a perfect-order job (+1 a day) and extra effort a parent awards. Turn them into rewards. A parent says yes.'),
     h('div', { style: { background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.5)', borderRadius: 12, padding: 10, margin: '8px 0' } },
       h('div', { style: { fontSize: 13, fontWeight: 900, color: '#9be5bd' } }, '👥 Do it together and pay fewer points!'),
-      h('div', { style: Object.assign({}, fpNote, { marginBottom: 6 }) }, 'Each brother or sister joining you takes ' + TD.per + '% off, and having a guest or company over takes ' + TD.guest + '% off (up to ' + TD.max + '% total). A parent still approves.'),
+      h('div', { style: Object.assign({}, fpNote, { marginBottom: 6 }) }, 'Each brother or sister joining you takes ' + TD.per + '% off, and having a guest or company over takes ' + TD.guest + '% off (more ways below; up to ' + TD.max + '% total). A parent still approves.'),
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
         sibs.map(function (m) { return h('button', { key: m.id, onClick: function () { var t = Object.assign({}, team); t[m.id] = !t[m.id]; setTeam(t); }, style: chip(!!team[m.id]) }, (team[m.id] ? '✔ ' : '') + (m.emoji || '') + ' ' + m.name); }),
         h('button', { onClick: function () { setGuest(!guest); }, style: chip(guest) }, (guest ? '✔ ' : '') + '🏡 Guest / company over')),
+      h('div', { style: { fontSize: 12, fontWeight: 800, color: '#9be5bd', margin: '8px 0 4px' } }, 'More ways we teamed up (tap any that are true — a parent checks):'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, FP_TEAM_EXTRAS.map(function (x) { return h('button', { key: x[0], onClick: function () { var o = Object.assign({}, ext); o[x[0]] = !o[x[0]]; setExt(o); }, style: chip(!!ext[x[0]]) }, (ext[x[0]] ? '✔ ' : '') + x[1] + ' (−' + x[2] + '%)'); })),
       pct > 0 ? h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginTop: 6 } }, '🎉 ' + pct + '% team discount applied') : null),
     RWD.map(function (r) { var c = disc(r[2]), can = pts - hold >= c; return h('div', { key: r[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 13, color: '#eee' } }, r[1]), h('button', { onClick: function () { ask(r); }, disabled: !can, style: Object.assign({}, fpBtn(can ? '#FFA000' : 'rgba(255,255,255,.1)'), { opacity: can ? 1 : 0.5 }) }, c < r[2] ? h('span', null, h('s', { style: { opacity: .6 } }, r[2]), ' ' + c + ' pts') : r[2] + ' pts')); }),
     h(FpConvert, { pid: pid, put: put, name: props.name, free: Math.max(0, pts - hold) }),
@@ -36167,7 +36201,10 @@ function ApprovalCenter(props) {
   var h = React.createElement, S = crS(), kids = ['ryan', 'kayla', 'mykah', 'ashelyn'], cfgS = fpDoc('finplan/cfg', {}), cfg = fpCfg(cfgS[0]), docs = {};
   kids.forEach(function (k) { docs[k] = fpDoc('finplan/p/' + k, {}); });
   var wk = typeof ktWeekStart === 'function' ? ktAddDays(ktWeekStart(), 7) : '', KC = ktUse('kitchenchallenge/' + wk, {}), kc = KC[0] || {};
-  var reqs = [], reds = [], plans = [];
+  var reqs = [], reds = [], plans = [], twS = ktUse('teamwork_req', {}), tws = Object.keys(twS[0] || {}).map(function (k) { return Object.assign({ id: k }, twS[0][k]); }).filter(function (x) { return x && x.status === 'pending'; });
+  function twNm(k) { var m = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (f) { return f.id === k; })[0]; return m ? m.name : k; }
+  function okTw(x) { [x.by].concat(x.with || []).forEach(function (k) { try { if (x.raw > 0 && typeof window._creditFn === 'function') window._creditFn(k, x.raw, '👥 Teamwork bonus: ' + x.label, 'tw_' + x.id + '_' + k, true); } catch (e) {} fpNotify(k, '👥 Teamwork bonus approved!', '+' + x.pts + ' pts for working together on: ' + x.label + '. Many hands make the load light!'); }); try { syncSet('teamwork_req/' + x.id + '/status', 'ok'); } catch (e) {} }
+  function noTw(x) { try { syncSet('teamwork_req/' + x.id + '/status', 'no'); } catch (e) {} fpNotify(x.by, 'Teamwork bonus not this time', x.label + ' — talk with a parent.'); }
   kids.forEach(function (k) { var p = docs[k][0], put = docs[k][1], rate = fpR2((p.rate != null ? p.rate : (cfg.rates || {})[k]) || 0);
     Object.keys(p.days || {}).forEach(function (d) { var x = p.days[d]; if (x && x.req && !x.ok) reqs.push({ k: k, d: d, rate: rate, put: put }); });
     Object.keys(p.redeem || {}).forEach(function (r) { var x = p.redeem[r]; if (x && x.status === 'pending') reds.push({ k: k, id: r, x: x, put: put }); }); });
@@ -36177,12 +36214,13 @@ function ApprovalCenter(props) {
   function rejectDay(r) { r.put('days/' + r.d + '/req', null); fpNotify(r.k, '📚 School day not approved yet', 'Talk with a parent about what is left to finish.'); }
   function okRed(r) { r.put('redeem/' + r.id + '/status', 'ok'); r.put('pts/spent/' + r.id, { n: r.x.cost, why: r.x.label, ts: Date.now() }); if (r.x.kind === 'bethel') fpPay(r.k, r.x.amt, '💱 Points → My Bethel cash', 'conv_' + r.id); fpNotify(r.k, '🎉 Approved', r.x.label + (r.x.kind === 'real' ? ' — a parent will give you the real cash.' : '')); }
   function noRed(r) { r.put('redeem/' + r.id + '/status', 'no'); fpNotify(r.k, 'Reward not now', r.x.label + ' — talk with a parent.'); }
-  var total = reqs.length + reds.length + plans.length + (props.pendingNotifs || 0), row = { display: 'flex', gap: 6, alignItems: 'center', padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.07)', fontSize: 13, color: '#eee' };
+  var total = reqs.length + reds.length + tws.length + plans.length + (props.pendingNotifs || 0), row = { display: 'flex', gap: 6, alignItems: 'center', padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.07)', fontSize: 13, color: '#eee' };
   return h('div', { style: Object.assign({}, S.card, { margin: '10px 14px', borderColor: total ? 'rgba(255,152,0,.7)' : 'rgba(76,175,80,.4)' }) },
     h('div', { style: { fontSize: 15, fontWeight: 900, color: total ? '#FFB74D' : '#81C784', marginBottom: 6 } }, '📥 Approvals — everything in one place (' + total + ')'),
     total === 0 ? h('div', { style: { fontSize: 12, color: '#9ad' } }, 'Nothing is waiting for you.') : null,
     reqs.map(function (r) { return h('div', { key: r.k + r.d, style: row }, h('div', { style: { flex: 1 } }, '📚 ' + crName(r.k) + ' finished school day ' + r.d), h('button', { onClick: function () { approveDay(r); }, style: S.btn('#4CAF82') }, '✔ Pay'), h('button', { onClick: function () { rejectDay(r); }, style: S.btn('#EF5350') }, '✕')); }),
     reds.map(function (r) { return h('div', { key: r.k + r.id, style: row }, h('div', { style: { flex: 1 } }, '🎉 ' + crName(r.k) + ' wants: ' + r.x.label + ' (' + r.x.cost + ' pts)'), h('button', { onClick: function () { okRed(r); }, style: S.btn('#4CAF82') }, '✔'), h('button', { onClick: function () { noRed(r); }, style: S.btn('#EF5350') }, '✕')); }),
+    tws.map(function (x) { return h('div', { key: x.id, style: row }, h('div', { style: { flex: 1 } }, '👥 ' + twNm(x.by) + ' + ' + (x.with || []).map(twNm).join(', ') + ' did together: ' + x.label + ' (+25% = ' + x.pts + ' pts each)'), h('button', { onClick: function () { okTw(x); }, style: S.btn('#4CAF82') }, '✔'), h('button', { onClick: function () { noTw(x); }, style: S.btn('#EF5350') }, '✕')); }),
     plans.length ? h('div', { style: row }, h('div', { style: { flex: 1 } }, '👩‍🍳 ' + plans.length + ' kids’ menu plan(s) turned in'), h('button', { onClick: function () { setShowKC(!showKC); }, style: S.btn('#FF9800') }, showKC ? 'Hide' : 'Review')) : null,
     showKC && typeof KitchenChallenge === 'function' ? h(KitchenChallenge, { isAdmin: true, personId: props.personId, family: props.family }) : null,
     props.pendingNotifs ? h('div', { style: row }, h('div', { style: { flex: 1 } }, '🔔 ' + props.pendingNotifs + ' task / work approval(s) in your notifications'), h('button', { onClick: props.onOpenNotifs, style: S.btn('#039BE5') }, 'Open')) : null);
@@ -36921,6 +36959,75 @@ function DbLockCheck(props) {
     h('div', { style: { fontSize: 12, fontWeight: 800, color: ok ? '#7be3ae' : '#FFB74D', marginBottom: 4 } }, '🔐 Database lock-down check'),
     h('div', { style: { fontSize: 13, color: '#fff', marginBottom: 6 } }, ok ? '✅ This device is signed in to Firebase (step 1 works).' : '⚠️ This device is not signed in to Firebase yet.' + (err ? ' (' + err + ')' : '')),
     h('div', { style: { fontSize: 11, color: '#b8b8c8', lineHeight: 1.6 } }, !ok ? 'In the Firebase console: Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save. Then reload this page. Do not change the database rules until this says ✅ on your phone AND on one other device.' : 'Do NOT change the database rules yet. Check this card on a second device as well. When both show ✅, tell Claude and we do step 2 (the app waits for sign-in before reading, then you switch the rules).'));
+}
+
+</script>
+<script>
+// ═══ CATCH-UP PLANNER — finds the lessons that were missed since school started and spreads them over the coming school days, a few at a time ═══
+function cuDone(p) { return !!(p && (p.teacherApproved || p.done || p.status === 'approved' || p.status === 'submitted')); }
+function cuDs(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function cuIsSchool(d) { var w = d.getDay(); return w >= 1 && w <= 5 && (typeof SC_OFF_DAYS === 'undefined' || SC_OFF_DAYS.indexOf(cuDs(d)) === -1); }
+// the date of the nth school day counting today as day 1 (if today is a school day)
+function cuNthDate(n) { var d = new Date(); d.setHours(12, 0, 0, 0); var c = 0, g = 0; while (g++ < 400) { if (cuIsSchool(d)) { c++; if (c === n) return d; } d.setDate(d.getDate() + 1); } return d; }
+function cuTodayDay() { try { var i = typeof getSchoolDayInfo === 'function' ? getSchoolDayInfo() : null; return Math.max(1, Math.min(180, (i && i.dayNum) || 1)); } catch (e) { return 1; } }
+function cuMissed(sid, prog, todayDay) {
+  var out = [];
+  for (var d = 1; d < todayDay; d++) SUBJECTS.forEach(function (s) { if (!cuDone(prog[sid + '_d' + d + '_' + s.id])) out.push({ day: d, sub: s }); });
+  return out;
+}
+function cuPer(cfg, sid) { var c = (cfg || {})[sid] || {}; return c.per != null && c.per !== '' ? Math.max(1, Math.min(6, +c.per || 2)) : 2; }
+function cuMark(sid, day, subId) {
+  try { syncSet('school/progress/' + sid + '_d' + day + '_' + subId, { done: false, actualMins: 0, attempts: [], status: 'approved', teacherApproved: true, note: 'Marked caught up by a parent', ts: Date.now() }); } catch (e) {}
+}
+function cuPlanFor(sid, prog, cfg, todayDay) {
+  var miss = cuMissed(sid, prog, todayDay), per = cuPer(cfg, sid), off = !!((cfg || {})[sid] || {}).off;
+  var daysNeeded = miss.length ? Math.ceil(miss.length / per) : 0;
+  return { miss: miss, per: per, off: off, today: off ? [] : miss.slice(0, per), daysNeeded: daysNeeded, finish: daysNeeded ? cuNthDate(daysNeeded + (cuIsSchool(new Date()) ? 0 : 0)) : null };
+}
+// Small card on the Today tab so a child sees today's catch-up
+function CatchUpBanner(props) {
+  var h = React.createElement, sid = props.student.id, pS = ktUse('school/progress', {}), prog = pS[0] || {}, cS = ktUse('school/catchup_cfg', {}), cfg = cS[0] || {};
+  var P = cuPlanFor(sid, prog, cfg, props.todayDay);
+  if (!P.today.length) return null;
+  return h('div', { onClick: props.onOpen, style: { cursor: 'pointer', margin: '0 0 10px', padding: 12, borderRadius: 14, background: 'rgba(255,152,0,.12)', border: '1px solid rgba(255,152,0,.55)' } },
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFB74D' } }, '🧭 Catch-up for today (' + P.today.length + ' lesson' + (P.today.length > 1 ? 's' : '') + ')'),
+    h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, P.today.map(function (m) { return 'Day ' + m.day + ' ' + m.sub.l; }).join(' · ')),
+    h('div', { style: { fontSize: 11, color: '#c8c8d8', marginTop: 3 } }, 'Tap to see the plan. A few a day and you will be all caught up' + (P.finish ? ' by ' + P.finish.toLocaleDateString([], { month: 'short', day: 'numeric' }) : '') + '.'));
+}
+function CatchUpPlanner(props) {
+  var h = React.createElement, admin = !!props.isAdmin, todayDay = props.todayDay || cuTodayDay();
+  var pS = ktUse('school/progress', {}), prog = pS[0] || {}, cS = ktUse('school/catchup_cfg', {}), cfg = cS[0] || {};
+  var sS = React.useState(''), openD = sS[0], setOpenD = sS[1];
+  var studs = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).filter(function (s) { return admin || s.id === (props.student || {}).id; });
+  var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 12, marginBottom: 10 };
+  function setCfg(sid, k, v) { var o = Object.assign({}, cfg[sid] || {}); o[k] = v; try { syncSet('school/catchup_cfg/' + sid, o); } catch (e) {} }
+  return h('div', { style: { padding: '4px 0' } },
+    h('div', { style: card },
+      h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🧭 Catch-Up Plan'),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8', lineHeight: 1.6, marginTop: 4 } }, 'Nothing is lost. Every lesson from Day 1 up to yesterday that is not finished is listed here. A few catch-up lessons are added to each school day, oldest first, until they are all done. Lessons drop off the list by themselves as they are finished. If the work was already done on paper, a parent can tap “Already did it.”'),
+      h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 6 } }, 'Today is school Day ' + todayDay + '. About 20 minutes per lesson.')),
+    studs.map(function (s) {
+      var P = cuPlanFor(s.id, prog, cfg, todayDay), total = Math.max(0, (todayDay - 1) * SUBJECTS.length), left = P.miss.length;
+      var byDay = {}; P.miss.forEach(function (m) { (byDay[m.day] = byDay[m.day] || []).push(m); });
+      var days = Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; });
+      return h('div', { key: s.id, style: card },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, h('div', { style: { flex: 1, fontSize: 15, fontWeight: 900, color: '#fff' } }, (s.emoji || '') + ' ' + s.name), h('div', { style: { fontSize: 13, fontWeight: 900, color: left ? '#FFB74D' : '#7be3ae' } }, left ? left + ' of ' + total + ' lessons to catch up' : '✅ All caught up!')),
+        total > 0 && h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', margin: '8px 0' } }, h('div', { style: { height: '100%', width: ((total - left) / total * 100) + '%', background: '#4CAF82' } })),
+        left > 0 && !P.off && h('div', { style: { fontSize: 12, color: '#e8e8f0', marginBottom: 6 } }, P.per + ' catch-up lesson' + (P.per > 1 ? 's' : '') + ' a day (about ' + P.per * 20 + ' extra minutes) → finished in ' + P.daysNeeded + ' school day' + (P.daysNeeded > 1 ? 's' : '') + ', around ' + P.finish.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + '.'),
+        P.today.length > 0 && h('div', { style: { background: 'rgba(255,152,0,.12)', borderRadius: 10, padding: 8, marginBottom: 8 } },
+          h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFB74D', marginBottom: 4 } }, 'Today’s catch-up'),
+          P.today.map(function (m) { return h('div', { key: m.day + m.sub.id, style: { display: 'flex', gap: 6, alignItems: 'center', padding: '3px 0' } }, h('div', { style: { flex: 1, fontSize: 13, color: '#fff' } }, 'Day ' + m.day + ' · ' + m.sub.l), h('button', { onClick: function () { props.onGo && props.onGo(s, m.day); }, style: { background: '#039BE5', color: '#fff', border: 'none', borderRadius: 12, padding: '6px 10px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, 'Open'), admin && h('button', { onClick: function () { cuMark(s.id, m.day, m.sub.id); }, style: { background: 'rgba(76,175,130,.25)', color: '#9be5bd', border: 'none', borderRadius: 12, padding: '6px 10px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, '✔ Already did it')); })),
+        admin && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 } },
+          h('span', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Catch-up lessons per day:'),
+          [1, 2, 3, 4].map(function (n) { return h('button', { key: n, onClick: function () { setCfg(s.id, 'per', n); }, style: { width: 36, height: 32, borderRadius: 10, border: '2px solid ' + (P.per === n ? '#fff' : 'rgba(255,255,255,.25)'), background: P.per === n ? '#1A73E8' : 'rgba(255,255,255,.08)', color: '#fff', fontWeight: 900, cursor: 'pointer' } }, n); }),
+          h('label', { style: { fontSize: 12, color: '#c8c8d8', marginLeft: 6 } }, h('input', { type: 'checkbox', checked: P.off, onChange: function (e) { setCfg(s.id, 'off', e.target.checked); } }), ' Pause catch-up for ' + s.name)),
+        days.length > 0 && h('button', { onClick: function () { setOpenD(openD === s.id ? '' : s.id); }, style: { background: 'transparent', color: '#9ad', border: 'none', padding: 0, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' } }, openD === s.id ? 'Hide the full list' : 'Show the full list (' + days.length + ' days)'),
+        openD === s.id && days.map(function (d) {
+          return h('div', { key: d, style: { borderTop: '1px solid rgba(255,255,255,.08)', padding: '6px 0' } },
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } }, h('div', { style: { flex: 1, fontSize: 13, fontWeight: 800, color: '#fff' } }, 'Day ' + d + (typeof schoolDayLabel === 'function' ? ' · ' + schoolDayLabel(d) : '')), admin && h('button', { onClick: function () { byDay[d].forEach(function (m) { cuMark(s.id, d, m.sub.id); }); }, style: { background: 'rgba(76,175,130,.25)', color: '#9be5bd', border: 'none', borderRadius: 12, padding: '5px 9px', fontWeight: 800, fontSize: 11, cursor: 'pointer' } }, '✔ Whole day done'), h('button', { onClick: function () { props.onGo && props.onGo(s, d); }, style: { background: '#039BE5', color: '#fff', border: 'none', borderRadius: 12, padding: '5px 9px', fontWeight: 800, fontSize: 11, cursor: 'pointer' } }, 'Open')),
+            h('div', { style: { fontSize: 12, color: '#b8c0d0' } }, byDay[d].map(function (m) { return m.sub.l; }).join(' · ')));
+        }));
+    }));
 }
 
 </script>
