@@ -7258,6 +7258,7 @@ function Dashboard({
     if (effectiveRole === 'parent' && adminMode && isOwner) {
       return [
         {id:'clock',    l:'⏱ My Day Time Tracker'},
+        {id:'start',    l:'🌅 Start My Day (1-2-3)'},
         {id:'admin',    l:'🔧 Admin'+(pending>0?' ('+pending+')':'')},
         {id:'money',    l:'💰 Money'},
         {id:'safety',   l:'🛡 Safety'},
@@ -7272,6 +7273,7 @@ function Dashboard({
     if (effectiveRole === 'parent') {
       return [
         {id:'clock',    l:'⏱ My Day Time Tracker'},
+        {id:'start',    l:'🌅 Start My Day (1-2-3)'},
         {id:'habits',  l:'🏆 Habit Leaders'},
         {id:'work',     l:'💼 Work & School'},
         {id:'money',    l:'💰 Money'},
@@ -7548,7 +7550,7 @@ function Dashboard({
       flex: 1,
       padding: '4px 14px 120px'
     }
-  }, (tab !== homeNow && typeof BackBar === 'function') && React.createElement(BackBar, { onBack: goBack, onHome: () => { setTab(homeNow); try { window.scrollTo(0, 0); } catch (e) {} }, homeLabel: effectiveRole === 'child' ? 'My Day' : 'Home' }), tab === 'start' && effectiveRole === 'child' && typeof StartMyDay === 'function' && /*#__PURE__*/React.createElement(StartMyDay, {
+  }, (tab !== homeNow && typeof BackBar === 'function') && React.createElement(BackBar, { onBack: goBack, onHome: () => { setTab(homeNow); try { window.scrollTo(0, 0); } catch (e) {} }, homeLabel: effectiveRole === 'child' ? 'My Day' : 'Home' }), tab === 'start' && typeof StartMyDay === 'function' && /*#__PURE__*/React.createElement(StartMyDay, {
     personId: effectiveId,
     name: effectivePerson && effectivePerson.name,
     sessions: sessions,
@@ -33711,6 +33713,7 @@ function AttendanceCard(props) {
       h('div', { style: { fontSize: 13, fontWeight: 900, color: present ? '#7be3ae' : rec ? '#FFB74D' : '#aaa' } }, rec ? ((STAT.filter(function (x) { return x[0] === rec.status; })[0] || ['', rec.status])[1]) : 'Not checked in')),
     rec && rec.status !== 'absent' && rec.status !== 'excused' && rec.status !== 'holiday' && h('div', { style: { fontSize: 14, color: '#e0e6f0', margin: '4px 0' } }, 'In ' + fmt(rec.start) + '  ·  Out ' + (running ? 'still in school' : fmt(rec.end)) + (rec.auto ? '  (from the school clock)' : '')),
     !rec && !running && h('button', { onClick: function () { var d0 = new Date(), hm0 = tcPad(d0.getHours()) + ':' + tcPad(d0.getMinutes()); try { syncSet('attendance/' + iso + '/' + pid, { status: 'present', start: hm0, end: '', note: '', auto: true, by: pid, at: Date.now() }); } catch (e) {} }, style: { display: 'block', width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: '14px', fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 6 } }, '✅ I am here — check me in'),
+    rec && present && !rec.end && !running && h('button', { onClick: function () { var d1 = new Date(); try { syncSet('attendance/' + iso + '/' + pid, Object.assign({}, rec, { end: tcPad(d1.getHours()) + ':' + tcPad(d1.getMinutes()), outBy: pid, at: Date.now() })); } catch (e) {} }, style: { display: 'block', width: '100%', background: '#FFB74D', color: '#000', border: 'none', borderRadius: 14, padding: '12px', fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 6 } }, '🚪 I am done for the day — check me out'),
     !rec && running && h('div', { style: { fontSize: 13, color: '#9aa' } }, 'Checking you in…'),
     !rec && !running && h('div', { style: { fontSize: 12, color: '#9aa', marginTop: 6 } }, 'You are also checked in automatically when you start your day or clock into anything. Clocking out of School records your time out.'),
     props.isAdmin && h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 } },
