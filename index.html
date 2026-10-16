@@ -7259,7 +7259,6 @@ function Dashboard({
       return [
         {id:'clock',    l:'⏱ My Day Time Tracker'},
         {id:'admin',    l:'🔧 Admin'+(pending>0?' ('+pending+')':'')},
-        {id:'family',   l:'👥 Family'},
         {id:'money',    l:'💰 Money'},
         {id:'safety',   l:'🛡 Safety'},
         {id:'menu',     l:'🍳 Kitchen'},
@@ -7853,11 +7852,13 @@ function Dashboard({
     style: {
       marginTop: 20
     }
-  }, /*#__PURE__*/React.createElement(SyncSetupPanel, null), typeof FamilyAccessPanel === 'function' && /*#__PURE__*/React.createElement(FamilyAccessPanel, null), /*#__PURE__*/React.createElement(typeof MemberManager === 'function' ? MemberManager : PinManager, {
+  }, /*#__PURE__*/React.createElement(SyncSetupPanel, null), typeof FamilyAccessPanel === 'function' && /*#__PURE__*/React.createElement(FamilyAccessPanel, null), /*#__PURE__*/React.createElement("div", {style:{padding:'0 14px'}}, /*#__PURE__*/React.createElement("div", {className:'lbl'}, 'Family Activity \u2014 Tap Any Person'), typeof FamilyActivityPanel === 'function' && /*#__PURE__*/React.createElement(FamilyActivityPanel, { sessions: sessions, family: fam, payMode: payMode, wallets: wallets, onViewProfile: setProfileId })), /*#__PURE__*/React.createElement(typeof MemberManager === 'function' ? MemberManager : PinManager, {
     family: fam,
     pins: pins,
     setPin: setPin,
-    isOwner: isOwner
+    isOwner: isOwner,
+    savePerson: savePerson,
+    deletePerson: deletePerson
   })), isOwner && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 20
@@ -36687,6 +36688,37 @@ function FoodPhoto(props) {
 </script>
 <script>
 // ═══ FAMILY MEMBERS — one card per person: name, age, phone, email, PIN (set / show / reset / delete) ═══
+var MM_EMOJIS = ['👩', '👨', '👦', '👧', '🧒', '🧑', '👴', '👵', '😊', '🌟'];
+var MM_COLORS = ['#E67C73', '#F4511E', '#F6BF26', '#33B679', '#039BE5', '#7986CB', '#8E24AA', '#D81B60', '#616161', '#795548'];
+// Add a new member at the bottom of the list
+function AddMember(props) {
+  var h = React.createElement, oS = React.useState(false), open = oS[0], setOpen = oS[1], fS = React.useState({ name: '', full: '', role: 'child', emoji: '😊', age: '', phone: '', email: '', pin: '' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var inp = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 10, color: '#fff', padding: '9px 10px', fontSize: 14 };
+  var set = function (k, v) { var o = Object.assign({}, f); o[k] = v; setF(o); };
+  var lab = function (t, el) { return h('div', { style: { marginBottom: 8 } }, h('div', { style: { fontSize: 10, color: '#b8b8c8', marginBottom: 3, fontWeight: 700 } }, t), el); };
+  function add() {
+    if (!f.name.trim()) { setMsg('Type a first name.'); return; }
+    var pin = f.pin.replace(/[^0-9]/g, '').slice(0, 4); if (f.pin && pin.length !== 4) { setMsg('A PIN must be exactly 4 numbers (or leave it blank to let them pick their own).'); return; }
+    var id = 'p' + Date.now().toString(36), n = (props.count || 0), p = { id: id, name: f.name.trim(), full: (f.full || f.name).trim(), emoji: f.emoji, color: MM_COLORS[n % MM_COLORS.length], colorName: '', role: f.role, age: f.age ? parseInt(f.age, 10) : undefined, inPaySystem: f.role === 'child' };
+    Object.keys(p).forEach(function (k) { if (p[k] === undefined) delete p[k]; });
+    try { props.savePerson(p); } catch (e) {}
+    ['age', 'phone', 'email'].forEach(function (k) { if (f[k]) { try { syncSet('member_info/' + id + '/' + k, f[k]); } catch (e) {} } });
+    if (pin && props.setPin) props.setPin(id, pin);
+    setMsg('✅ ' + p.name + ' was added.' + (pin ? ' Their PIN is ' + pin + '.' : ' They will pick their own PIN the first time they sign in.')); setF({ name: '', full: '', role: 'child', emoji: '😊', age: '', phone: '', email: '', pin: '' });
+  }
+  return h('div', { style: { marginTop: 10 } },
+    h('button', { onClick: function () { setOpen(!open); setMsg(''); }, style: { width: '100%', background: open ? 'rgba(255,255,255,.1)' : '#4CAF82', color: open ? '#fff' : '#000', border: 'none', borderRadius: 14, padding: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, open ? 'Close' : '➕ Add a member'),
+    open && h('div', { style: { marginTop: 8, padding: 12, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 12 } },
+      lab('First name (shown in the app)', h('input', { value: f.name, onChange: function (e) { set('name', e.target.value); }, style: inp })),
+      lab('Full name', h('input', { value: f.full, onChange: function (e) { set('full', e.target.value); }, style: inp })),
+      lab('Who are they?', h('div', { style: { display: 'flex', gap: 6 } }, [['child', 'Child'], ['parent', 'Parent / admin'], ['elder', 'Elder']].map(function (r) { var on = f.role === r[0]; return h('button', { key: r[0], onClick: function () { set('role', r[0]); }, style: { flex: 1, padding: 9, borderRadius: 10, border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.25)'), background: on ? '#1A73E8' : 'rgba(255,255,255,.08)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, r[1]); }))),
+      lab('Picture', h('div', { style: { display: 'flex', gap: 5, flexWrap: 'wrap' } }, MM_EMOJIS.map(function (e) { return h('button', { key: e, onClick: function () { set('emoji', e); }, style: { width: 34, height: 34, borderRadius: '50%', fontSize: 18, border: f.emoji === e ? '2px solid #FFD54F' : '1px solid rgba(255,255,255,.2)', background: f.emoji === e ? 'rgba(255,213,79,.2)' : 'rgba(255,255,255,.06)', cursor: 'pointer' } }, e); }))),
+      h('div', { style: { display: 'flex', gap: 8 } }, h('div', { style: { flex: 1 } }, lab('Age', h('input', { type: 'number', value: f.age, onChange: function (e) { set('age', e.target.value); }, style: inp }))), h('div', { style: { flex: 2 } }, lab('Phone', h('input', { type: 'tel', value: f.phone, onChange: function (e) { set('phone', e.target.value); }, style: inp })))),
+      lab('Email', h('input', { type: 'email', value: f.email, onChange: function (e) { set('email', e.target.value); }, style: inp })),
+      lab('Login PIN (4 numbers — or leave blank so they pick their own)', h('input', { type: 'tel', inputMode: 'numeric', maxLength: 4, value: f.pin, onChange: function (e) { set('pin', e.target.value.replace(/[^0-9]/g, '').slice(0, 4)); }, style: Object.assign({}, inp, { letterSpacing: 6, textAlign: 'center' }) })),
+      h('button', { onClick: add, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, 'Add to the family'),
+      msg && h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 8 } }, msg)));
+}
 function MemberCard(props) {
   var h = React.createElement, p = props.p, pid = p.id, iS = ktUse('member_info/' + pid, {}), info = iS[0] || {};
   var oS = React.useState(false), open = oS[0], setOpen = oS[1], eS = React.useState(false), editing = eS[0], setEditing = eS[1], pS = React.useState(''), pin = pS[0], setPin = pS[1], sS = React.useState(false), shown = sS[0], setShown = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
@@ -36710,6 +36742,8 @@ function MemberCard(props) {
       h('div', { style: { display: 'flex', gap: 8 } }, h('div', { style: { flex: 1 } }, lab('Age', fld('age', 'number', 'e.g. 13'))), h('div', { style: { flex: 2 } }, lab('Birthday', fld('birthday', 'date')))),
       lab('Phone number', fld('phone', 'tel', '(555) 555-5555')),
       lab('Email', fld('email', 'email', 'name@email.com')),
+      props.savePerson && lab('Name shown in the app', h('input', { key: pid + 'nm' + p.name, defaultValue: p.name, onBlur: function (e) { var v = e.target.value.trim(); if (v && v !== p.name) props.savePerson(Object.assign({}, p, { name: v })); }, style: inp })),
+      props.savePerson && lab('Picture', h('div', { style: { display: 'flex', gap: 5, flexWrap: 'wrap' } }, MM_EMOJIS.map(function (e) { return h('button', { key: e, onClick: function () { props.savePerson(Object.assign({}, p, { emoji: e })); }, style: { width: 34, height: 34, borderRadius: '50%', fontSize: 18, border: p.emoji === e ? '2px solid #FFD54F' : '1px solid rgba(255,255,255,.2)', background: p.emoji === e ? 'rgba(255,213,79,.2)' : 'rgba(255,255,255,.06)', cursor: 'pointer' } }, e); }))),
       h('div', { style: { fontSize: 11, fontWeight: 800, color: '#CE93D8', margin: '10px 0 6px' } }, '🔑 LOGIN PIN'),
       editing ? h('div', { style: { display: 'flex', gap: 8, marginBottom: 6 } },
         h('input', { type: 'tel', inputMode: 'numeric', maxLength: 4, value: pin, onChange: function (e) { setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4)); }, placeholder: '4 digits', style: Object.assign({}, inp, { flex: 1, textAlign: 'center', letterSpacing: 6, fontSize: 18 }) }),
@@ -36718,7 +36752,8 @@ function MemberCard(props) {
         has && h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 800, letterSpacing: 4, minWidth: 70 } }, shown ? pinNow : '••••'),
         has && h('button', { onClick: function () { setShown(!shown); }, style: pill('rgba(66,165,245,.2)', '#90CAF9', 'rgba(66,165,245,.5)') }, shown ? 'Hide' : '🔐 Show PIN'),
         h('button', { onClick: function () { setEditing(true); setMsg(''); }, style: pill('rgba(156,141,196,.25)', '#d1c4e9', 'rgba(156,141,196,.5)') }, has ? '🔄 Reset PIN' : '➕ Set PIN'),
-        has && h('button', { onClick: clearPin, style: pill('rgba(239,83,80,.12)', '#EF5350', 'rgba(239,83,80,.35)') }, 'Delete PIN'))));
+        has && h('button', { onClick: clearPin, style: pill('rgba(239,83,80,.12)', '#EF5350', 'rgba(239,83,80,.35)') }, 'Delete PIN')),
+      props.deletePerson && pid !== 'laurel' && pid !== 'eric' && h('div', { style: { marginTop: 14, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.08)' } }, h('button', { onClick: function () { if (!(window._safeConfirm ? window._safeConfirm('Remove ' + p.name + ' from the app? Their saved data is kept but they will not appear or be able to log in.') : true)) return; props.deletePerson(pid); }, style: pill('rgba(239,83,80,.12)', '#EF5350', 'rgba(239,83,80,.35)') }, '🗑 Remove ' + p.name + ' from the app'))));
 }
 function MemberManager(props) {
   var h = React.createElement, fam = (props.family || (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : [])).filter(function (p) { return !p.deleted; }), pins = props.pins;
@@ -36730,7 +36765,8 @@ function MemberManager(props) {
     h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '👨‍👩‍👧‍👦 My Bethel Family — members'),
     h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 10 } }, 'Tap a person to see and edit their name, age, phone, email and login PIN.'),
     requests.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '1px solid rgba(255,152,0,.4)', borderRadius: 10, padding: '8px 10px', fontSize: 12, color: '#FFCC80' } }, '🙋 ' + requests.map(function (r) { return r.personName || r.personId; }).join(', ') + (requests.length > 1 ? ' are' : ' is') + ' locked out — open their card and tap Reset PIN.'),
-    fam.map(function (p) { return h(MemberCard, { key: p.id, p: p, readPin: readPin, setPin: props.setPin, onResolved: resolved }); }));
+    fam.map(function (p) { return h(MemberCard, { key: p.id, p: p, readPin: readPin, setPin: props.setPin, onResolved: resolved, savePerson: props.savePerson, deletePerson: props.deletePerson }); }),
+    props.savePerson && h(AddMember, { savePerson: props.savePerson, setPin: props.setPin, count: fam.length }));
 }
 
 </script>
