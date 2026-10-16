@@ -4340,7 +4340,7 @@ function Leaderboard({
       color: cat === c.k ? '#000' : '#555',
       border: 'none'
     }
-  }, c.l))), boards.map((b, i) => /*#__PURE__*/React.createElement("div", {
+  }, c.l))), ranked.map((b, i) => /*#__PURE__*/React.createElement("div", {
     key: b.person.id,
     style: {
       display: 'flex',
@@ -4391,14 +4391,16 @@ function Leaderboard({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 20,
+      fontSize: 24,
       fontWeight: 900,
-      color: b.rank === 1 ? '#C0CA33' : b.rank === 2 ? '#aaa' : b.rank === 3 ? '#cd7f32' : '#555'
+      color: lbBright(b.person.color),
+      textShadow: '0 0 10px ' + lbBright(b.person.color) + '88'
     }
-  }, b.pts), /*#__PURE__*/React.createElement("div", {
+  }, Math.round((+b.pts || 0) * 10) / 10), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 8,
-      color: '#444'
+      fontSize: 10,
+      fontWeight: 800,
+      color: lbBright(b.person.color)
     }
   }, "pts")), false && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4426,6 +4428,13 @@ function Leaderboard({
   }, "No one clocked in yet today"));
 }
 
+// Bright version of a person's color for the leaderboard numbers (hot pink if they have none)
+function lbBright(c) {
+  var m = /^#?([0-9a-f]{6})$/i.exec(String(c || '').trim());
+  if (!m) return '#FF1493';
+  var n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255, mix = function (v) { return Math.round(v + (255 - v) * 0.3); };
+  return 'rgb(' + mix(r) + ',' + mix(g) + ',' + mix(b) + ')';
+}
 // ═══ PEOPLE MANAGER ══════════════════════════════════════════════════════════
 // Passcode box inside a family member's edit screen: masked by default, a button reveals it
 function MemberPinBox(props) {
@@ -31601,6 +31610,7 @@ function StartMyDay(props) {
     h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff' } }, greet + (nm ? ', ' + nm : '') + '! 👋'),
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 14px' } }, new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) + ' — do these 3 steps in order.'),
     lateModal,
+    sd.dayEnd && h('div', { style: { background: 'rgba(76,175,130,.18)', border: '2px solid #4CAF82', borderRadius: 16, padding: 14, marginBottom: 12, color: '#fff' } }, h('div', { style: { fontSize: 17, fontWeight: 900 } }, '🎉 Day complete' + (nm ? ', ' + nm : '') + '!'), h('div', { style: { fontSize: 13, color: '#d8f0e2', marginTop: 4, lineHeight: 1.5 } }, 'You ended your day at ' + new Date(sd.dayEnd).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '. Your time is saved for Mom & Dad to review. Start My Day clears itself and is ready fresh tomorrow morning.')),
     props.topEl,
     props.safetyEl,
     box(1, s1, h('div', null, head(1, '⏱', 'Start my day', s1, clocked ? 'Your day is running ✔' : 'Tap the green button'), (cur === 1 || clocked) && h('div', { style: { marginTop: 10 } }, props.dayEl))),
