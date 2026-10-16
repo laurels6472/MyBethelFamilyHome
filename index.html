@@ -6431,6 +6431,7 @@ function NotifPanel({ notifs, onClose, onApprove, onApproveTask, onMarkAllRead, 
           ),
           n.approved === true && /*#__PURE__*/React.createElement('div',{style:{fontSize:9,color:'#4CAF82',fontWeight:800}},'✓ Approved'),
           n.approved === false && /*#__PURE__*/React.createElement('div',{style:{fontSize:9,color:'#EF5350',fontWeight:800}},'✗ Sent back'),
+          n.goto && window._gotoDest && /*#__PURE__*/React.createElement('button',{onClick:()=>window._gotoDest(n.goto, n.id),style:{display:'block',width:'100%',marginTop:6,background:'#FFB74D',color:'#000',border:'none',borderRadius:14,padding:'11px',fontSize:13,fontWeight:900,cursor:'pointer'}},'🛒 Open the flyers & menu →'),
           /*#__PURE__*/React.createElement('div',{style:{display:'flex',gap:8,marginTop:8}},
             (n.fromId || n.personId) && (n.fromId || n.personId) !== 'all' && (n.fromId || n.personId) !== currentPersonId && window._msgTo && /*#__PURE__*/React.createElement('button',{onClick:()=>window._msgTo(n.fromId || n.personId),style:{fontSize:13,fontWeight:800,background:'#1A73E8',color:'#fff',border:'none',borderRadius:16,padding:'9px 14px',cursor:'pointer'}},'💬 Reply'),
             onToggleSave && /*#__PURE__*/React.createElement('button',{onClick:()=>onToggleSave(n.id),style:{fontSize:13,fontWeight:800,background:n.saved?'#FFD54F':'rgba(255,213,79,.15)',color:n.saved?'#000':'#FFD54F',border:'none',borderRadius:16,padding:'9px 14px',cursor:'pointer'}},n.saved?'⭐ Saved':'☆ Save'),
@@ -7231,6 +7232,7 @@ function Dashboard({
   const effectiveId = viewingAs || personId;
   React.useEffect(() => { window._dashSetTab = setTab; }, []);
   React.useEffect(() => { window._clockApi = { sessions: sessions, onUpdate: onUpdate }; });
+  React.useEffect(() => { window._gotoDest = function (d, nid) { try { if (nid) syncSet('notifs/' + nid + '/read', true); } catch (e) {} var a = String(d || '').split(':'); if (a[0] === 'kitchen') { window._kitchenGo = a[1] || null; setShowNotifs(false); setTab('menu'); try { window.scrollTo(0, 0); } catch (e) {} } }; });
   React.useEffect(() => {
     window._currentPersonId = effectiveId; window._loginPersonId = personId;
     window._currentPersonName = (typeof getPerson === 'function' ? getPerson(effectiveId)?.name : null) || effectiveId;
@@ -29317,7 +29319,7 @@ function KitchenTodayCard(props) {
 function KitchenModule(props) {
   var h = React.createElement;
   var isAdmin = !!props.isAdmin;
-  var tabS = React.useState(isAdmin ? 'pantry' : 'kids'), tab = tabS[0], setTab = tabS[1];
+  var tabS = React.useState((function () { var g = window._kitchenGo; window._kitchenGo = null; return g || (isAdmin ? 'pantry' : 'kids'); })()), tab = tabS[0], setTab = tabS[1];
   var wsS = React.useState(ktWeekStart()), week = wsS[0], setWeek = wsS[1];
   var recS = ktUse('recipes', {}), recipes = recS[0], setRecipes = recS[1];
   var panS = ktUse('pantry', {}), pantry = panS[0], setPantry = panS[1];
@@ -32005,11 +32007,11 @@ function OpsApprovals(props) {
 // ── Parent setup: edit habit lists + add custom chores ──
 function RoutinesAdmin(props) {
   var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.role === 'child'; });
-  var oS = React.useState(false), open = oS[0], setOpen = oS[1], sS = React.useState('__all'), sel = sS[0], setSel = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1], sS = React.useState('__all'), sel = sS[0], setSel = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], svS = React.useState(''), sv = svS[0], setSv = svS[1];
   var hS = ktUse('habits/' + sel, null), cur = hS[0] || {}, cS = ktUse('ops/custom', null), custom = rtList(cS[0]) || [];
   var nf = React.useState({ freq: 'weekly', weekday: '', assignee: 'any', label: '', steps: '', pts: '', cash: '' }), f = nf[0], setF = nf[1];
   var selName = sel === '__all' ? '' : ((fam.find(function (p) { return p.id === sel; }) || {}).name || '');
-  function save(period, text) { var arr = text.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); try { syncSet('habits/' + sel + '/' + period, arr.length ? arr : null); setMsg('Saved ' + period + '.'); } catch (e) {} }
+  function save(period, text) { var arr = text.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); try { syncSet('habits/' + sel + '/' + period, arr.length ? arr : null); setMsg('Saved ' + period + '.'); setSv(period); setTimeout(function () { setSv(''); }, 2500); } catch (e) { setMsg('Could not save: ' + (e && e.message || e)); } }
   function addChore() { if (!f.label.trim()) return; var id = 'c' + Date.now().toString(36); try { syncSet('ops/custom', custom.concat([Object.assign({}, f, { id: id, label: f.label.trim() })])); setF(Object.assign({}, f, { label: '', steps: '', pts: '', cash: '' })); setMsg('Chore added.'); } catch (e) {} }
   function delChore(id) { try { var next = custom.filter(function (c) { return c.id !== id; }); syncSet('ops/custom', next.length ? next : null); } catch (e) {} }
   var inp = { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.18)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 14, width: '100%', boxSizing: 'border-box', marginBottom: 8, fontFamily: 'inherit' };
@@ -32022,7 +32024,7 @@ function RoutinesAdmin(props) {
         var list = rtList(cur[x[0]]) || rtDefaults(selName || 'Ryan', x[0]);
         return h('div', { key: x[0] + sel }, h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff', margin: '6px 0 4px' } }, x[1]),
           h('textarea', { rows: Math.min(10, list.length + 1), defaultValue: list.join('\n'), id: 'rt_' + x[0], style: inp }),
-          h('button', { onClick: function () { var el = document.getElementById('rt_' + x[0]); if (el) save(x[0], el.value); }, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 16, padding: '7px 14px', fontWeight: 800, cursor: 'pointer', marginBottom: 6 } }, 'Save ' + x[0]));
+          h('button', { onClick: function () { var el = document.getElementById('rt_' + x[0]); if (el) save(x[0], el.value); }, style: { background: sv === x[0] ? '#2E7D32' : '#4CAF82', color: sv === x[0] ? '#fff' : '#000', border: 'none', borderRadius: 16, padding: '10px 16px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, sv === x[0] ? '✅ Saved!' : 'Save ' + x[0]));
       }),
       h('div', { style: { borderTop: '1px solid rgba(255,255,255,.12)', marginTop: 12, paddingTop: 10 } },
         h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 6 } }, '➕ Add your own chore / maintenance job'),
@@ -32437,7 +32439,7 @@ function IncomingAlerts(props) {
   (props.notifs || []).forEach(function (n) {
     if (!n || n.read || n.timestamp < t0.current - 60000 || n.type === 'pin_reset_request' || n.type === 'clock_in') return;
     var mine = n.personId === pid || n.personId === 'all';
-    if (mine || (isAdmin && n.personId !== pid && (typeof ncWants !== 'function' || ncWants(pid, n, ncfg)))) found.push({ id: 'n_' + n.id, title: n.title || 'Notification', body: n.message || '', link: n.link });
+    if (mine || (isAdmin && n.personId !== pid && (typeof ncWants !== 'function' || ncWants(pid, n, ncfg)))) found.push({ id: 'n_' + n.id, title: n.title || 'Notification', body: n.message || '', link: n.link, goto: n.goto, nid: n.id });
   });
   React.useEffect(function () {
     var ids = found.map(function (f) { return f.id; });
@@ -32455,7 +32457,7 @@ function IncomingAlerts(props) {
     toasts.map(function (t) { return h('div', { key: t.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } },
       h('div', { style: { flex: 1, fontSize: 14 } }, h('b', null, t.title), t.body ? ' — ' + String(t.body).slice(0, 120) : ''),
       t.link && h('a', { href: t.link, target: '_blank', rel: 'noopener noreferrer', style: { background: '#4CAF82', color: '#000', borderRadius: 14, padding: '7px 11px', fontWeight: 800, fontSize: 12, textDecoration: 'none' } }, '\uD83D\uDCCD Map'),
-      props.onOpen && h('button', { onClick: function () { setToasts(function (old) { return old.filter(function (x) { return x.id !== t.id; }); }); props.onOpen(); }, style: { background: '#fff', color: '#1E88E5', border: 'none', borderRadius: 14, padding: '7px 11px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, 'Open'),
+      props.onOpen && h('button', { onClick: function () { setToasts(function (old) { return old.filter(function (x) { return x.id !== t.id; }); }); if (t.goto && typeof window._gotoDest === 'function') { window._gotoDest(t.goto, t.nid); return; } props.onOpen(); }, style: { background: '#fff', color: '#1E88E5', border: 'none', borderRadius: 14, padding: '7px 11px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, 'Open'),
       h('button', { onClick: function () { setToasts(function (old) { return old.filter(function (x) { return x.id !== t.id; }); }); }, style: { background: 'rgba(0,0,0,.25)', color: '#fff', border: 'none', borderRadius: 14, padding: '7px 10px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, '✕')); }));
 }
 
@@ -32510,7 +32512,7 @@ function pciGuess(running) {
   if (a === 'fun') return 'friends'; if (a === 'free') return 'home'; if (a === 'driving') return 'out'; return 'work';
 }
 function ParentCheckIn(props) {
-  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = ['Mom & Dad', 'Mom', 'Dad'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; })), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = ['Mom & Dad', 'Mom', 'Dad'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; })), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent' || p.name !== dflt; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
   var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : !isP;
@@ -32563,7 +32565,7 @@ function ParentCheckIn(props) {
   var curLabel = running.length ? running.map(function (r) { return (typeof planActLabel === 'function' ? planActLabel(r.activity) : r.activity); }).join(' + ') : 'nothing';
   function submit() {
     if (!f.status) return;
-    var wl = (f.whoL && f.whoL.length) ? f.whoL : null, whoStr = wl ? wl.join(' & ') : dflt, inWl = function (p) { return !!wl && wl.indexOf(p.name) >= 0 && p.role !== 'parent'; };
+    var wl = (f.whoL && f.whoL.length) ? f.whoL : null, whoStr = wl ? wl.join(' & ') : dflt, inWl = function (p) { return !!wl && wl.indexOf(p.name) >= 0 && (isP || p.role !== 'parent'); };
     var id = 'ci' + Date.now().toString(36), rec = { id: id, ts: Date.now(), who: whoStr, whoL: wl || null, status: f.status, statusLabel: st ? st[2] : f.status, ctx: f.ctx.trim(), ctxQ: ctxQ, aff: f.aff.trim(), affQ: aff, mood: f.mood, help: f.help, clocked: curLabel };
     try { syncSet('checkins/' + dayK + '/' + pid + '/' + id, rec); } catch (e) {}
     if (isP) { try { syncSet('parent_status/' + pid, { ts: Date.now(), name: name, who: whoStr, status: f.status, statusLabel: st ? st[2] : f.status, emoji: st ? st[1] : '', ctx: f.ctx.trim(), share: f.share !== false }); } catch (e) {} pFam.filter(inWl).forEach(function (tgt) { if (typeof window._addNotifFn === 'function') { try { window._addNotifFn('message', tgt.id, '📍 ' + name + ' shared an update', (st ? st[1] + ' ' + st[2] : '') + (f.ctx.trim() ? ': ' + f.ctx.trim() : ''), { fromId: pid }); } catch (e) {} } }); }
@@ -35425,7 +35427,7 @@ function MenuScience(props) {
           if (b.val()) { localStorage.setItem(key, '1'); return; }
           try { db.ref('argilan/smartmenu/remind/' + ws).set(Date.now()); } catch (e) {}
           localStorage.setItem(key, '1');
-          window._addNotifFn('task', 'laurel', '🛒 New flyers are out — renew the menu', 'Open Kitchen → Smart Menu, add this week’s sales, tap New ideas, then Put this plan on the weekly menu.', {});
+          window._addNotifFn('task', 'laurel', '🛒 New flyers are out — renew the menu', 'Open Kitchen → Smart Menu, add this week’s sales, tap New ideas, then Put this plan on the weekly menu.', { goto: 'kitchen:smart' });
         });
       });
     } catch (e) {}
