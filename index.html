@@ -33573,6 +33573,7 @@ function TeacherManual(props) {
       e[4] && e[4] !== 'See 180-day document' && h('div', { style: { fontSize: 15, color: '#E0D7F5' } }, '📖 ' + e[4]),
       e[5] > 0 && h('div', { style: { fontSize: 14, color: '#F6BF26' } }, '🎵 Song #' + e[5] + ' — play it first'),
       h('div', { style: { fontSize: 13, color: '#c8c8d8', marginTop: 6 } }, 'Read straight from this page. Anything in a green SAY tag is what you say out loud. Yellow [brackets] are things you do.')),
+    typeof ListenBar === 'function' && h(ListenBar, { text: text, title: 'Day ' + day + ': ' + (e[3] || ''), onNext: function () { window._lnAuto = true; go(day + 1); } }),
     h('div', { style: { display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' } }, btn('rgba(255,255,255,.14)', '#fff', function () { go(day - 1); }, '‹ Previous'), btn('#9C8DC4', '#000', function () { go(day + 1); }, 'Next day ›'), btn('rgba(255,255,255,.14)', '#fff', function () { if (props.today) go(props.today); }, 'Today'), btn('rgba(255,255,255,.14)', '#fff', function () { setBig(!big); }, big ? 'A− smaller' : 'A+ bigger'), btn('rgba(255,255,255,.14)', '#fff', function () { setListOpen(!listOpen); }, '📚 All days ' + (listOpen ? '▾' : '▸'))),
     listOpen && h('div', { style: { background: 'rgba(255,255,255,.05)', borderRadius: 14, padding: 10, marginBottom: 10, maxHeight: 360, overflowY: 'auto' } }, Object.keys(units).map(function (u) {
       return h('div', { key: u, style: { marginBottom: 8 } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#C5B8E8', marginBottom: 4 } }, 'UNIT ' + u + ' — ' + units[u]),
@@ -37829,6 +37830,89 @@ function NoteSkillCard(props) {
       days > 0 && h('div', { style: { fontSize: 11, color: '#9a9ab0', marginTop: 6, textAlign: 'center' } }, '📓 ' + days + ' notebook day' + (days > 1 ? 's' : '') + ' so far'),
       h('div', { style: { marginTop: 10 } }, h('button', { onClick: function () { setGuide(!guide); }, style: { background: 'transparent', color: '#90CAF9', border: 'none', fontWeight: 800, fontSize: 12, cursor: 'pointer', padding: 0 } }, (guide ? '▾' : '▸') + ' How my notebook is set up')),
       guide && h('div', { style: { marginTop: 6, padding: 10, background: 'rgba(0,0,0,.2)', borderRadius: 10 } }, guideRows.map(function (r) { return h('div', { key: r[0], style: { marginBottom: 8 } }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#fff' } }, r[0]), h('div', { style: { fontSize: 12, color: '#c8c8d8', lineHeight: 1.45 } }, r[1])); }))));
+}
+
+</script>
+<script>
+// ═══ LISTEN BAR — reads the Teacher Manual out loud (free: uses the phone's own voices) ═══
+function lnClean(text, withNotes) {
+  var out = [], EMO = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B50}\u{2705}]/gu;
+  String(text || '').split('\n').forEach(function (ln) {
+    var t = ln.trim(); if (!t) return;
+    var note = /^\[.*\]$/.test(t); if (note) { if (!withNotes) return; t = 'Teacher note: ' + t.replace(/^\[|\]$/g, ''); }
+    t = t.replace(/\[([^\]]*)\]/g, withNotes ? ', $1,' : '').replace(/(SAY|TEACH|ASK|DO|READ|NOTE|Hook|Teach|Music|Worship Dig Deeper|After School):/g, function (m, a) { return /^(SAY|TEACH)$/i.test(a) ? '' : a + '.'; }).replace(EMO, '').replace(/\s+/g, ' ').trim();
+    if (!t) return;
+    var sent = t.match(/[^.!?]+[.!?]*["”')]*\s*/g) || [t];
+    sent.forEach(function (s) {
+      s = s.trim(); if (!s) return;
+      while (s.length > 220) { var cut = s.lastIndexOf(',', 220); if (cut < 60) cut = s.lastIndexOf(' ', 220); if (cut < 40) cut = 220; out.push(s.slice(0, cut + 1).trim()); s = s.slice(cut + 1).trim(); }
+      if (s) out.push(s);
+    });
+  });
+  return out;
+}
+function lnLoad() { try { return JSON.parse(localStorage.getItem('fm_tts') || '{}') || {}; } catch (e) { return {}; } }
+function ListenBar(props) {
+  var h = React.createElement, synth = window.speechSynthesis, ok = !!synth && typeof SpeechSynthesisUtterance !== 'undefined';
+  var cfgS = React.useState(lnLoad()), cfg = cfgS[0], setCfg = cfgS[1];
+  var vS = React.useState([]), voices = vS[0], setVoices = vS[1];
+  var pS = React.useState(0), pos = pS[0], setPos = pS[1], rS = React.useState('stop'), mode = rS[0], setMode = rS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var notes = cfg.notes !== false, chunks = React.useMemo(function () { return lnClean(props.text, notes); }, [props.text, notes]);
+  var st = React.useRef({}); st.current = { pos: pos, mode: mode, chunks: chunks, cfg: cfg, props: props };
+  function save(o) { var n = Object.assign({}, cfg, o); setCfg(n); try { localStorage.setItem('fm_tts', JSON.stringify(n)); } catch (e) {} }
+  React.useEffect(function () {
+    if (!ok) return; function load() { var v = synth.getVoices() || []; setVoices(v.filter(function (x) { return /^en/i.test(x.lang); }).sort(function (a, b) { var sc = function (x) { return (/natural|neural|premium|enhanced|google|siri/i.test(x.name) ? 0 : 1) + (/en[-_]US/i.test(x.lang) ? 0 : .5); }; return sc(a) - sc(b) || a.name.localeCompare(b.name); })); }
+    load(); synth.addEventListener && synth.addEventListener('voiceschanged', load); return function () { synth.removeEventListener && synth.removeEventListener('voiceschanged', load); };
+  }, []);
+  var gen = React.useRef(0);
+  function speakFrom(i) {
+    if (!ok) return; var S = st.current, c = S.chunks; gen.current++; var g = gen.current; try { synth.cancel(); } catch (e) {}
+    if (i >= c.length) { setMode('stop'); setPos(0); if (S.cfg.auto && S.props.onNext) { S.props.onNext(); } return; }
+    setPos(i); setMode('play');
+    var u = new SpeechSynthesisUtterance(c[i]); u.rate = +S.cfg.rate || 1; u.pitch = +S.cfg.pitch || 1; u.lang = 'en-US';
+    var vv = (synth.getVoices() || []).filter(function (x) { return x.name === S.cfg.voice; })[0]; if (vv) { u.voice = vv; u.lang = vv.lang; }
+    u.onend = function () { if (g !== gen.current) return; speakFrom(i + 1); };
+    u.onerror = function (e) { if (g !== gen.current) return; if (e && (e.error === 'interrupted' || e.error === 'canceled')) return; setMode('pause'); };
+    setTimeout(function () { if (g === gen.current) { try { synth.speak(u); } catch (e) {} } }, 60);
+  }
+  function play() { speakFrom(st.current.mode === 'pause' ? st.current.pos : (st.current.pos || 0)); }
+  function pause() { gen.current++; try { synth.cancel(); } catch (e) {} setMode('pause'); }
+  function stop() { gen.current++; try { synth.cancel(); } catch (e) {} setMode('stop'); setPos(0); }
+  function jump(d) { var n = Math.max(0, Math.min(chunks.length - 1, st.current.pos + d)); if (st.current.mode === 'play') speakFrom(n); else setPos(n); }
+  // stop when the day changes or the page closes
+  React.useEffect(function () { stop(); if (window._lnAuto) { window._lnAuto = false; setTimeout(function () { speakFrom(0); }, 500); } }, [props.text]);
+  React.useEffect(function () { return function () { gen.current++; try { synth && synth.cancel(); } catch (e) {} }; }, []);
+  // lock-screen / headset buttons where the phone allows it
+  React.useEffect(function () {
+    try { if (!('mediaSession' in navigator)) return; navigator.mediaSession.metadata = new MediaMetadata({ title: props.title || 'Teacher Manual', artist: 'Discovering Kids Academy' });
+      navigator.mediaSession.setActionHandler('play', play); navigator.mediaSession.setActionHandler('pause', pause); navigator.mediaSession.setActionHandler('stop', stop);
+      navigator.mediaSession.setActionHandler('nexttrack', function () { jump(5); }); navigator.mediaSession.setActionHandler('previoustrack', function () { jump(-5); }); } catch (e) {}
+  });
+  if (!ok) return h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginBottom: 10, fontSize: 13, color: '#FFE0B2' } }, '🔇 This browser can’t read aloud. Try Chrome on Android or Safari on iPhone.');
+  var pct = chunks.length ? Math.round(pos / chunks.length * 100) : 0, playing = mode === 'play';
+  var b = function (bg, fg, fn, t, big) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 16, padding: big ? '16px 22px' : '12px 14px', fontWeight: 900, fontSize: big ? 20 : 15, cursor: 'pointer', flex: big ? 2 : 1 } }, t); };
+  var sel = { width: '100%', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 14, marginBottom: 8 };
+  return h('div', { style: { position: 'sticky', top: 0, zIndex: 15, background: 'rgba(28,24,48,.97)', border: '2px solid #9C8DC4', borderRadius: 16, padding: 12, marginBottom: 10, boxShadow: '0 4px 14px rgba(0,0,0,.35)' } },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#C5B8E8', letterSpacing: 1, marginBottom: 6 } }, '🎧 LISTEN TO THIS LESSON'),
+    h('div', { style: { height: 6, background: 'rgba(255,255,255,.12)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 } }, h('div', { style: { height: '100%', width: pct + '%', background: '#9C8DC4', transition: 'width .3s' } })),
+    h('div', { style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
+      b('rgba(255,255,255,.14)', '#fff', function () { jump(-5); }, '⏪'),
+      playing ? b('#FFD54F', '#000', pause, '⏸ Pause', true) : b('#4CAF82', '#000', play, mode === 'pause' ? '▶ Resume' : '▶ Play', true),
+      b('rgba(255,255,255,.14)', '#fff', function () { jump(5); }, '⏩'),
+      mode !== 'stop' && b('rgba(239,83,80,.8)', '#fff', stop, '⏹')),
+    h('div', { style: { fontSize: 12, color: '#b8b8c8', marginTop: 6 } }, (mode === 'stop' ? 'Ready' : playing ? 'Reading…' : 'Paused') + ' · ' + Math.min(pos + 1, chunks.length) + ' of ' + chunks.length + ' parts · ⏪⏩ skip ~5 sentences'),
+    h('button', { onClick: function () { setOpen(!open); }, style: { background: 'transparent', border: 'none', color: '#C5B8E8', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: '8px 0 0' } }, (open ? '▲ ' : '▼ ') + 'Voice & speed'),
+    open && h('div', { style: { marginTop: 6 } },
+      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Voice (these are the voices on this phone — the ones marked ★ usually sound most natural)'),
+      h('select', { value: cfg.voice || '', onChange: function (e) { save({ voice: e.target.value }); }, style: sel }, h('option', { value: '' }, 'Phone default'), voices.map(function (v) { return h('option', { key: v.name + v.lang, value: v.name }, (/natural|neural|premium|enhanced|google|siri/i.test(v.name) ? '★ ' : '') + v.name + ' (' + v.lang + ')'); })),
+      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Speed: ' + (+cfg.rate || 1).toFixed(2) + '×'),
+      h('input', { type: 'range', min: 0.6, max: 1.6, step: 0.05, value: +cfg.rate || 1, onChange: function (e) { save({ rate: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }),
+      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Pitch: ' + (+cfg.pitch || 1).toFixed(2)),
+      h('input', { type: 'range', min: 0.7, max: 1.3, step: 0.05, value: +cfg.pitch || 1, onChange: function (e) { save({ pitch: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }),
+      h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 6 } }, h('input', { type: 'checkbox', checked: notes, onChange: function (e) { save({ notes: e.target.checked }); } }), ' Read the [bracket] teacher notes too'),
+      h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 8 } }, h('input', { type: 'checkbox', checked: !!cfg.auto, onChange: function (e) { save({ auto: e.target.checked }); } }), ' When this day ends, go straight to the next day'),
+      h('button', { onClick: function () { try { synth.cancel(); var u = new SpeechSynthesisUtterance('Good morning! This is how I will sound reading your lesson.'); var vv = (synth.getVoices() || []).filter(function (x) { return x.name === cfg.voice; })[0]; if (vv) u.voice = vv; u.rate = +cfg.rate || 1; u.pitch = +cfg.pitch || 1; synth.speak(u); } catch (e) {} }, style: { background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' } }, '🔊 Hear this voice'),
+      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 8, lineHeight: 1.5 } }, 'Free — nothing is uploaded; your phone does the talking. While driving: start it, then you can lock the screen on most Android phones. iPhones may stop reading when the screen locks, so keep the screen on (plug in the charger) or use a car mount. Your settings are remembered on this phone.')));
 }
 
 </script>
