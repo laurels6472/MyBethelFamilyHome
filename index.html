@@ -12893,7 +12893,7 @@ function HomeschoolModule({
     student: student,
     todayDay: todayDay,
     onOpen: () => setTab('catchup')
-  }), tab === 'today' && /*#__PURE__*/React.createElement(DailySchoolDay, {
+  }), tab === 'today' && typeof NoteSkillCard === 'function' && /*#__PURE__*/React.createElement(NoteSkillCard, { student: student, day: day }), tab === 'today' && /*#__PURE__*/React.createElement(DailySchoolDay, {
     day: day,
     student: student,
     hook: hook,
@@ -33719,7 +33719,10 @@ function AttendanceCard(props) {
   var running = typeof clockActiveList === 'function' ? clockActiveList((props.sessions || {})[pid] || {}).some(function (a) { return a.activity === 'school'; }) : false;
   var STAT = [['present', '✅ Present'], ['late', '⏰ Late'], ['absent', '❌ Absent'], ['excused', '📝 Excused'], ['holiday', '🏖 Holiday / Vacation (excused)']];
   var v = function (k, d) { return f[k] != null ? f[k] : (rec && rec[k] != null ? rec[k] : d); };
-  function save() { var st = v('status', 'present'), off = st === 'absent' || st === 'excused' || st === 'holiday'; try { syncSet('attendance/' + iso + '/' + pid, { status: st, start: off ? '' : v('start', '09:00'), end: off ? '' : v('end', ''), note: v('note', ''), by: window._currentPersonId || 'parent', at: Date.now() }); } catch (e) {} setEdit(false); setF({}); }
+  function save() { var st = v('status', 'present'), off = st === 'absent' || st === 'excused' || st === 'holiday'; var s0 = off ? '' : v('start', '09:00'), e0 = off ? '' : v('end', ''); try { syncSet('attendance/' + iso + '/' + pid, { status: st, start: s0, end: e0, note: v('note', ''), by: window._currentPersonId || 'parent', at: Date.now() }); } catch (e) {}
+    // Editing the time also moves the Start My Day clock so both always agree
+    try { if (s0) { var pz = iso.split('-'), msOf = function (t) { var m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? new Date(+pz[0], +pz[1] - 1, +pz[2], +m[1], +m[2], 0, 0).getTime() : null; }, a0 = msOf(s0), b0 = msOf(e0), sk = 'startday/' + todayKey() + '/' + pid, cur0 = {}; try { cur0 = syncGet(sk) || {}; } catch (e) {} if (a0) syncSet(sk, Object.assign({}, cur0, { dayStart: a0, dayEnd: b0 || null, clockedAt: cur0.clockedAt || a0, editedByAdmin: true })); } } catch (e) {}
+    setEdit(false); setF({}); }
   function del() { if (!conf) { setConf(true); setTimeout(function () { setConf(false); }, 4000); return; } try { syncSet('attendance/' + iso + '/' + pid, null); } catch (e) {} setConf(false); setEdit(false); }
   var inp = { background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, color: '#fff', padding: 9, fontSize: 15 };
   var present = rec && (rec.status === 'present' || rec.status === 'late');
@@ -37652,6 +37655,79 @@ function ErasedBackups() {
         h('div', { style: { fontSize: 13, fontWeight: 800 } }, x.title), h('div', { style: { fontSize: 11, color: '#9a9ab0' } }, new Date(x.ts).toLocaleString() + ' · by ' + (x.by || '?') + ' · ' + (x.n || 0) + ' item(s)'),
         h(DcConfirm, { onConfirm: function () { restore(x); }, label: '↩ Restore this', sure: 'Tap again — puts it back', style: { background: 'rgba(255,213,79,.15)', color: '#FFD54F', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: '9px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 6 } })); }),
       msg && h('div', { style: { fontSize: 12, color: '#81C784', marginTop: 8 } }, msg)));
+}
+
+</script>
+<script>
+// ═══ NOTE-TAKING, woven into school from Day 6: one small notebook skill a day, in the kids' own electronic notebook ═══
+var NS_SUBJ = ['Bible Study', 'Science', 'Language Arts', 'Math', 'History', 'Composition'];
+// Each skill = a 10-school-day block: 2 days to LEARN, 6 days to PRACTICE, 2 days to SHOW it
+var NS_SKILLS = [
+  { t: 'Know your notebook', page: 'The whole notebook', why: 'You cannot use a tool you have not explored. Today we find our way around.', learn: 'Open your notebook with a parent. Find: the month tabs across the top, the Daily page, Favourite verses by theme, the Meeting pages, and the Bible people pages.', tryIt: 'Open today’s Daily page. Type the date in the top box and type the scripture reference in the Scripture box. That is all — you did it!' },
+  { t: 'Your tools: write, draw, undo', page: 'Pen · highlighter · eraser · undo', why: 'A messy page is fine. Undo and eraser mean nothing is ever ruined.', learn: 'Try each tool: pen, highlighter, eraser, undo, zoom, and changing colors. Scribble on a spare page on purpose.', tryIt: 'Write today’s date in one color and one key word in another color. Highlight one word. Undo it once, just to see it work.' },
+  { t: 'The Scripture box', page: 'Daily page → SCRIPTURE', why: 'Writing the verse helps your brain hold on to it.', learn: 'Write the reference, then copy just the 3–5 words that matter most. Not the whole verse.', tryIt: 'Put today’s scripture reference and your 3–5 key words in the Scripture box.' },
+  { t: 'Daily text in 4 words', page: 'Daily page → DAILY TEXT IN 4 WORDS', why: 'Shrinking an idea into 4 words forces you to find the main point.', learn: 'Read the daily text. Ask: “What is it REALLY about?” Say it in exactly 4 words.', tryIt: 'Write your 4 words in the four boxes. Then say them to someone at home.' },
+  { t: 'Draw it: the Photo/Drawing box', page: 'Daily page → PHOTO/DRAWING', why: 'A quick picture is a note too. Stick figures count!', learn: 'Pick the one idea you want to remember. Draw a tiny symbol for it: heart, arrow, light bulb, crown, tree.', tryIt: 'Make a 1-minute sketch of today’s main idea in the Photo/Drawing box, or add a photo.' },
+  { t: 'Key words, not sentences', page: 'Daily page → NOTES', why: 'Writing sentences means you miss what comes next. Key words keep you up with the speaker.', learn: 'Listen for words that are repeated, said loudly, or are names, numbers and places. Write only those.', tryIt: 'During today’s lesson, write key words only in Notes — no full sentences.' },
+  { t: 'Shortcuts and symbols', page: 'Daily page → NOTES', why: 'Your own code makes writing fast.', learn: 'Make a mini list: → leads to, = same as, ≠ different, ? question, ! important, w/ with, b/c because, ↑ more, ↓ less.', tryIt: 'Use at least 3 of your shortcuts in today’s notes.' },
+  { t: 'Main idea and details', page: 'Daily page → NOTES (2 levels)', why: 'This is how big lessons fit on a small page.', learn: 'Write the main idea on the left edge. Indent the details under it. One idea = one chunk.', tryIt: 'Make 2 main ideas with 2 details under each in today’s notes.' },
+  { t: 'Ask a question', page: 'Daily page → NOTES', why: 'Good questions turn listening into thinking.', learn: 'Mark a ? when something is confusing, interesting or surprising. Do not worry about the answer yet.', tryIt: 'Write at least one ? question during today’s lesson. At the end, find the answer or ask a parent.' },
+  { t: 'Want to apply', page: 'Daily page → WANT TO APPLY', why: 'Notes are useful when they change what we do.', learn: 'Make it one small action, with a who or when: “Tonight I will say thank you to Mom.” Not “be kinder.”', tryIt: 'Write one specific thing you want to apply from today in WANT TO APPLY.' },
+  { t: 'Bible people pages', page: 'Bible people → Name · Family · Info · Qualities', why: 'People in the Bible are real lessons in how to live.', learn: 'Choose a man, woman or bad example. Fill in the name, family and 2–3 facts. Use the film frames for quick pictures.', tryIt: 'Fill in a Bible people page for someone in today’s Bible lesson — name, family and info.' },
+  { t: 'Good and bad qualities, key events', page: 'Bible people → Qualities · Key events', why: 'Comparing shows what to copy and what to avoid.', learn: 'List 2 good qualities, 2 bad qualities, then 3 key events in order. Draw a line from a quality to the event that shows it.', tryIt: 'Finish the Bible person page: qualities plus key events. What is one lesson for you?' },
+  { t: 'Favourite verses by theme', page: 'Favourite verses by theme', why: 'Sorting verses by theme makes them easy to find when you need them.', learn: 'Themes: to encourage others, about the future, qualities of Jehovah, Bible principles, for my personality, for ministry.', tryIt: 'Add a verse from this week to the theme where it fits. Write the reference and 3 words.' },
+  { t: 'Meeting notes: before, during, after', page: 'Meeting pages', why: 'The same 3-step plan works for any meeting, talk or assembly.', learn: 'BEFORE: write the theme and scriptures. DURING: key words and ONE good comment idea. AFTER: one thing to apply.', tryIt: 'Prepare a meeting page: write the theme and 2 scriptures before. Take notes during. Add one apply after.' },
+  { t: 'Review: cover and recall', page: 'Daily page → NOTES', why: 'Reading again feels productive but recalling from memory is what actually builds it.', learn: 'Cover your notes. Say what you remember out loud. Uncover and fix or add anything.', tryIt: 'Do a 2-minute cover-and-recall on yesterday’s notes. How much could you say?' },
+  { t: 'Summarize in 2 sentences', page: 'Notes → bottom of page', why: 'If you can explain it in 2 sentences, you own it.', learn: 'Look at your notes. Write 1 sentence for the big idea and 1 sentence for why it matters.', tryIt: 'Write a 2-sentence summary at the bottom of one of this week’s pages.' },
+  { t: 'Study from your notes', page: 'Your notes', why: 'Notes are for studying. Little and often beats cramming.', learn: 'Review after 1 day, 1 week and 1 month. Make a question from each heading and test yourself.', tryIt: 'Pick a page from a week ago. Make 3 questions from it and answer them from memory.' },
+  { t: 'Notes for writing and research', page: 'Notes → Composition', why: 'Notes in your own words are the start of good writing.', learn: 'Write the source at the top. Use key words only. Put each fact in your own words, then add what YOU think.', tryIt: 'Take notes on one article for Composition: source, 3 facts in your own words, 1 of your own thoughts.' }
+];
+var NS_TIER = {
+  mykah: ['a', 'Mykah', '3 key words + 1 picture'],
+  ashelyn: ['b', 'Ashelyn', '3–4 key points'],
+  kayla: ['c', 'Kayla', 'main ideas, details and 1 question'],
+  ryan: ['d', 'Ryan', 'headings, details and a 2-sentence summary']
+};
+function nsInfo(day) {
+  var d = Math.max(6, day), i = d - 6, bi = Math.floor(i / 10), pos = i % 10, S = NS_SKILLS[Math.min(NS_SKILLS.length - 1, bi)];
+  var phase = pos < 2 ? 'learn' : pos < 8 ? 'practice' : 'show';
+  return { skill: S, block: bi, pos: pos, phase: phase, subj: NS_SUBJ[(d - 6) % NS_SUBJ.length], mastery: bi >= NS_SKILLS.length };
+}
+function NoteSkillCard(props) {
+  var h = React.createElement, sid = props.student && props.student.id, day = props.day || 1;
+  var dS = ktUse('notes_done/' + sid + '/' + day, null), done = dS[0], allS = ktUse('notes_done/' + sid, {}), all = allS[0] || {};
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1], gS = React.useState(false), guide = gS[0], setGuide = gS[1], sS = React.useState(300), left = sS[0], setLeft = sS[1], rS = React.useState(false), run = rS[0], setRun = rS[1], cS = React.useState('words'), way = cS[0], setWay = cS[1];
+  React.useEffect(function () { if (!run) return; var iv = setInterval(function () { setLeft(function (x) { if (x <= 1) { setRun(false); return 0; } return x - 1; }); }, 1000); return function () { clearInterval(iv); }; }, [run]);
+  if (!sid || day < 6) return null;
+  var I = nsInfo(day), S = I.skill, tier = NS_TIER[sid] || ['b', (props.student && props.student.name) || '', '3–4 key points'];
+  var days = Object.keys(all).length;
+  var phaseLabel = I.phase === 'learn' ? '👀 Learn it' : I.phase === 'practice' ? '✍️ Practice it' : '🌟 Show it';
+  var mm = Math.floor(left / 60), ss = left % 60;
+  var WAYS = [['words', '✍️ Words'], ['draw', '🎨 Draw it'], ['web', '🗺 Web']];
+  var wayTip = way === 'draw' ? 'Use a quick sketch + 2 labels for your notes today.' : way === 'web' ? 'Put the topic in the middle and branch out each main idea.' : 'Use key words and short phrases — no full sentences.';
+  var chip = function (on) { return { padding: '8px 12px', borderRadius: 18, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.25)'), background: on ? 'rgba(255,213,79,.18)' : 'transparent', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }; };
+  function finish() { try { syncSet('notes_done/' + sid + '/' + day, Date.now()); } catch (e) {} }
+  var guideRows = [['📅 Month tabs → Daily page', 'Date, SCRIPTURE, PHOTO/DRAWING, DAILY TEXT IN 4 WORDS, NOTES and WANT TO APPLY'], ['⭐ Favourite verses by theme', 'Encourage others · Future · Qualities of Jehovah · Qualities of Jesus · Principles · Illustrations · Personality · Ministry · Questions/Answers'], ['🏛 Meeting pages', 'Public talk & Watchtower · Christian Life and Ministry · Broadcast · Morning worship · Assemblies · CO visits'], ['👤 Bible people pages', 'Men · Women · Bad examples · Extra: Name, Family, Info, Good & Bad qualities, Key events, film frames']];
+  return h('div', { style: { margin: '0 0 10px', borderRadius: 14, background: 'rgba(76,175,130,.10)', border: '1px solid rgba(76,175,130,.55)', overflow: 'hidden' } },
+    h('div', { onClick: function () { setOpen(!open); }, style: { padding: 12, cursor: 'pointer' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#7be3ae' } }, '📓 My Notebook Skill — ' + (done ? '✅ done today' : phaseLabel)), h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginTop: 2 } }, S.t)), h('div', { style: { color: '#b8c0d0' } }, open ? '▾' : '▸')),
+      !open && h('div', { style: { fontSize: 11, color: '#c8c8d8', marginTop: 3 } }, 'Take your notes in ' + I.subj + ' today · about 5 minutes · tap to open')),
+    open && h('div', { style: { padding: '0 12px 12px' } },
+      h('div', { style: { fontSize: 12, color: '#d8f0e2', lineHeight: 1.55, marginBottom: 8 } }, '“' + S.why + '”'),
+      h('div', { style: { fontSize: 11, fontWeight: 900, color: '#FFD54F' } }, 'WHERE IN YOUR NOTEBOOK'), h('div', { style: { fontSize: 13, color: '#fff', marginBottom: 8 } }, S.page),
+      I.phase === 'learn' && h('div', { style: { marginBottom: 8 } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#FFD54F' } }, '👀 LEARN IT (with Mom, Dad or a sibling)'), h('div', { style: { fontSize: 13, color: '#fff', lineHeight: 1.5 } }, S.learn)),
+      h('div', { style: { marginBottom: 8 } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#FFD54F' } }, (I.phase === 'show' ? '🌟 SHOW IT: ' : '✍️ TRY IT: ') + 'in your ' + I.subj + ' lesson'), h('div', { style: { fontSize: 13, color: '#fff', lineHeight: 1.5 } }, S.tryIt), I.phase === 'show' && h('div', { style: { fontSize: 12, color: '#c8f0d8', marginTop: 4 } }, 'Then show or tell someone at home one thing you wrote. Teaching it is the best way to keep it.')),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 6 } }, 'For ' + tier[1] + ': aim for ' + tier[2] + '. There is no “wrong” — it only needs to help YOU remember.'),
+      h('div', { style: { fontSize: 11, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, 'PICK YOUR WAY TODAY'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 } }, WAYS.map(function (w) { return h('button', { key: w[0], onClick: function () { setWay(w[0]); }, style: chip(way === w[0]) }, w[1]); })),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 10 } }, wayTip),
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 } },
+        h('button', { onClick: function () { if (!run && left === 0) setLeft(300); setRun(!run); }, style: { background: run ? '#FFB74D' : '#039BE5', color: run ? '#000' : '#fff', border: 'none', borderRadius: 14, padding: '11px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, run ? '⏸ Pause' : '⏱ 5-minute notes timer'),
+        h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, mm + ':' + (ss < 10 ? '0' : '') + ss), left === 0 && h('div', { style: { fontSize: 12, color: '#7be3ae' } }, 'Time! Great focus.')),
+      done ? h('div', { style: { fontSize: 14, fontWeight: 900, color: '#7be3ae' } }, '✅ Notebook done for today — nice work!') : h('button', { onClick: finish, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✅ I did my notebook today'),
+      days > 0 && h('div', { style: { fontSize: 11, color: '#9a9ab0', marginTop: 6, textAlign: 'center' } }, '📓 ' + days + ' notebook day' + (days > 1 ? 's' : '') + ' so far'),
+      h('div', { style: { marginTop: 10 } }, h('button', { onClick: function () { setGuide(!guide); }, style: { background: 'transparent', color: '#90CAF9', border: 'none', fontWeight: 800, fontSize: 12, cursor: 'pointer', padding: 0 } }, (guide ? '▾' : '▸') + ' How my notebook is set up')),
+      guide && h('div', { style: { marginTop: 6, padding: 10, background: 'rgba(0,0,0,.2)', borderRadius: 10 } }, guideRows.map(function (r) { return h('div', { key: r[0], style: { marginBottom: 8 } }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#fff' } }, r[0]), h('div', { style: { fontSize: 12, color: '#c8c8d8', lineHeight: 1.45 } }, r[1])); }))));
 }
 
 </script>
