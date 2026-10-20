@@ -10323,6 +10323,7 @@ function clockInActivity(personId, sessions, onUpdate, activityId, opts) {
   const act = activityId || 'service';
   const active = clockActiveList(data);
   if (active.some(a => a.activity === act)) return;
+  try { if (typeof playOnce === 'function') playOnce('clockIn'); } catch (e) {}
   const s = { activity: act, startTime: Date.now(), approvalStatus: 'approved' };
   if (opts && opts.label) s.label = opts.label;
   if (opts && opts.linked) s.linked = true;
@@ -10337,6 +10338,7 @@ function clockOutActivity(personId, sessions, onUpdate, activityId) {
   const list = clockActiveList(data);
   const target = activityId ? list.find(a => a.activity === activityId) : data.current;
   if (!target) return;
+  try { if (typeof playOnce === 'function') playOnce('clockOut'); } catch (e) {}
   const rest = list.filter(a => a !== target);
   clockSave(personId, sessions, onUpdate, rest[0] || null, rest.slice(1), [...(data.today||[]), clockClose(target)]);
   clockNotify(personId, 'clock_out', target.activity);
@@ -10344,6 +10346,7 @@ function clockOutActivity(personId, sessions, onUpdate, activityId) {
 function clockOutAll(personId, sessions, onUpdate) {
   const data = (sessions||{})[personId] || { current: null, today: [] };
   const list = clockActiveList(data); if (!list.length) return;
+  try { if (typeof playOnce === 'function') playOnce('clockOut'); } catch (e) {}
   clockSave(personId, sessions, onUpdate, null, [], [...(data.today||[]), ...list.map(clockClose)]);
   list.forEach(a => clockNotify(personId, 'clock_out', a.activity));
 }
@@ -31577,7 +31580,7 @@ function otCfg() {
 function otFmt(a) { return otCfg().pts ? (Math.round(a * 100) / 100) + ' pts' : '$' + (+a).toFixed(2); }
 function otCheck(pid, label, startTs, mins) {
   if (!startTs || !mins) return false; var c = otCfg(); if (!c.on || !(c.amt > 0)) return false;
-  var el = (Date.now() - startTs) / 60000, lim = mins + Math.max(2, mins * 0.2); if (el <= lim) return false;
+  var el = (Date.now() - startTs) / 60000, lim = mins + Math.max(2, mins * 0.2); if (el <= lim) return false; try { playOnce('alert'); } catch (e) {}
   var key = 'fm_ot_' + pid + '_' + todayKey() + '_' + (typeof rtHash === 'function' ? rtHash(label) : label); try { if (localStorage.getItem(key)) return false; localStorage.setItem(key, '1'); } catch (e) {}
   try { if (typeof window._deductFn === 'function') window._deductFn(pid, c.amt, '⏱ Over time: ' + label + ' (' + Math.round(el) + ' min, planned ' + mins + ')'); } catch (e) {}
   try { if (typeof tgToast === 'function') tgToast('⏱ “' + label + '” went over its time — ' + otFmt(c.amt) + ' was taken. Next time, beat the clock!'); } catch (e) {}
@@ -31666,14 +31669,14 @@ function StartMyDay(props) {
   var allDays = Object.keys(htAll).sort().slice(-7);
   var submitted = !!sd.dayEnd;
   var startOpen = stOpen != null ? stOpen : !clocked;
-  function readyGo() {
+  function readyGo() { playOnce('success');
     try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: Date.now() })); } catch (e) {}
     // getting ready is over: clock out of My Time. Work and Household Work unlock — the child clocks into each one by hand.
     try { var api = window._clockApi; if (api && api.onUpdate && typeof clockOutActivity === 'function') clockOutActivity(pid, api.sessions || {}, api.onUpdate, 'free'); } catch (e) {}
   }
   var runNow = typeof clockActiveList === 'function' ? clockActiveList(mine) : [];
   var actName = function (id) { return typeof getAct === 'function' ? getAct(id).label : id; };
-  function submitDay(withDeduct) {
+  function submitDay(withDeduct) { playOnce('success');
     var c = typeof otCfg === 'function' ? otCfg() : { foAmt: 0 };
     if (withDeduct && c.foAmt > 0 && runNow.length) {
       runNow.forEach(function (r) { try { if (typeof window._deductFn === 'function') window._deductFn(pid, c.foAmt, '⏱ Forgot to clock out of ' + actName(r.activity)); } catch (e) {} });
@@ -31698,7 +31701,7 @@ function StartMyDay(props) {
   })();
   // what drops down under each clock-in
   function panelFor(actId) {
-    if (actId === 'free') return h('div', null, props.habitsAllEl, ready && h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Morning, afternoon and evening habits live here. Tap “Clock in” on a step, then the circle when you finish.'));
+    if (actId === 'free') return h('div', null, props.habitsAllEl, props.role === 'parent' && typeof RoutinesAdmin === 'function' && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 2 } }, 'Parents: change the morning, afternoon and evening habit lists here.'), h(RoutinesAdmin, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], initial: pid })), ready && h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Morning, afternoon and evening habits live here. Tap “Clock in” on a step, then the circle when you finish.'));
     var base = { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, compact: true };
     if (actId === 'chores') return h(MyDayList, Object.assign({}, base, { kinds: ['chore', 'block'], blockAct: 'chores' }));
     if (['animals', 'school', 'spiritual', 'service', 'va_work', 'eric_work', 'consulting', 'el_sales'].indexOf(actId) !== -1)
@@ -31721,7 +31724,7 @@ function StartMyDay(props) {
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 10px' } }, new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })),
     clocked && h(NowBanner, { personId: pid, name: nm, sessions: props.sessions }),
     lateModal,
-    typeof MySchedule === 'function' && h(MySchedule, { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, clocked: clocked, ready: ready, addNotif: props.addNotif, onGo: function (t) { props.onSwitchTab && props.onSwitchTab(t); } }),
+    typeof MySchedule === 'function' && h(MySchedule, { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, clocked: clocked, ready: ready, role: props.role, addNotif: props.addNotif, onGo: function (t) { props.onSwitchTab && props.onSwitchTab(t); } }),
     sd.dayEnd && h('div', { style: { background: 'rgba(76,175,130,.18)', border: '2px solid #4CAF82', borderRadius: 16, padding: 14, marginBottom: 12, color: '#fff' } }, h('div', { style: { fontSize: 17, fontWeight: 900 } }, '🎉 Day complete' + (nm ? ', ' + nm : '') + '!'), h('div', { style: { fontSize: 13, color: '#d8f0e2', marginTop: 4, lineHeight: 1.5 } }, 'You ended your day at ' + tm(sd.dayEnd) + '. Your time is saved for Mom & Dad to review. Start My Day clears itself and is ready fresh tomorrow morning.')),
     // ── 1. START MY DAY (drop-down) ──
     h('div', { id: 'fm-step-1' }, box(s1, h('div', null,
@@ -31771,7 +31774,7 @@ function planOwnBlocks(pid, dayKey) {
   var out = [];
   try {
     var root = (typeof ktLocal === 'function' ? ktLocal('mysched/' + pid, null) : (typeof syncGet === 'function' && syncGet('mysched/' + pid))) || {};
-    [[root[dayKey], false], [root.daily, true]].forEach(function (x) { var o = x[0]; if (o && typeof o === 'object') Object.keys(o).forEach(function (k) { var b = o[k]; if (b && b.title) out.push(Object.assign({}, b, { id: b.id || k, own: true, daily: x[1], color: b.color || '#26C6DA', pts: 0 })); }); });
+    [[root[dayKey], false], [root.daily, true]].forEach(function (x) { var o = x[0]; if (o && typeof o === 'object') Object.keys(o).forEach(function (k) { var b = o[k]; if (b && b.title && b.status !== 'pending' && b.status !== 'denied') out.push(Object.assign({}, b, { id: b.id || k, own: true, daily: x[1], color: b.color || '#26C6DA', pts: 0 })); }); });
   } catch (e) {}
   return out;
 }
@@ -31853,8 +31856,8 @@ function PlanApprovals(props) {
   var off = []; Object.keys(logs).forEach(function (pid) { Object.values(logs[pid] || {}).forEach(function (l) { off.push(Object.assign({ pid: pid }, l)); }); });
   off.sort(function (a, b) { return b.ts - a.ts; });
   function decide(r, ok) { var path = 'plansdone/' + dayKey + '/' + r.pid + '/' + r.bid; try { syncSet(path, Object.assign({}, r.e, { status: ok ? 'approved' : 'redo', by: 'parent', decidedAt: Date.now() })); } catch (e) {} if (ok && r.e.pts && window._creditFn) { try { window._creditFn(r.pid, r.e.pts, '✅ ' + r.e.title, 'plan_' + dayKey + '_' + r.bid); } catch (e) {} } }
-  if (!rows.length && !off.length) return null;
-  return h('div', { style: { background: 'rgba(66,165,245,.1)', border: '1px solid rgba(66,165,245,.4)', borderRadius: 16, padding: 14, margin: '10px 14px' } },
+  if (!rows.length && !off.length) return typeof SchedAddApprovals === 'function' ? h(SchedAddApprovals, { family: fam }) : null;
+  return h('div', null, typeof SchedAddApprovals === 'function' && h(SchedAddApprovals, { family: fam }), h('div', { style: { background: 'rgba(66,165,245,.1)', border: '1px solid rgba(66,165,245,.4)', borderRadius: 16, padding: 14, margin: '10px 14px' } },
     h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '✅ Waiting for your approval (' + rows.length + ')'),
     rows.length === 0 && h('div', { style: { fontSize: 13, color: '#b8b8c8' } }, 'Nothing waiting.'),
     rows.map(function (r) { return h('div', { key: r.pid + r.bid, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.08)' } },
@@ -31863,7 +31866,7 @@ function PlanApprovals(props) {
       h('button', { onClick: function () { decide(r, false); }, style: { background: 'rgba(239,83,80,.25)', color: '#FF8A80', border: 'none', borderRadius: 16, padding: '8px 12px', fontWeight: 900, cursor: 'pointer' } }, '🔁')); }),
     off.length > 0 && h('div', { style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.12)' } },
       h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFB74D', marginBottom: 4 } }, '⚠️ Off schedule today (' + off.length + ')'),
-      off.slice(0, 8).map(function (l) { return h('div', { key: l.id, style: { fontSize: 12, color: '#ddd', padding: '2px 0' } }, nm(l.pid) + ' · ' + new Date(l.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ' · should be ' + planActLabel(l.expected) + ' (' + l.title + '), was ' + (l.actual && l.actual.length ? l.actual.map(planActLabel).join('+') : 'not clocked in')); })));
+      off.slice(0, 8).map(function (l) { return h('div', { key: l.id, style: { fontSize: 12, color: '#ddd', padding: '2px 0' } }, nm(l.pid) + ' · ' + new Date(l.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ' · should be ' + planActLabel(l.expected) + ' (' + l.title + '), was ' + (l.actual && l.actual.length ? l.actual.map(planActLabel).join('+') : 'not clocked in')); }))));
 }
 
 // ── Put the family schedule on Google Calendar (or any calendar app) as a file the calendar can import ──
@@ -31925,7 +31928,7 @@ function rtWithWaterOLD(list, period) {
 function rtNowPeriod() { var h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
 function rtDefaults(name, period) {
   var nm = (typeof MORNING_ITEMS !== 'undefined' && MORNING_ITEMS[name]) ? name : 'Ryan';
-  if (period === 'morning') return rtWithWater((typeof MORNING_ITEMS !== 'undefined' ? MORNING_ITEMS[nm] : []) || [], 'morning');
+  if (period === 'morning') return rtWithWater(((typeof MORNING_ITEMS !== 'undefined' ? MORNING_ITEMS[nm] : []) || []).filter(function (x) { return !/personal bible reading|spiritual (prep|review|preparation)/i.test(String(x)); }), 'morning');
   if (period === 'afternoon') return rtWithWater(RT_AFTERNOON, 'afternoon');
   var b = typeof BEDTIME_ITEMS !== 'undefined' ? BEDTIME_ITEMS : {};
   return rtWithWater(['Devices put away at 8 PM'].concat(b[name] || b.Ryan || []), 'evening');
@@ -31959,7 +31962,7 @@ function HabitsPanel(props) {
   var hsS = ktUse('habitstart/' + rtDay() + '/' + pid, {}), hs = hsS[0] || {}, skS = ktUse('skips/' + rtDay() + '/' + pid, {}), sk = skS[0] || {}, cfS = ktUse('startday_cfg', null), auto = !!(cfS[0] || {}).autoTimers;
   var tkS = React.useState(0), setTk = tkS[1];
   React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
-  function set(id, on, label) { if (on && hs[id] && typeof otCheck === 'function') { var rr = cur.rows.filter(function (x) { return x.id === id; })[0]; if (rr) otCheck(pid, rr.label, hs[id], rr.mins); } rtHabitSet(pid, id, on, label); }
+  function set(id, on, label) { keepScroll(); if (on) playOnce('claim'); if (on && hs[id] && typeof otCheck === 'function') { var rr = cur.rows.filter(function (x) { return x.id === id; })[0]; if (rr) otCheck(pid, rr.label, hs[id], rr.mins); } rtHabitSet(pid, id, on, label); }
   function block(p) {
     var list = rtHabits(name, pid, p, oS[0], aS[0]), n = 0;
     var rows = list.map(function (label) { var pr = rtParse(label), id = p + '_' + rtHash(label), on = !!done[id], skp = !on && !!sk['h_' + id]; if (on || skp) n++; return { id: id, label: pr.text, mins: pr.mins, on: on, skip: skp, ts: done[id] || 0 }; });
@@ -32165,8 +32168,8 @@ function OpsApprovals(props) {
 
 // ── Parent setup: edit habit lists + add custom chores ──
 function RoutinesAdmin(props) {
-  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.role === 'child'; });
-  var oS = React.useState(false), open = oS[0], setOpen = oS[1], sS = React.useState('__all'), sel = sS[0], setSel = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], svS = React.useState(''), sv = svS[0], setSv = svS[1];
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && (p.role === 'child' || p.role === 'parent'); });
+  var oS = React.useState(!!props.startOpen), open = oS[0], setOpen = oS[1], sS = React.useState(props.initial || '__all'), sel = sS[0], setSel = sS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], svS = React.useState(''), sv = svS[0], setSv = svS[1];
   var hS = ktUse('habits/' + sel, null), cur = hS[0] || {}, cS = ktUse('ops/custom', null), custom = rtList(cS[0]) || [];
   var nf = React.useState({ freq: 'weekly', weekday: '', assignee: 'any', label: '', steps: '', pts: '', cash: '' }), f = nf[0], setF = nf[1];
   var selName = sel === '__all' ? '' : ((fam.find(function (p) { return p.id === sel; }) || {}).name || '');
@@ -33648,6 +33651,10 @@ function TeacherManual(props) {
 <script>
 // ═══ MY DAY — one ordered checklist: schedule, habits and chores. Checking things off pays points straight away,
 // finishing early earns a time bonus, and school/clock time pays too. Points are Bethel Cash (points ÷ points-per-B$). ═══
+// play a sound but never the same one twice within a second (several code paths may ask for it)
+function playOnce(t) { try { var n = Date.now(); window._po = window._po || {}; if (window._po[t] && n - window._po[t] < 900) return; window._po[t] = n; if (typeof playSound === 'function') playSound(t); } catch (e) {} }
+// keep the screen where it is after a tap (lists re-draw when something is checked off)
+function keepScroll() { try { var y = window.pageYOffset || document.documentElement.scrollTop || 0; [0, 40, 120, 300, 700].forEach(function (t) { setTimeout(function () { var c = window.pageYOffset || document.documentElement.scrollTop || 0; if (Math.abs(c - y) > 3) window.scrollTo(0, y); }, t); }); } catch (e) {} }
 function mdCfgDefaults(c) { c = c || {}; return { habitPts: c.habitPts != null && c.habitPts !== '' ? +c.habitPts : 1, blockPts: c.blockPts != null && c.blockPts !== '' ? +c.blockPts : 2, bonusPerMin: c.bonusPerMin != null && c.bonusPerMin !== '' ? +c.bonusPerMin : 0.5, clockMult: c.clockMult != null && c.clockMult !== '' ? +c.clockMult : 1, clockPay: c.clockPay === false ? false : true }; }
 function mdPtsPerB(sc) { return sc && +sc.ptsPerB > 0 ? +sc.ptsPerB : 20; }
 function mdRaw(pts, ptsPerB) { return (window._payMode || 'pay') === 'points' ? Math.round(pts * 100) / 100 : Math.round((pts / ptsPerB) * 100) / 100; }
@@ -33719,8 +33726,9 @@ function MyDayList(props) {
     say(got ? '✅ +' + pts + ' pts' + (bonus > 0 ? ' + ⏱ ' + bonus + ' bonus pts for finishing early!' : '') + ' (' + mdFmtB(pts + bonus, ppb) + ')' : '✅ Done');
   }
   function skipRow(r, on) { try { syncSet('skips/' + rdy + '/' + pid + '/' + r.k, on ? { ts: Date.now(), label: r.label, kind: r.kind } : null); } catch (e) {} say(on ? '⏭ Skipped for today — no points for this one, and everything else still counts.' : '↩ Put back on your list'); }
-  function startHabit(r) { if (typeof tgGuard === 'function' && !tgGuard(pid, 'this step')) return; try { syncSet('habitstart/' + rdy + '/' + pid + '/' + (r.hid || r.k), Date.now()); } catch (e) {} }
-  function toggle(r, frac) {
+  function startHabit(r) { if (typeof tgGuard === 'function' && !tgGuard(pid, 'this step')) return; playOnce('clockIn'); try { syncSet('habitstart/' + rdy + '/' + pid + '/' + (r.hid || r.k), Date.now()); } catch (e) {} }
+  function toggle(r, frac) { keepScroll(); if (!r.on) playOnce(r.kind === 'habit' ? 'claim' : 'success'); return toggle0(r, frac); }
+  function toggle0(r, frac) {
     frac = frac || 1;
     if (r.kind === 'habit') {
       if (r.on) { try { syncSet('habitsdone/' + rdy + '/' + pid + '/' + r.hid, null); } catch (e) {} mdRevoke(pid, r.k, r.label); mdRevoke(pid, r.k + '_bonus', r.label); return; }
@@ -36537,7 +36545,6 @@ function tgToast(msg) {
     var d = document.createElement('div'); d.id = 'fm-tg-toast';
     d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:100000;background:#E65100;color:#fff;border-radius:16px;padding:14px 16px;font:800 15px/1.4 sans-serif;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5)';
     d.textContent = msg; document.body.appendChild(d); setTimeout(function () { try { d.remove(); } catch (e) {} }, 4200);
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
   } catch (e) {}
 }
 // Call before starting any timer. Returns true when the person is clocked in; otherwise shows a reminder and returns false.
@@ -38223,6 +38230,8 @@ function MySchedule(props) {
   var tourS = React.useState(function () { return !msTourGet(pid); }), tour = tourS[0], setTour = tourS[1];
   var addS = React.useState(false), addOpen = addS[0], setAdd = addS[1], fS = React.useState({ title: '', time: '', act: '', when: 'today' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var listS = React.useState(false), allOpen = listS[0], setAllOpen = listS[1];
+  var rootOwn = (typeof ktLocal === 'function' ? ktLocal('mysched/' + pid, null) : null) || {}, pendOwn = [];
+  Object.keys(rootOwn).forEach(function (k) { var o = rootOwn[k]; if (!o || typeof o !== 'object') return; if (k !== 'daily' && k < day) return; Object.keys(o).forEach(function (id) { var b = o[id]; if (b && b.title && (b.status === 'pending' || b.status === 'denied')) pendOwn.push(Object.assign({}, b, { id: b.id || id, dayK: k })); }); });
   var d = new Date(), nowM = d.getHours() * 60 + d.getMinutes();
   var blocks = planBlocksFor(props.schedHook, pid, day);
   var timed = blocks.filter(function (b) { return b._t != null; });
@@ -38241,11 +38250,11 @@ function MySchedule(props) {
     var title = (f.title || '').trim(); if (!title) { say('Type what it is first.'); return; }
     if (!f.time) { say('Pick a time.'); return; }
     var p = f.time.split(':'), m = (+p[0]) * 60 + (+p[1]), id = 'own' + Date.now().toString(36);
-    var blk = { id: id, title: title, time: msFmt(m), activity: f.act || '', own: true, by: pid, ts: Date.now() };
+    var isPar = props.role === 'parent', blk = { id: id, title: title, time: msFmt(m), activity: f.act || '', own: true, by: pid, ts: Date.now(), status: isPar ? 'approved' : 'pending', when: f.when };
     var path = f.when === 'daily' ? 'mysched/' + pid + '/daily/' + id : 'mysched/' + pid + '/' + (function () { var t = new Date(); if (f.when === 'tomorrow') t.setDate(t.getDate() + 1); var z = function (n) { return (n < 10 ? '0' : '') + n; }; return t.getFullYear() + '-' + z(t.getMonth() + 1) + '-' + z(t.getDate()); })() + '/' + id;
     try { syncSet(path, blk); } catch (e) {}
-    try { props.addNotif && props.addNotif('info', pid, '📅 ' + (nm || pid) + ' added to their schedule', blk.time + ' — ' + title + (f.when === 'daily' ? ' (every day)' : f.when === 'tomorrow' ? ' (tomorrow)' : ' (today)'), { adminOnly: true }); } catch (e) {}
-    setF({ title: '', time: '', act: '', when: 'today' }); setAdd(false); say('✅ Added — it is on your schedule now' + (f.when === 'tomorrow' ? ' for tomorrow' : f.when === 'daily' ? ' every day' : '') + '.');
+    try { if (props.addNotif && !isPar) props.addNotif('info', pid, '📅 ' + (nm || pid) + ' wants to add to their schedule — needs your OK', blk.time + ' — ' + title + (f.when === 'daily' ? ' (every day)' : f.when === 'tomorrow' ? ' (tomorrow)' : ' (today)') + ' · open Start My Day or the Admin tab to approve.', { adminOnly: true }); } catch (e) {}
+    setF({ title: '', time: '', act: '', when: 'today' }); setAdd(false); say(isPar ? '✅ Added to your schedule.' : '⏳ Sent to Mom and Dad. It goes on your schedule as soon as they say yes.');
   }
   function removeOwn(b) {
     if (!window.confirm('Take “' + b.title + '” off your schedule?')) return;
@@ -38288,6 +38297,10 @@ function MySchedule(props) {
         h('div', { style: { fontSize: 16, color: '#fff', fontWeight: 800 } }, blocks.length === 0 ? 'Nothing is on your schedule yet today.' : (next ? 'Nothing right now.' : 'Your schedule is finished for today. 🎉')),
         blocks.length === 0 && h('div', { style: { fontSize: 13, color: '#c8c8d8', marginTop: 4 } }, 'Ask Mom or Dad, or add your own with the button below.'),
         heroNext),
+    props.role === 'parent' && h(SchedAddApprovals, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], compact: true }),
+    pendOwn.length > 0 && h('div', { style: { marginTop: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10 } },
+      h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', letterSpacing: 1, marginBottom: 4 } }, 'YOUR REQUESTS'),
+      pendOwn.map(function (b) { return h('div', { key: b.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', color: '#fff', fontSize: 14 } }, h('div', { style: { flex: 1 } }, (b.status === 'denied' ? '❌ ' : '⏳ ') + b.time + ' · ' + b.title + (b.status === 'denied' ? ' — not this time' + (b.note ? ': ' + b.note : '') : ' — waiting for Mom or Dad')), h('button', { onClick: function () { try { syncSet('mysched/' + pid + '/' + (b.when === 'daily' ? 'daily' : b.dayK) + '/' + b.id, null); } catch (e) {} }, style: { background: 'transparent', border: 'none', color: '#EF9A9A', fontSize: 16, cursor: 'pointer' } }, '✕')); })),
     msg && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '1px solid #4CAF82', borderRadius: 12, padding: 8, marginTop: 8, color: '#fff', fontSize: 13 } }, msg),
     blocks.length > 0 && h('div', { style: { marginTop: 12 } },
       h('div', { style: { fontSize: 12, fontWeight: 800, color: '#c8c8d8', letterSpacing: 1, marginBottom: 4 } }, allOpen ? 'THE WHOLE DAY' : 'COMING UP TODAY'),
@@ -38308,7 +38321,22 @@ function MySchedule(props) {
       h('select', { value: f.act, onChange: function (e) { setF(Object.assign({}, f, { act: e.target.value })); }, style: inp }, h('option', { value: '' }, 'No clock needed'), acts.filter(function (a) { return a.id !== 'meals'; }).map(function (a) { return h('option', { key: a.id, value: a.id }, 'Clock into ' + a.label); })),
       h('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } }, [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['daily', 'Every day']].map(function (x) { var on = f.when === x[0]; return h('button', { key: x[0], onClick: function () { setF(Object.assign({}, f, { when: x[0] })); }, style: { flex: 1, background: on ? '#00BCD4' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, x[1]); })),
       bigBtn('#00BCD4', '#000', addItem, '✅ Put it on my schedule'),
-      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Mom and Dad get a note when you add something. Things you add yourself (⭐) do not earn points.')));
+      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Mom and Dad have to say yes before it goes on your schedule. Things you add yourself (⭐) do not earn points.')));
+}
+
+// ── Parent: approve or turn down things the kids put on their own schedule ──
+function SchedAddApprovals(props) {
+  var h = React.createElement, aS = ktUse('mysched', {}), tkS = React.useState(0), setTk = tkS[1], all = (typeof ktLocal === 'function' ? ktLocal('mysched', null) : null) || aS[0] || {}, fam = props.family || [], rows = [];
+  var nm = function (id) { var p = fam.find(function (x) { return x.id === id; }); return p ? (p.emoji || '') + ' ' + p.name : id; };
+  Object.keys(all).forEach(function (pid) { var root = all[pid] || {}; Object.keys(root).forEach(function (k) { var o = root[k]; if (!o || typeof o !== 'object') return; Object.keys(o).forEach(function (id) { var b = o[id]; if (b && b.title && b.status === 'pending') rows.push({ pid: pid, k: k, id: id, b: b }); }); }); });
+  function decide(r, ok) { var note = ''; if (!ok) { try { note = window.prompt('Tell them why (optional):', '') || ''; } catch (e) {} } try { syncSet('mysched/' + r.pid + '/' + r.k + '/' + r.id, Object.assign({}, r.b, { status: ok ? 'approved' : 'denied', note: note, decidedAt: Date.now() })); } catch (e) {} setTimeout(function () { setTk(function (x) { return x + 1; }); }, 50); }
+  if (!rows.length) return null;
+  return h('div', { style: { background: 'rgba(0,188,212,.12)', border: '2px solid #00BCD4', borderRadius: 14, padding: 12, margin: props.compact ? '10px 0 0' : '10px 14px' } },
+    h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '📅 Schedule additions waiting for your OK (' + rows.length + ')'),
+    rows.map(function (r) { return h('div', { key: r.pid + r.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: '1px solid rgba(255,255,255,.1)' } },
+      h('div', { style: { flex: 1, fontSize: 14, color: '#fff' } }, h('b', null, nm(r.pid)), ' — ' + r.b.time + ' · ' + r.b.title, h('div', { style: { fontSize: 11, color: '#b8b8c8' } }, (r.k === 'daily' ? 'every day' : r.k) + (r.b.activity ? ' · clocks into ' + (typeof planActLabel === 'function' ? planActLabel(r.b.activity) : r.b.activity) : ''))),
+      h('button', { onClick: function () { decide(r, true); }, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 16, padding: '9px 13px', fontWeight: 900, cursor: 'pointer' } }, '✓ Yes'),
+      h('button', { onClick: function () { decide(r, false); }, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 16, padding: '9px 13px', fontWeight: 900, cursor: 'pointer' } }, '✕ No')); }));
 }
 
 </script>
