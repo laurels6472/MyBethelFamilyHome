@@ -23645,7 +23645,7 @@ function DKAModuleFull(_ref2) {
   }, lessonLocked ? visibleScripture : scripture)), (family || DEFAULT_FAMILY).filter(function (p) {
     return ['ryan', 'kayla', 'ashelyn', 'mykah'].includes(p.id);
   }).map(function (s) {
-    var task = (typeof bcActive === 'function' && bcActive(dayNum)) ? '✅ Covered by the Big Catch-Up Assignment — no separate homework for this day.' : ((typeof syncGet === 'function' && (syncGet('school/assign/' + dayNum + '/' + s.id) || null)) || DKA_STUDENT_TASKS[s.id] || 'See teacher for today\'s assignment.');
+    var task = (typeof bcActive === 'function' && bcActive(dayNum)) ? '✅ Light day: no separate homework — your Lessons Quiz covers it. The lesson itself is still yours to do.' : ((typeof syncGet === 'function' && (syncGet('school/assign/' + dayNum + '/' + s.id) || null)) || DKA_STUDENT_TASKS[s.id] || 'See teacher for today\'s assignment.');
     var isMe = s.id === personId;
     return /*#__PURE__*/React.createElement("div", {
       id: 'dka_stu_' + s.id,
@@ -37292,12 +37292,12 @@ function cuPlanFor(sid, prog, cfg, todayDay) {
 // Small card on the Today tab so a child sees today's catch-up
 function CatchUpBanner(props) {
   var h = React.createElement, sid = props.student.id, pS = ktUse('school/progress', {}), prog = pS[0] || {}, cS = ktUse('school/catchup_cfg', {}), cfg = cS[0] || {};
-  var bcS = ktUse('school/bigcatch', null), bc = bcS[0] || {}, bsS = ktUse('school/bigcatch_sub/' + sid, null), bsub = bsS[0] || {};
+  var bc = bcUse(), bsS = ktUse('school/bigcatch_sub/' + sid, null), bsub = bsS[0] || {};
   if (bc.on) {
     if (bsub.status === 'approved') return null;
     return h('div', { onClick: props.onOpen, style: { cursor: 'pointer', margin: '0 0 10px', padding: 14, borderRadius: 14, background: 'rgba(255,152,0,.16)', border: '2px solid #FFB74D' } },
-      h('div', { style: { fontSize: 15, fontWeight: 900, color: '#FFB74D' } }, bsub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment'),
-      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'One short quiz and one small project replace ALL the old homework (Day 1 to Day ' + bc.through + '). Tap here.'));
+      h('div', { style: { fontSize: 15, fontWeight: 900, color: '#FFB74D' } }, bsub.status === 'submitted' ? '🕓 Lessons Quiz turned in — waiting for Mom or Dad' : '📝 Do your Lessons Quiz'),
+      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'Two questions for each of Days 1–' + bc.through + ', from the real lessons. Tap here.'));
   }
   var P = cuPlanFor(sid, prog, cfg, props.todayDay);
   if (!P.today.length) return null;
@@ -37314,7 +37314,6 @@ function CatchUpPlanner(props) {
   var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 12, marginBottom: 10 };
   function setCfg(sid, k, v) { var o = Object.assign({}, cfg[sid] || {}); o[k] = v; try { syncSet('school/catchup_cfg/' + sid, o); } catch (e) {} }
   return h('div', { style: { padding: '4px 0' } },
-    admin && typeof BigCatchSetup === 'function' && h(BigCatchSetup, { todayDay: todayDay }),
     studs.map(function (s) { return typeof BigCatchCard === 'function' ? h(BigCatchCard, { key: 'bc' + s.id, student: s, isAdmin: admin, todayDay: todayDay }) : null; }),
     h('div', { style: card },
       h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🧭 Catch-Up Plan'),
@@ -37347,7 +37346,9 @@ function CatchUpPlanner(props) {
 // ═══ BIG CATCH-UP TURN-IN — ONE short quiz + ONE small project replaces all the old homework from the first day of school up to a chosen day.
 // Nothing is deleted: when a parent approves it, the missed lessons are marked "caught up" (only the ones not already done). ═══
 var BC_SUBS = ['bible', 'lang', 'math', 'science', 'history'];
-function bcCfg() { try { return syncGet('school/bigcatch') || null; } catch (e) { return null; } }
+function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(10, (typeof cuTodayDay === 'function' ? cuTodayDay() : 10) || 10); return { on: true, through: (c && +c.through) || t }; }
+function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
+function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
 function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
 function bcStudent(sid) { return (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).filter(function (s) { return s.id === sid; })[0] || { id: sid, grade: 8, name: sid }; }
 var BC_ROT = ['bible', 'science', 'lang', 'math', 'history', 'comp'];
@@ -37368,7 +37369,7 @@ function bcQuestions(sid, through) {
       var topic = bcTopic(L); try { key = (L && L.answerKey && L.answerKey.short) ? String(L.answerKey.short) : ''; } catch (e) {}
       if (sub === 'bible') {
         var title = en ? String(en[3] || '') : '', scr = en ? String(en[4] || '') : '', theme = en ? String(en[6] || '') : '';
-        text = 'Bible lesson' + (title ? ' — “' + title + '”' : '') + (scr ? ' (' + scr + ')' : '') + '. Read the scripture again. What is this lesson mainly teaching us about Jehovah' + (theme ? ' (the theme was “' + theme + '”)' : '') + ', and what is one thing from the account that shows it?';
+        text = 'Bible lesson' + (title ? ' — “' + title + '”' : '') + (scr ? ' (' + scr + ')' : '') + '. ' + (scr ? 'Read the scripture again. ' : '') + 'What is this lesson mainly teaching us about Jehovah' + (theme ? ' (the theme was “' + theme + '”)' : '') + ', and what is one thing from the account that shows it?';
         key = theme ? 'Theme: ' + theme + (scr ? ' — ' + scr : '') : key;
       } else if (!topic) {
         text = meta.l + ': explain the main idea of the lesson you did on this day and give one example.';
@@ -37381,6 +37382,7 @@ function bcQuestions(sid, through) {
         if (pm) { text = 'Math (' + topic + ') — solve this problem and show your steps: ' + pm[1].trim(); key = mk ? 'Answer: ' + mk[1].trim() : key; }
         else text = 'Math — “' + topic + '”. Explain the rule or idea in your own words and show one example with the answer.';
       } else text = meta.l + ' — “' + topic + '”. Explain the main idea and give one example.';
+      text += ' Be detailed: include at least two things you remember from that day’s lesson.';
       out.push({ id: 'd' + d + '_' + sub, day: d, sub: sub, label: meta.l || sub, text: text, key: key });
     });
   }
@@ -37393,13 +37395,13 @@ function bcApprove(sid, through) {
   return n;
 }
 function BigCatchSetup(props) {
-  var h = React.createElement, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, mgS = React.useState(''), bmsg = mgS[0], setMsg = mgS[1], nS = React.useState(''), nv = nS[0], setNv = nS[1], todayDay = props.todayDay || cuTodayDay();
+  var h = React.createElement, cfg = bcUse(), mgS = React.useState(''), bmsg = mgS[0], setMsg = mgS[1], nS = React.useState(''), nv = nS[0], setNv = nS[1], todayDay = props.todayDay || cuTodayDay();
   var box = { background: 'rgba(26,115,232,.14)', border: '2px solid #1A73E8', borderRadius: 14, padding: 12, marginBottom: 10 };
   var through = nv !== '' ? Math.max(1, Math.min(180, +nv || 1)) : (cfg.through || todayDay);
   function turnOn() { bcWrite('school/bigcatch', { on: true, through: through, ts: Date.now() }, function (er) { setMsg('⚠️ Could not save (' + er + ')'); }); setMsg('✅ Saved. The kids’ orange button is on.'); setTimeout(function () { setMsg(''); }, 6000); }
-  function turnOff() { if (!window.confirm('Turn the Big Catch-Up Assignment off? Anything already approved stays caught up.')) return; bcWrite('school/bigcatch', Object.assign({}, cfg, { on: false })); setMsg('Turned off.'); }
+  function turnOff() { if (!window.confirm('Turn the Lessons Quiz off? Anything already approved stays caught up.')) return; bcWrite('school/bigcatch', Object.assign({}, cfg, { on: false })); setMsg('Turned off.'); }
   return h('div', { style: box },
-    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🎒 Big Catch-Up Assignment'),
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🎒 Lessons Quiz'),
     h('div', { style: { fontSize: 13, color: '#dbe8ff', lineHeight: 1.6, margin: '4px 0 8px' } }, 'Instead of making up every old lesson and homework page, each child answers 2 questions for every missed day (10 days = 20 questions). Each question is pulled from that day’s real lessons. When you approve it, all the old lessons up to the day you choose are marked caught up. Nothing is deleted.'),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
       h('span', { style: { fontSize: 13, color: '#fff' } }, 'Cover school Day 1 through Day'),
@@ -37413,7 +37415,7 @@ function BigCatchSetup(props) {
 }
 function BigCatchCard(props) {
   var h = React.createElement, s = props.student, sid = s.id, admin = !!props.isAdmin;
-  var cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, subS = ktUse('school/bigcatch_sub/' + sid, null), sub = subS[0] || null;
+  var cfg = bcUse(), subS = ktUse('school/bigcatch_sub/' + sid, null), sub = subS[0] || null;
   var aS = React.useState(null), local = aS[0], setLocal = aS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   if (!cfg.on) return null;
   var through = +cfg.through || 1, qs = bcQuestions(sid, through), ans = local || (sub && sub.answers) || {};
@@ -37431,8 +37433,8 @@ function BigCatchCard(props) {
   var locked = status === 'submitted' && !admin, byDay = {}; qs.forEach(function (q) { (byDay[q.day] = byDay[q.day] || []).push(q); });
   var btn = function (bg, fg, fn, t, grow) { return h('button', { onClick: fn, style: { flex: grow ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
   return h('div', { style: card },
-    h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Big Catch-Up Assignment' + (admin ? ' — ' + s.name : '')),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions replace ALL the homework from Day 1 to Day ' + through + ' (2 questions for each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
+    h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Lessons Quiz' + (admin ? ' — ' + s.name : '')),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day 1 to Day ' + through + ' (2 questions for each day). The lessons are still yours to keep. Each question comes from what we studied that day. ' + bcAsk(s.grade)),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, answered + ' of ' + qs.length + ' answered'),
     h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 } }, h('div', { style: { height: '100%', width: (qs.length ? answered / qs.length * 100 : 0) + '%', background: '#4CAF82' } })),
     status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
@@ -37457,17 +37459,16 @@ function BigCatchCard(props) {
 
 // Big orange button where the family actually works: School screen and Start My Day
 function BigCatchPrompt(props) {
-  var h = React.createElement, admin = !!props.isAdmin, pid = props.personId, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, sS = ktUse('school/bigcatch_sub/' + pid, null), sub = sS[0] || {}, aS = ktUse('school/bigcatch_sub', {}), all = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/bigcatch_sub', {}) : null) || {}, aS[0] || {});
+  var h = React.createElement, admin = !!props.isAdmin, pid = props.personId, cfg = bcUse(), sS = ktUse('school/bigcatch_sub/' + pid, null), sub = sS[0] || {}, aS = ktUse('school/bigcatch_sub', {}), all = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/bigcatch_sub', {}) : null) || {}, aS[0] || {});
   var isKid = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).some(function (s) { return s.id === pid; });
   var btn = function (bg, fg, border, t, sub2) { return h('button', { onClick: props.onOpen, style: { display: 'block', width: '100%', textAlign: 'left', background: bg, color: fg, border: '2px solid ' + border, borderRadius: 16, padding: 14, margin: '8px 0', cursor: 'pointer', fontWeight: 900, fontSize: 16 } }, t, sub2 && h('div', { style: { fontWeight: 600, fontSize: 12, marginTop: 3, opacity: .9 } }, sub2)); };
   if (admin) {
     var waiting = Object.keys(all).filter(function (k) { return all[k] && all[k].status === 'submitted'; }).length;
-    if (!cfg.on) return btn('rgba(26,115,232,.18)', '#fff', '#1A73E8', '🎒 Set up the Big Catch-Up Assignment', 'Two questions per missed day replace all the old homework. Tap to set it up.');
-    if (waiting) return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', '📝 ' + waiting + ' Big Catch-Up turn-in' + (waiting > 1 ? 's' : '') + ' waiting for you', 'Tap to review and approve.');
-    return btn('rgba(255,255,255,.07)', '#fff', 'rgba(255,255,255,.18)', '🎒 Big Catch-Up Assignment', 'On through Day ' + cfg.through + ' — tap to see each child.');
+    if (waiting) return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', '📝 ' + waiting + ' Lessons Quiz turn-in' + (waiting > 1 ? 's' : '') + ' waiting for you', 'Tap to review and approve.');
+    return null;
   }
   if (!cfg.on || !isKid || sub.status === 'approved') return null;
-  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment', 'Two questions for each missed day. Tap here.');
+  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Lessons Quiz turned in — waiting for Mom or Dad' : '📝 Do your Lessons Quiz', 'Two questions for each missed day. Tap here.');
 }
 
 // ═══ BULK ASSIGN (teacher only, lives under Assignments): pick days + students, swap in a shorter assignment, undo ═══
@@ -37478,61 +37479,8 @@ var BA_PRESETS = [
   ['No homework', 'No separate homework today. The lesson is enough.']
 ];
 function BulkAssign(props) {
-  var h = React.createElement, today = (typeof cuTodayDay === 'function' ? cuTodayDay() : 1) || 1;
-  var kids = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []);
-  var openS = React.useState(false), open = openS[0], setOpen = openS[1];
-  var modeS = React.useState('today'), mode = modeS[0], setMode = modeS[1];
-  var fS = React.useState(String(Math.max(1, today - 4))), from = fS[0], setFrom = fS[1], tS = React.useState(String(today)), to = tS[0], setTo = tS[1];
-  var selS = React.useState({}), sel = selS[0], setSel = selS[1];
-  var txtS = React.useState(BA_PRESETS[0][1]), txt = txtS[0], setTxt = txtS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
-  var pvS = ktUse('school/assign_prev', null), prev = pvS[0] || {};
-  var allSel = {}; kids.forEach(function (k) { allSel[k.id] = (k.id in sel) ? sel[k.id] : true; });
-  function range() {
-    if (mode === 'today') return [today, today];
-    if (mode === 'week') { var s = Math.floor((today - 1) / 5) * 5 + 1; return [s, s + 4]; }
-    if (mode === 'sofar') return [1, today];
-    var a = Math.max(1, Math.min(180, +from || 1)), b = Math.max(1, Math.min(180, +to || a)); return a <= b ? [a, b] : [b, a];
-  }
-  var r = range(), ids = kids.filter(function (k) { return allSel[k.id]; }).map(function (k) { return k.id; }), count = (r[1] - r[0] + 1) * ids.length;
-  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 6000); }
-  function apply() {
-    if (!ids.length) { say('Pick at least one student.'); return; }
-    if (!txt.trim()) { say('Type the shorter assignment first.'); return; }
-    if (!window.confirm('Replace ' + count + ' assignment' + (count === 1 ? '' : 's') + ' (Day ' + r[0] + (r[1] > r[0] ? ' to ' + r[1] : '') + ') with the shorter one? You can undo it right after.')) return;
-    var snap = { ts: Date.now(), r: r, vals: {} };
-    for (var d = r[0]; d <= r[1]; d++) { snap.vals[d] = {}; ids.forEach(function (id) { var old = null; try { old = syncGet('school/assign/' + d + '/' + id); } catch (e) {} snap.vals[d][id] = old == null ? '' : old; }); }
-    try { syncSet('school/assign_prev', snap); } catch (e) {}
-    for (var d2 = r[0]; d2 <= r[1]; d2++) ids.forEach(function (id) { try { syncSet('school/assign/' + d2 + '/' + id, txt.trim()); } catch (e) {} });
-    say('✅ Done — ' + count + ' assignment' + (count === 1 ? '' : 's') + ' changed. Kids see it right away.');
-  }
-  function undo() {
-    if (!prev || !prev.vals) return;
-    Object.keys(prev.vals).forEach(function (d) { Object.keys(prev.vals[d]).forEach(function (id) { var v = prev.vals[d][id]; try { syncSet('school/assign/' + d + '/' + id, v ? v : null); } catch (e) {} }); });
-    try { syncSet('school/assign_prev', null); } catch (e) {}
-    say('↩️ Undone — the old assignments are back.');
-  }
-  var card = { background: 'rgba(76,175,130,.12)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 12 };
-  var chip = function (on) { return { background: on ? '#4CAF82' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 20, padding: '8px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }; };
-  var inp = { width: 64, padding: 8, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 15 };
-  return h('div', null,
-    h('div', { style: card, id: 'fm-bulkassign' },
-      h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontSize: 16, fontWeight: 900, cursor: 'pointer', padding: 0 } }, (open ? '▾ ' : '▸ ') + '✂️ Make assignments shorter (many days at once)'),
-      !open && h('div', { style: { fontSize: 12, color: '#c8e8d8', marginTop: 4 } }, 'Pick a day, a week, or a range, pick the students, and swap in a shorter assignment.'),
-      open && h('div', { style: { marginTop: 8 } },
-        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFD54F', marginBottom: 4 } }, '1. Which days?'),
-        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } },
-          [['today', 'Today (Day ' + today + ')'], ['week', 'This week'], ['sofar', 'Day 1 to today'], ['range', 'Pick days']].map(function (m) { return h('button', { key: m[0], onClick: function () { setMode(m[0]); }, style: chip(mode === m[0]) }, m[1]); })),
-        mode === 'range' && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, color: '#fff', fontSize: 13 } }, 'Day', h('input', { type: 'number', min: 1, max: 180, value: from, onChange: function (e) { setFrom(e.target.value); }, style: inp }), 'to Day', h('input', { type: 'number', min: 1, max: 180, value: to, onChange: function (e) { setTo(e.target.value); }, style: inp })),
-        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFD54F', margin: '8px 0 4px' } }, '2. Which students?'),
-        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, kids.map(function (k) { return h('button', { key: k.id, onClick: function () { setSel(function (o) { var n = Object.assign({}, o); n[k.id] = !((k.id in o) ? o[k.id] : true); return n; }); }, style: chip(allSel[k.id]) }, (allSel[k.id] ? '☑ ' : '☐ ') + k.name); })),
-        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFD54F', margin: '8px 0 4px' } }, '3. The shorter assignment'),
-        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, BA_PRESETS.map(function (p) { return h('button', { key: p[0], onClick: function () { setTxt(p[1]); }, style: chip(txt === p[1]) }, p[0]); })),
-        h('textarea', { rows: 3, value: txt, onChange: function (e) { setTxt(e.target.value); }, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 14, fontFamily: 'inherit' } }),
-        h('button', { onClick: apply, style: { width: '100%', marginTop: 8, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✅ Change ' + count + ' assignment' + (count === 1 ? '' : 's')),
-        prev && prev.vals && h('button', { onClick: undo, style: { width: '100%', marginTop: 6, background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, cursor: 'pointer' } }, '↩️ Undo the last change (Day ' + prev.r[0] + (prev.r[1] > prev.r[0] ? '–' + prev.r[1] : '') + ')'),
-        msg && h('div', { style: { marginTop: 8, color: '#9be3bd', fontWeight: 800, fontSize: 13 } }, msg))),
-    typeof BigCatchSetup === 'function' && h(BigCatchSetup, { todayDay: today }),
-    kids.map(function (s) { return typeof BigCatchCard === 'function' ? h(BigCatchCard, { key: s.id, student: s, isAdmin: true }) : null; }));
+  var h = React.createElement, kids = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []);
+  return h('div', { id: 'fm-quizreview' }, kids.map(function (s) { return typeof BigCatchCard === 'function' ? h(BigCatchCard, { key: s.id, student: s, isAdmin: true }) : null; }));
 }
 
 </script>
@@ -38408,7 +38356,7 @@ function ListenBar(props) {
 function nvToday() { try { return new Date().toLocaleDateString('en-CA'); } catch (e) { return ''; } }
 function nvGet(key, def) { try { var o = JSON.parse(localStorage.getItem('fm_nv_' + key) || 'null'); if (o && o.d === nvToday() && o.v !== undefined) return o.v; } catch (e) {} return def; }
 function nvSet(key, v) { try { localStorage.setItem('fm_nv_' + key, JSON.stringify({ d: nvToday(), v: v })); } catch (e) {} }
-var SN_LABEL = { plan: ['🎯', "Today's lesson"], catchup: ['🎒', 'Big Catch-Up'], schedule: ['⏰', 'Schedule'], manual: ['📖', 'Teacher manual & script'], worship: ['✨', 'Worship'], levels: ['✍️', 'Assignments'], music: ['🎵', 'Music'], attendance: ['📋', 'Attendance'] };
+var SN_LABEL = { plan: ['🎯', "Today's lesson"], catchup: ['🎒', 'Lessons Quiz'], schedule: ['⏰', 'Schedule'], manual: ['📖', 'Teacher manual & script'], worship: ['✨', 'Worship'], levels: ['✍️', 'Assignments'], music: ['🎵', 'Music'], attendance: ['📋', 'Attendance'] };
 function SchoolNav(props) {
   var h = React.createElement, view = props.view, VIEWS = props.VIEWS || [], teacher = !!props.isTeacher;
   var scr = String(props.scripture || '').replace(/\s+/g, ' ').trim(), q = encodeURIComponent(scr.split(';')[0] || scr);
