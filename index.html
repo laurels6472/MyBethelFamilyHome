@@ -7304,7 +7304,7 @@ function Dashboard({
     // ── CHILDREN ──────────────────────────────────────────────────────────
     return [
       {id:'start',    l:'⏱ My Day Clock-In'},
-      {id:'work',     l:'💼 School & Jobs'},
+      {id:'work',     l:'💼 Work & School'},
       {id:'habits',   l:'🏆 Habit Leaders'},
       {id:'money',    l:'💰 Money'},
       {id:'menu',     l:'🍳 Kitchen'},
@@ -23018,12 +23018,12 @@ function DKAModuleFull(_ref2) {
     _React$useState12 = _slicedToArray(_React$useState11, 2),
     day = _React$useState12[0],
     setDay = _React$useState12[1];
-  var _React$useState13 = React.useState((_nv && _nv.view) || 'plan'),
+  var _React$useState13 = React.useState((function () { var v0 = (_nv && _nv.view) || 'plan'; if (!isTeacher && (v0 === 'manual' || v0 === 'teacher')) v0 = 'plan'; if (isTeacher && v0 === 'catchup') v0 = 'levels'; return v0; })()),
     _React$useState14 = _slicedToArray(_React$useState13, 2),
     view = _React$useState14[0],
     _setViewRaw = _React$useState14[1];
   var _hist = React.useRef([]);
-  function setView(v) { if (v === view) return; _hist.current.push(view); _setViewRaw(v); try { window.scrollTo(0, 0); } catch (e) {} }
+  function setView(v) { if (isTeacher && v === 'catchup') v = 'levels'; if (!isTeacher && (v === 'manual' || v === 'teacher')) v = 'plan'; if (v === view) return; _hist.current.push(view); _setViewRaw(v); try { window.scrollTo(0, 0); } catch (e) {} }
   function backView() { var p = _hist.current.pop(); if (p) { _setViewRaw(p); try { window.scrollTo(0, 0); } catch (e) {} } }
   var _React$useState15 = React.useState(false),
     _React$useState16 = _slicedToArray(_React$useState15, 2),
@@ -23090,9 +23090,6 @@ function DKAModuleFull(_ref2) {
     id: 'plan',
     l: '🎯 Today'
   }, {
-    id: 'catchup',
-    l: '🎒 Big Catch-Up'
-  }, {
     id: 'schedule',
     l: '⏰ Schedule'
   }, {
@@ -23113,9 +23110,6 @@ function DKAModuleFull(_ref2) {
   }] : [{
     id: 'plan',
     l: '🎯 Today'
-  }, {
-    id: 'catchup',
-    l: '🎒 Big Catch-Up'
   }, {
     id: 'schedule',
     l: '⏰ Schedule'
@@ -23623,7 +23617,7 @@ function DKAModuleFull(_ref2) {
         color: 'rgba(255,255,255,.2)'
       }
     }, "\u203A"));
-  }))), view === 'levels' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }))), view === 'levels' && /*#__PURE__*/React.createElement("div", null, (isTeacher && typeof BulkAssign === 'function') ? React.createElement(BulkAssign, {}) : null, /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 10,
       background: 'rgba(156,141,196,.06)',
@@ -37208,7 +37202,7 @@ var KT_PAGES = [
   ['👋', 'Welcome to our family app!', 'This is our family’s home on your device. It helps your day go smoothly, helps you learn, and helps you earn. This tour takes about two minutes. You can replay it any time.'],
   ['⏱', '1. Start your day', 'Open My Day Clock-In and tap the big green button to start your day. Then do your morning habits. Tap “I’m ready for the day” before the get-ready timer runs out. If you run late, a small amount can be taken from your account.'],
   ['📋', '2. Follow your schedule', 'After you are ready, “Follow my schedule” shows what is next: school blocks, chores, and breaks. In “Coming up”, tap Go and it takes you right to it.'],
-  ['💼', '3. School & Jobs', 'School & Jobs is where your lessons and your chores are. Do the work, then check it off. Some jobs you pick up yourself. Mom or Dad look at finished work and approve it.'],
+  ['💼', '3. Work & School', 'Work & School is where your lessons and your chores are. Do the work, then check it off. Some jobs you pick up yourself. Mom or Dad look at finished work and approve it.'],
   ['💬', '4. Check-ins', 'A check-in pops up a few times a day. Tell us who you are with, what you are doing, and how you feel. It also asks for one good thing you can say about yourself. Answer honestly — that is how we know you are safe and doing well.'],
   ['💰', '5. Money & Habit Leaders', 'You earn money and points for finishing your day, your habits, and your jobs. Money shows your balance. Habit Leaders shows how you are growing. Missing a check-in or being late can take a small amount away.'],
   ['☰', '6. The Menu button', 'The ☰ Menu button at the top is your map. It takes you to every page. It also has Settings (sound and alerts), Family contacts (call or text your family), and your Notifications.'],
@@ -37437,6 +37431,71 @@ function BigCatchPrompt(props) {
   }
   if (!cfg.on || !isKid || sub.status === 'approved') return null;
   return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment', 'One short quiz and one small project. Tap here.');
+}
+
+// ═══ BULK ASSIGN (teacher only, lives under Assignments): pick days + students, swap in a shorter assignment, undo ═══
+var BA_PRESETS = [
+  ['Short & easy', 'Pick ONE thing you learned today and write 3 sentences about it. Turn it in.'],
+  ['One page', 'Do the one practice page for today’s lesson (or write a half page about it). That is all.'],
+  ['Talk it out', 'Tell Mom or Dad what you learned today in your own words, then draw or write one thing you remember.'],
+  ['No homework', 'No separate homework today. The lesson is enough.']
+];
+function BulkAssign(props) {
+  var h = React.createElement, today = (typeof cuTodayDay === 'function' ? cuTodayDay() : 1) || 1;
+  var kids = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []);
+  var openS = React.useState(false), open = openS[0], setOpen = openS[1];
+  var modeS = React.useState('today'), mode = modeS[0], setMode = modeS[1];
+  var fS = React.useState(String(Math.max(1, today - 4))), from = fS[0], setFrom = fS[1], tS = React.useState(String(today)), to = tS[0], setTo = tS[1];
+  var selS = React.useState({}), sel = selS[0], setSel = selS[1];
+  var txtS = React.useState(BA_PRESETS[0][1]), txt = txtS[0], setTxt = txtS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var pvS = ktUse('school/assign_prev', null), prev = pvS[0] || {};
+  var allSel = {}; kids.forEach(function (k) { allSel[k.id] = (k.id in sel) ? sel[k.id] : true; });
+  function range() {
+    if (mode === 'today') return [today, today];
+    if (mode === 'week') { var s = Math.floor((today - 1) / 5) * 5 + 1; return [s, s + 4]; }
+    if (mode === 'sofar') return [1, today];
+    var a = Math.max(1, Math.min(180, +from || 1)), b = Math.max(1, Math.min(180, +to || a)); return a <= b ? [a, b] : [b, a];
+  }
+  var r = range(), ids = kids.filter(function (k) { return allSel[k.id]; }).map(function (k) { return k.id; }), count = (r[1] - r[0] + 1) * ids.length;
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 6000); }
+  function apply() {
+    if (!ids.length) { say('Pick at least one student.'); return; }
+    if (!txt.trim()) { say('Type the shorter assignment first.'); return; }
+    if (!window.confirm('Replace ' + count + ' assignment' + (count === 1 ? '' : 's') + ' (Day ' + r[0] + (r[1] > r[0] ? ' to ' + r[1] : '') + ') with the shorter one? You can undo it right after.')) return;
+    var snap = { ts: Date.now(), r: r, vals: {} };
+    for (var d = r[0]; d <= r[1]; d++) { snap.vals[d] = {}; ids.forEach(function (id) { var old = null; try { old = syncGet('school/assign/' + d + '/' + id); } catch (e) {} snap.vals[d][id] = old == null ? '' : old; }); }
+    try { syncSet('school/assign_prev', snap); } catch (e) {}
+    for (var d2 = r[0]; d2 <= r[1]; d2++) ids.forEach(function (id) { try { syncSet('school/assign/' + d2 + '/' + id, txt.trim()); } catch (e) {} });
+    say('✅ Done — ' + count + ' assignment' + (count === 1 ? '' : 's') + ' changed. Kids see it right away.');
+  }
+  function undo() {
+    if (!prev || !prev.vals) return;
+    Object.keys(prev.vals).forEach(function (d) { Object.keys(prev.vals[d]).forEach(function (id) { var v = prev.vals[d][id]; try { syncSet('school/assign/' + d + '/' + id, v ? v : null); } catch (e) {} }); });
+    try { syncSet('school/assign_prev', null); } catch (e) {}
+    say('↩️ Undone — the old assignments are back.');
+  }
+  var card = { background: 'rgba(76,175,130,.12)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 12 };
+  var chip = function (on) { return { background: on ? '#4CAF82' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 20, padding: '8px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }; };
+  var inp = { width: 64, padding: 8, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 15 };
+  return h('div', null,
+    h('div', { style: card, id: 'fm-bulkassign' },
+      h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontSize: 16, fontWeight: 900, cursor: 'pointer', padding: 0 } }, (open ? '▾ ' : '▸ ') + '✂️ Make assignments shorter (many days at once)'),
+      !open && h('div', { style: { fontSize: 12, color: '#c8e8d8', marginTop: 4 } }, 'Pick a day, a week, or a range, pick the students, and swap in a shorter assignment.'),
+      open && h('div', { style: { marginTop: 8 } },
+        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFD54F', marginBottom: 4 } }, '1. Which days?'),
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } },
+          [['today', 'Today (Day ' + today + ')'], ['week', 'This week'], ['sofar', 'Day 1 to today'], ['range', 'Pick days']].map(function (m) { return h('button', { key: m[0], onClick: function () { setMode(m[0]); }, style: chip(mode === m[0]) }, m[1]); })),
+        mode === 'range' && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, color: '#fff', fontSize: 13 } }, 'Day', h('input', { type: 'number', min: 1, max: 180, value: from, onChange: function (e) { setFrom(e.target.value); }, style: inp }), 'to Day', h('input', { type: 'number', min: 1, max: 180, value: to, onChange: function (e) { setTo(e.target.value); }, style: inp })),
+        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFD54F', margin: '8px 0 4px' } }, '2. Which students?'),
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, kids.map(function (k) { return h('button', { key: k.id, onClick: function () { setSel(function (o) { var n = Object.assign({}, o); n[k.id] = !((k.id in o) ? o[k.id] : true); return n; }); }, style: chip(allSel[k.id]) }, (allSel[k.id] ? '☑ ' : '☐ ') + k.name); })),
+        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#FFD54F', margin: '8px 0 4px' } }, '3. The shorter assignment'),
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, BA_PRESETS.map(function (p) { return h('button', { key: p[0], onClick: function () { setTxt(p[1]); }, style: chip(txt === p[1]) }, p[0]); })),
+        h('textarea', { rows: 3, value: txt, onChange: function (e) { setTxt(e.target.value); }, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 14, fontFamily: 'inherit' } }),
+        h('button', { onClick: apply, style: { width: '100%', marginTop: 8, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '✅ Change ' + count + ' assignment' + (count === 1 ? '' : 's')),
+        prev && prev.vals && h('button', { onClick: undo, style: { width: '100%', marginTop: 6, background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, cursor: 'pointer' } }, '↩️ Undo the last change (Day ' + prev.r[0] + (prev.r[1] > prev.r[0] ? '–' + prev.r[1] : '') + ')'),
+        msg && h('div', { style: { marginTop: 8, color: '#9be3bd', fontWeight: 800, fontSize: 13 } }, msg))),
+    typeof BigCatchSetup === 'function' && h(BigCatchSetup, { todayDay: today }),
+    kids.map(function (s) { return typeof BigCatchCard === 'function' ? h(BigCatchCard, { key: s.id, student: s, isAdmin: true }) : null; }));
 }
 
 </script>
