@@ -31721,6 +31721,7 @@ function StartMyDay(props) {
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 10px' } }, new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })),
     clocked && h(NowBanner, { personId: pid, name: nm, sessions: props.sessions }),
     lateModal,
+    typeof MySchedule === 'function' && h(MySchedule, { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, clocked: clocked, ready: ready, addNotif: props.addNotif, onGo: function (t) { props.onSwitchTab && props.onSwitchTab(t); } }),
     sd.dayEnd && h('div', { style: { background: 'rgba(76,175,130,.18)', border: '2px solid #4CAF82', borderRadius: 16, padding: 14, marginBottom: 12, color: '#fff' } }, h('div', { style: { fontSize: 17, fontWeight: 900 } }, '🎉 Day complete' + (nm ? ', ' + nm : '') + '!'), h('div', { style: { fontSize: 13, color: '#d8f0e2', marginTop: 4, lineHeight: 1.5 } }, 'You ended your day at ' + tm(sd.dayEnd) + '. Your time is saved for Mom & Dad to review. Start My Day clears itself and is ready fresh tomorrow morning.')),
     // ── 1. START MY DAY (drop-down) ──
     h('div', { id: 'fm-step-1' }, box(s1, h('div', null,
@@ -31736,7 +31737,6 @@ function StartMyDay(props) {
         ready && h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } },
           h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
           !submitted && h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null })); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Not ready')),
-        ready && props.rightNow,
         props.clockEl,
         depts,
         ready && big('rgba(3,155,229,.25)', '#fff', go('work'), '🏫  School & Worship — full lessons'),
@@ -31766,9 +31766,18 @@ function planMinutes(str) {
   if (h > 23 || mi > 59) return null; return h * 60 + mi;
 }
 function planActLabel(id) { var a = (typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : []).find(function (x) { return x.id === id; }); return a ? a.label : id; }
+// things a child put on their OWN schedule (today / tomorrow / every day) — they show up everywhere the schedule does
+function planOwnBlocks(pid, dayKey) {
+  var out = [];
+  try {
+    var root = (typeof ktLocal === 'function' ? ktLocal('mysched/' + pid, null) : (typeof syncGet === 'function' && syncGet('mysched/' + pid))) || {};
+    [[root[dayKey], false], [root.daily, true]].forEach(function (x) { var o = x[0]; if (o && typeof o === 'object') Object.keys(o).forEach(function (k) { var b = o[k]; if (b && b.title) out.push(Object.assign({}, b, { id: b.id || k, own: true, daily: x[1], color: b.color || '#26C6DA', pts: 0 })); }); });
+  } catch (e) {}
+  return out;
+}
 function planBlocksFor(schedHook, pid, dayKey) {
   var day = schedHook && schedHook.getDay ? schedHook.getDay(dayKey) : { blocks: [] };
-  var bl = (day.blocks || []).filter(function (b) { return !b.kids || !b.kids.length || b.kids.indexOf(pid) !== -1; }).map(function (b, i) { return Object.assign({ _i: i, _t: planMinutes(b.time) }, b); });
+  var bl = (day.blocks || []).filter(function (b) { return !b.kids || !b.kids.length || b.kids.indexOf(pid) !== -1; }).concat(planOwnBlocks(pid, dayKey)).map(function (b, i) { return Object.assign({ _i: i, _t: planMinutes(b.time) }, b); });
   return bl.sort(function (a, b) { if (a._t == null && b._t == null) return a._i - b._i; if (a._t == null) return 1; if (b._t == null) return -1; return a._t - b._t || a._i - b._i; });
 }
 function PlanRightNow(props) {
@@ -33669,6 +33678,7 @@ function MyDayList(props) {
   var hsS = ktUse('habitstart/' + rdy + '/' + pid, {}), hst = hsS[0] || {}, skS = ktUse('skips/' + rdy + '/' + pid, {}), skips = skS[0] || {}, cfS = ktUse('startday_cfg', null), autoT = !!(cfS[0] || {}).autoTimers;
   var twS = React.useState(null), twOpen = twS[0], setTwOpen = twS[1], twmS = React.useState({}), twSel = twmS[0], setTwSel = twmS[1], trS = ktUse('teamwork_req', {}), treq = trS[0] || {};
   var sibsT = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.role === 'child' && m.id !== pid && !m.deleted; });
+  ktUse('mysched/' + pid, null);
   var xS = React.useState(null), ex = xS[0], setEx = xS[1], tS = React.useState(0), setT = tS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   React.useEffect(function () { window._ptsPerB = ppb; });
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(iv); }; }, []);
@@ -33678,7 +33688,7 @@ function MyDayList(props) {
   var rows = [];
   blocks.forEach(function (b, i) {
     var nx = blocks[i + 1], endM = nx && nx._t != null ? nx._t : (b._t != null ? b._t + 30 : null), dn = pdone[b.id];
-    rows.push({ k: 'b_' + b.id, t: b._t != null ? b._t : 900 + i / 100, kind: 'block', icon: b.emoji || '🕒', label: b.title, time: b.time, color: b.color || '#9C8DC4', on: !!dn && (dn.status === 'approved' || dn.status === 'submitted'), pts: +b.pts || cfg.blockPts, mins: b._t != null && endM != null ? endM - b._t : null, startM: b._t, endM: endM, b: b });
+    rows.push({ k: 'b_' + b.id, t: b._t != null ? b._t : 900 + i / 100, kind: 'block', icon: b.emoji || '🕒', label: b.title, time: b.time, color: b.color || '#9C8DC4', on: !!dn && (dn.status === 'approved' || dn.status === 'submitted'), pts: b.own ? 0 : (+b.pts || cfg.blockPts), mins: b._t != null && endM != null ? endM - b._t : null, startM: b._t, endM: endM, b: b });
   });
   var PER = [['morning', '☀️', 360, 'Morning habit'], ['afternoon', '🌤', 900, 'Afternoon habit'], ['evening', '🌙', 1140, 'Evening habit']];
   if (typeof rtHabits === 'function') PER.forEach(function (p) {
@@ -37938,21 +37948,103 @@ function lnClean(text, withNotes, mode) {
   return out;
 }
 function lnLoad() { try { return JSON.parse(localStorage.getItem('fm_tts') || '{}') || {}; } catch (e) { return {}; } }
+// ═══ NATURAL VOICE — free, runs on the device, works offline once downloaded (Kokoro voice model, Apache-2.0) ═══
+var KK_VOICES = [['af_heart', 'Heart', 'woman ★'], ['af_bella', 'Bella', 'woman ★'], ['af_nicole', 'Nicole', 'woman, soft ★'], ['af_sarah', 'Sarah', 'woman'], ['af_sky', 'Sky', 'woman'], ['af_nova', 'Nova', 'woman'], ['af_river', 'River', 'woman'], ['af_alloy', 'Alloy', 'woman'], ['af_aoede', 'Aoede', 'woman'], ['af_jessica', 'Jessica', 'woman'], ['af_kore', 'Kore', 'woman'],
+  ['am_michael', 'Michael', 'man ★'], ['am_fenrir', 'Fenrir', 'man ★'], ['am_puck', 'Puck', 'man ★'], ['am_adam', 'Adam', 'man'], ['am_echo', 'Echo', 'man'], ['am_eric', 'Eric', 'man'], ['am_liam', 'Liam', 'man'], ['am_onyx', 'Onyx', 'man, deep'],
+  ['bf_emma', 'Emma', 'British woman ★'], ['bf_isabella', 'Isabella', 'British woman'], ['bf_alice', 'Alice', 'British woman'], ['bf_lily', 'Lily', 'British woman'],
+  ['bm_george', 'George', 'British man ★'], ['bm_fable', 'Fable', 'British man ★'], ['bm_daniel', 'Daniel', 'British man'], ['bm_lewis', 'Lewis', 'British man']];
+var KK = { w: null, cbs: {}, id: 0, ls: [], chain: Promise.resolve(), rtf: 0 };
+function kkBase() { try { return new URL('tts/', document.baseURI).href; } catch (e) { return 'tts/'; } }
+function kkOn(fn) { KK.ls.push(fn); return function () { KK.ls = KK.ls.filter(function (x) { return x !== fn; }); }; }
+function kkBroadcast(m) { KK.ls.slice().forEach(function (f) { try { f(m); } catch (e) {} }); }
+function kkWorker() {
+  if (KK.w) return KK.w;
+  var w = new Worker(kkBase() + 'tts-worker.js', { type: 'module' });
+  w.onmessage = function (e) { var m = e.data; if (m.id && KK.cbs[m.id]) { var cb = KK.cbs[m.id]; delete KK.cbs[m.id]; cb(m); return; } kkBroadcast(m); };
+  w.onerror = function () { KK.w = null; Object.keys(KK.cbs).forEach(function (k) { var cb = KK.cbs[k]; delete KK.cbs[k]; cb({ type: 'error', message: 'The natural voice could not start on this phone.' }); }); kkBroadcast({ type: 'error', message: 'The natural voice could not start on this phone.' }); };
+  KK.w = w; return w;
+}
+// one sentence at a time (the engine can only do one job at once)
+function kkSay(text, voice, speed, alive) {
+  var p = KK.chain.then(function () {
+    if (alive && !alive()) return null;
+    return new Promise(function (res, rej) {
+      var id = ++KK.id;
+      KK.cbs[id] = function (m) { if (m.type === 'error') rej(new Error(m.message)); else { var ms = m.samples.length / 24; if (ms > 0) KK.rtf = m.ms / ms; res(m.samples); } };
+      kkWorker().postMessage({ type: 'say', id: id, text: text, voice: voice, speed: speed });
+    });
+  });
+  KK.chain = p.catch(function () {});
+  return p;
+}
+function kkPcm(f) { var n = f.length, o = new Int16Array(n + 3600); for (var i = 0; i < n; i++) { var s = Math.max(-1, Math.min(1, f[i])); o[i] = s < 0 ? s * 32768 : s * 32767; } return o; }
+function kkWavUrl(pcm) {
+  var n = pcm.length, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+  function w(o, t) { for (var i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); }
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 24000, true); v.setUint32(28, 48000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  new Int16Array(b, 44, n).set(pcm); return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+}
+function kkKey(text, voice, speed) { var s = voice + '|' + speed + '|' + text, h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return kkBase() + 'audio/' + (h >>> 0).toString(36) + '-' + s.length; }
+function kkCacheGet(k) { try { return caches.open('fm-tts-audio').then(function (c) { return c.match(k); }).then(function (r) { return r ? r.arrayBuffer().then(function (b) { return new Int16Array(b); }) : null; }).catch(function () { return null; }); } catch (e) { return Promise.resolve(null); } }
+function kkCacheHas(k) { try { return caches.open('fm-tts-audio').then(function (c) { return c.match(k); }).then(function (r) { return !!r; }).catch(function () { return false; }); } catch (e) { return Promise.resolve(false); } }
+function kkCachePut(k, pcm) { try { return caches.open('fm-tts-audio').then(function (c) { return c.put(k, new Response(pcm.buffer.slice(0))); }).catch(function () {}); } catch (e) { return Promise.resolve(); } }
+function kkChunk(text, voice, speed, keep, alive) {
+  var k = kkKey(text, voice, speed);
+  return kkCacheGet(k).then(function (pc) {
+    if (pc) return pc;
+    return kkSay(text, voice, speed, alive).then(function (f) { if (!f) return null; var pcm = kkPcm(f); return keep ? kkCachePut(k, pcm).then(function () { return pcm; }) : pcm; });
+  });
+}
+function kkInstalled() {
+  try { var b = kkBase(), need = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.mjs'].concat([0, 1, 2, 3, 4, 5].map(function (i) { return 'model/kokoro-q8.part' + i + '.bin'; }));
+    return caches.open('fm-tts-v1').then(function (c) { return Promise.all(need.map(function (r) { return c.match(b + r); })); }).then(function (a) { return a.every(Boolean); }).catch(function () { return false; }); } catch (e) { return Promise.resolve(false); }
+}
 function ListenBar(props) {
   var h = React.createElement, synth = window.speechSynthesis, ok = !!synth && typeof SpeechSynthesisUtterance !== 'undefined';
   var cfgS = React.useState(lnLoad()), cfg = cfgS[0], setCfg = cfgS[1];
   var vS = React.useState([]), voices = vS[0], setVoices = vS[1];
   var pS = React.useState(0), pos = pS[0], setPos = pS[1], rS = React.useState('stop'), mode = rS[0], setMode = rS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var iS = React.useState(null), inst = iS[0], setInst = iS[1], dS = React.useState(null), dl = dS[0], setDl = dS[1], eS = React.useState(''), err = eS[0], setErr = eS[1], bS = React.useState(false), busy = bS[0], setBusy = bS[1], svS = React.useState(null), sv = svS[0], setSv = svS[1];
+  var nat = cfg.engine !== 'phone' && inst === true;
   var notes = cfg.notes !== false, speakOnly = !cfg.all, spoken = React.useMemo(function () { return lnClean(props.text, notes, 'speak'); }, [props.text]);
   var fell = speakOnly && spoken.length === 0, chunks = React.useMemo(function () { return (speakOnly && spoken.length) ? spoken : lnClean(props.text, notes, 'all'); }, [props.text, notes, speakOnly, spoken]);
-  var st = React.useRef({}); st.current = { pos: pos, mode: mode, chunks: chunks, cfg: cfg, props: props };
-  function save(o) { var n = Object.assign({}, cfg, o); setCfg(n); try { localStorage.setItem('fm_tts', JSON.stringify(n)); } catch (e) {} }
+  var st = React.useRef({}); st.current = { pos: pos, mode: mode, chunks: chunks, cfg: cfg, props: props, nat: nat };
+  var au = React.useRef(null), live = React.useRef(false), pf = React.useRef({}), ep = React.useRef(0), saveTok = React.useRef(0);
+  function save(o) { var n = Object.assign({}, lnLoad(), cfg, o); setCfg(n); try { localStorage.setItem('fm_tts', JSON.stringify(n)); } catch (e) {} }
+  React.useEffect(function () { kkInstalled().then(setInst); }, []);
   React.useEffect(function () {
     if (!ok) return; function load() { var v = synth.getVoices() || []; setVoices(v.filter(function (x) { return /^en/i.test(x.lang); }).sort(function (a, b) { var sc = function (x) { return (/natural|neural|premium|enhanced|google|siri/i.test(x.name) ? 0 : 1) + (/en[-_]US/i.test(x.lang) ? 0 : .5); }; return sc(a) - sc(b) || a.name.localeCompare(b.name); })); }
     load(); synth.addEventListener && synth.addEventListener('voiceschanged', load); return function () { synth.removeEventListener && synth.removeEventListener('voiceschanged', load); };
   }, []);
   var gen = React.useRef(0);
+  // ── natural voice helpers ──
+  function kVoice(alt) { return alt ? (st.current.cfg.kv2 || 'am_michael') : (st.current.cfg.kv || 'af_heart'); }
+  function natGet(i) {
+    var S = st.current, raw = S.chunks[i]; if (raw === undefined) return Promise.resolve(null);
+    var alt = raw.charAt(0) === '\u0001'; if (alt) raw = raw.slice(1);
+    var voice = kVoice(alt), sp = +S.cfg.rate || 1, key = voice + '|' + sp + '|' + raw, myEp = ep.current;
+    if (!pf.current[key]) { pf.current[key] = kkChunk(raw, voice, sp, false, function () { return myEp === ep.current; }); pf.current[key].catch(function () { delete pf.current[key]; }); }
+    return pf.current[key];
+  }
+  function unlock() {
+    if (!au.current) au.current = new Audio(); var a = au.current;
+    if (!a.getAttribute('data-k')) { a.setAttribute('data-k', '1'); try { a.src = kkWavUrl(new Int16Array(480)); var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {} }
+  }
+  function natFrom(i) {
+    var S = st.current, c = S.chunks; gen.current++; var g = gen.current; live.current = false; try { au.current && au.current.pause(); } catch (e) {}
+    if (i >= c.length) { setMode('stop'); setPos(0); setBusy(false); if (S.cfg.auto && S.props.onNext) { S.props.onNext(); } return; }
+    setPos(i); setMode('play'); setBusy(true); setErr('');
+    var p0 = natGet(i); natGet(i + 1); natGet(i + 2);
+    p0.then(function (pcm) {
+      if (g !== gen.current) return; setBusy(false); if (!pcm) return;
+      var a = au.current, old = a.getAttribute('data-u'); if (old) { try { URL.revokeObjectURL(old); } catch (e) {} }
+      var url = kkWavUrl(pcm); a.setAttribute('data-u', url); a.src = url; live.current = true;
+      a.onended = function () { if (g === gen.current) { live.current = false; natFrom(i + 1); } };
+      var pr = a.play(); if (pr && pr.catch) pr.catch(function () { if (g === gen.current) { live.current = true; setMode('pause'); } });
+    }).catch(function (e) { if (g === gen.current) { setMode('pause'); setBusy(false); setErr(String(e && e.message || e)); } });
+  }
   function speakFrom(i) {
+    if (st.current.nat) return natFrom(i);
     if (!ok) return; var S = st.current, c = S.chunks; gen.current++; var g = gen.current; try { synth.cancel(); } catch (e) {}
     if (i >= c.length) { setMode('stop'); setPos(0); if (S.cfg.auto && S.props.onNext) { S.props.onNext(); } return; }
     setPos(i); setMode('play');
@@ -37964,25 +38056,102 @@ function ListenBar(props) {
     u.onerror = function (e) { if (g !== gen.current) return; if (e && (e.error === 'interrupted' || e.error === 'canceled')) return; setMode('pause'); };
     setTimeout(function () { if (g === gen.current) { try { synth.speak(u); } catch (e) {} } }, 60);
   }
-  function play() { speakFrom(st.current.mode === 'pause' ? st.current.pos : (st.current.pos || 0)); }
-  function pause() { gen.current++; try { synth.cancel(); } catch (e) {} setMode('pause'); }
-  function stop() { gen.current++; try { synth.cancel(); } catch (e) {} setMode('stop'); setPos(0); }
+  function play() {
+    var S = st.current;
+    if (S.nat) { unlock(); if (S.mode === 'pause' && live.current && au.current) { var pr = au.current.play(); if (pr && pr.catch) pr.catch(function () {}); setMode('play'); return; } natFrom(S.mode === 'pause' ? S.pos : (S.pos || 0)); return; }
+    speakFrom(S.mode === 'pause' ? S.pos : (S.pos || 0));
+  }
+  function pause() {
+    if (st.current.nat) { if (live.current && au.current) { au.current.pause(); } else { gen.current++; setBusy(false); } setMode('pause'); return; }
+    gen.current++; try { synth.cancel(); } catch (e) {} setMode('pause');
+  }
+  function stop() { gen.current++; ep.current++; pf.current = {}; live.current = false; try { synth && synth.cancel(); } catch (e) {} try { au.current && au.current.pause(); } catch (e) {} setBusy(false); setMode('stop'); setPos(0); }
   function jump(d) { var n = Math.max(0, Math.min(chunks.length - 1, st.current.pos + d)); if (st.current.mode === 'play') speakFrom(n); else setPos(n); }
+  // a changed voice / speed / day must not reuse old sentences
+  React.useEffect(function () { ep.current++; pf.current = {}; }, [chunks, cfg.kv, cfg.kv2, cfg.rate, nat]);
   // stop when the day changes or the page closes
-  React.useEffect(function () { stop(); if (window._lnAuto) { window._lnAuto = false; setTimeout(function () { speakFrom(0); }, 500); } }, [props.text]);
-  React.useEffect(function () { return function () { gen.current++; try { synth && synth.cancel(); } catch (e) {} }; }, []);
+  React.useEffect(function () { stop(); if (window._lnAuto) { window._lnAuto = false; setTimeout(function () { if (st.current.nat) unlock(); speakFrom(0); }, 500); } }, [props.text]);
+  React.useEffect(function () { return function () { gen.current++; saveTok.current++; try { synth && synth.cancel(); } catch (e) {} try { au.current && au.current.pause(); } catch (e) {} }; }, []);
   // lock-screen / headset buttons where the phone allows it
   React.useEffect(function () {
     try { if (!('mediaSession' in navigator)) return; navigator.mediaSession.metadata = new MediaMetadata({ title: props.title || 'Teacher Manual', artist: 'Discovering Kids Academy' });
       navigator.mediaSession.setActionHandler('play', play); navigator.mediaSession.setActionHandler('pause', pause); navigator.mediaSession.setActionHandler('stop', stop);
       navigator.mediaSession.setActionHandler('nexttrack', function () { jump(5); }); navigator.mediaSession.setActionHandler('previoustrack', function () { jump(-5); }); } catch (e) {}
   });
-  if (!ok) return h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginBottom: 10, fontSize: 13, color: '#FFE0B2' } }, '🔇 This browser can’t read aloud. Try Chrome on Android or Safari on iPhone.');
+  // ── download the voice (one time) ──
+  function install() {
+    setErr(''); setDl(0);
+    var off = kkOn(function (m) {
+      if (m.type === 'progress') setDl(m.pct);
+      else if (m.type === 'downloaded') { off(); setDl(null); setInst(true); save({ engine: 'natural' }); }
+      else if (m.type === 'error') { off(); setDl(null); setErr(/Missing file/.test(m.message) ? 'The voice files are not in the app folder yet (the “tts” folder on GitHub). ' + m.message : m.message); }
+    });
+    kkWorker().postMessage({ type: 'download', voices: KK_VOICES.map(function (v) { return v[0]; }) });
+  }
+  function removeAll() {
+    if (!window.confirm('Remove the natural voice and all saved lesson audio from this phone? You can download it again later.')) return;
+    stop(); try { caches.delete('fm-tts-v1'); caches.delete('fm-tts-audio'); } catch (e) {} if (KK.w) { try { KK.w.postMessage({ type: 'clear' }); } catch (e) {} } setInst(false); setSv(null);
+  }
+  // ── save the lesson so it plays instantly, even with no signal ──
+  function allKeys() { var S = st.current, sp = +S.cfg.rate || 1; return S.chunks.map(function (r) { var alt = r.charAt(0) === '\u0001', raw = alt ? r.slice(1) : r, v = kVoice(alt); return { raw: raw, v: v, sp: sp, k: kkKey(raw, v, sp) }; }); }
+  React.useEffect(function () {
+    if (!nat) return; var dead = false;
+    Promise.all(allKeys().map(function (x) { return kkCacheHas(x.k); })).then(function (a) { if (!dead) setSv(function (o) { return (o && o.running) ? o : { n: a.filter(Boolean).length, of: a.length, running: false }; }); });
+    return function () { dead = true; };
+  }, [nat, chunks, cfg.kv, cfg.kv2, cfg.rate]);
+  function saveAll() {
+    var list = allKeys(), tok = ++saveTok.current, i = 0; unlock(); setErr(''); setSv({ n: 0, of: list.length, running: true });
+    (function next() {
+      if (tok !== saveTok.current) return;
+      if (i >= list.length) { setSv({ n: list.length, of: list.length, running: false }); return; }
+      var x = list[i++];
+      kkChunk(x.raw, x.v, x.sp, true, function () { return tok === saveTok.current; }).then(function () { setSv({ n: i, of: list.length, running: true }); next(); }).catch(function (e) { setSv({ n: i - 1, of: list.length, running: false }); setErr(String(e && e.message || e)); });
+    })();
+  }
+  function stopSave() { saveTok.current++; setSv(function (o) { return o && { n: o.n, of: o.of, running: false }; }); }
+  function hearNat(alt) {
+    unlock(); gen.current++; live.current = false; setErr('');
+    kkChunk('Good morning! This is how I will sound reading your lesson.', kVoice(alt), +cfg.rate || 1, false).then(function (pcm) { var a = au.current; a.onended = null; a.src = kkWavUrl(pcm); var pr = a.play(); if (pr && pr.catch) pr.catch(function () {}); }).catch(function (e) { setErr(String(e && e.message || e)); });
+  }
+  if (!ok && !nat) return h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginBottom: 10, fontSize: 13, color: '#FFE0B2' } }, '🔇 This browser can’t read aloud. Try Chrome on Android or Safari on iPhone.');
   var pct = chunks.length ? Math.round(pos / chunks.length * 100) : 0, playing = mode === 'play';
   var b = function (bg, fg, fn, t, big) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 16, padding: big ? '16px 22px' : '12px 14px', fontWeight: 900, fontSize: big ? 20 : 15, cursor: 'pointer', flex: big ? 2 : 1 } }, t); };
   var sel = { width: '100%', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 14, marginBottom: 8 };
+  var lab = { fontSize: 11, color: '#b8b8c8', marginBottom: 3 };
+  var pill = function (bg, fg, fn, t, dis) { return h('button', { onClick: fn, disabled: !!dis, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, cursor: 'pointer', opacity: dis ? .5 : 1 } }, t); };
+  var kvOpts = KK_VOICES.map(function (v) { return h('option', { key: v[0], value: v[0] }, v[1] + ' — ' + v[2]); });
+  var slow = nat && KK.rtf > 1.05;
+  var natCard = inst === false && cfg.engine !== 'phone' && h('div', { style: { background: 'rgba(76,175,130,.14)', border: '1px solid rgba(76,175,130,.5)', borderRadius: 12, padding: 10, margin: '8px 0' } },
+    h('div', { style: { fontWeight: 900, color: '#A5E8C7', fontSize: 14 } }, '🎙 Get the natural voice (free, works with no internet)'),
+    h('div', { style: { fontSize: 12, color: '#e0e0ee', lineHeight: 1.6, margin: '4px 0 8px' } }, 'One-time download of about 115 MB — do it on Wi-Fi. After that it lives on this phone and talks with no signal. 27 voices, women and men, American and British.'),
+    dl === null ? pill('#4CAF82', '#000', install, '⬇ Download natural voice') : h('div', null, h('div', { style: { height: 8, background: 'rgba(255,255,255,.15)', borderRadius: 4, overflow: 'hidden' } }, h('div', { style: { height: '100%', width: dl + '%', background: '#4CAF82', transition: 'width .3s' } })), h('div', { style: { fontSize: 12, color: '#e0e0ee', marginTop: 4 } }, 'Downloading… ' + dl + '% — keep this screen open')));
+  var natPanel = nat && h(React.Fragment, null,
+    h('div', { style: lab }, 'Main voice'), h('select', { value: cfg.kv || 'af_heart', onChange: function (e) { save({ kv: e.target.value }); }, style: sel }, kvOpts),
+    h('div', { style: lab }, 'Voice for QUESTIONS (the ASK lines)'), h('select', { value: cfg.kv2 || 'am_michael', onChange: function (e) { save({ kv2: e.target.value }); }, style: sel }, kvOpts),
+    h('div', { style: lab }, 'Speed'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, [['Slow & clear', 0.8], ['Calm', 0.9], ['Normal', 1], ['Brisk', 1.15]].map(function (x) { var on = Math.abs((+cfg.rate || 1) - x[1]) < .01; return h('button', { key: x[0], onClick: function () { save({ rate: x[1] }); }, style: { background: on ? '#9C8DC4' : 'rgba(255,255,255,.12)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 14, padding: '8px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, x[0]); })),
+    h('input', { type: 'range', min: 0.6, max: 1.5, step: 0.05, value: +cfg.rate || 1, onChange: function (e) { save({ rate: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }),
+    h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 } }, pill('rgba(255,255,255,.14)', '#fff', function () { hearNat(false); }, '🔊 Hear main voice'), pill('rgba(255,255,255,.14)', '#fff', function () { hearNat(true); }, '🔊 Hear question voice')),
+    h('div', { style: { background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10, marginBottom: 8 } },
+      h('div', { style: { fontWeight: 800, fontSize: 13, color: '#FFD54F' } }, '📥 Save this lesson so it plays instantly'),
+      h('div', { style: { fontSize: 12, color: '#e0e0ee', lineHeight: 1.6, margin: '4px 0 8px' } }, 'Making the voice takes a little while, and slower phones can pause between sentences. Tap this once (on charger, screen on) and the whole day is saved on the phone — it then plays smoothly with no signal. Saved for the current voices and speed.'),
+      sv && sv.running ? h('div', null, h('div', { style: { height: 8, background: 'rgba(255,255,255,.15)', borderRadius: 4, overflow: 'hidden' } }, h('div', { style: { height: '100%', width: Math.round(sv.n / Math.max(1, sv.of) * 100) + '%', background: '#FFD54F' } })), h('div', { style: { fontSize: 12, color: '#e0e0ee', margin: '4px 0 6px' } }, 'Saving ' + sv.n + ' of ' + sv.of + ' sentences…'), pill('rgba(239,83,80,.8)', '#fff', stopSave, 'Stop saving'))
+        : h('div', null, h('div', { style: { fontSize: 12, color: sv && sv.n === sv.of && sv.of ? '#A5E8C7' : '#e0e0ee', marginBottom: 6 } }, sv ? (sv.of && sv.n === sv.of ? '✓ Whole lesson saved' : sv.n + ' of ' + sv.of + ' sentences saved') : 'Checking…'), pill('#4CAF82', '#000', saveAll, sv && sv.n > 0 && sv.n < sv.of ? '📥 Finish saving' : '📥 Save this lesson', sv && sv.of > 0 && sv.n === sv.of))),
+    h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 8 } }, h('input', { type: 'checkbox', checked: false, onChange: function () { save({ engine: 'phone' }); } }), ' Use the phone’s own voices instead'));
+  var phonePanel = !nat && h(React.Fragment, null,
+    inst === true && cfg.engine === 'phone' && h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 8 } }, h('input', { type: 'checkbox', checked: false, onChange: function () { save({ engine: 'natural' }); } }), ' Use the natural voice again'),
+    h('div', { style: lab }, 'Voice (these are the voices on this phone — the ones marked ★ usually sound most natural)'),
+    h('select', { value: cfg.voice || '', onChange: function (e) { save({ voice: e.target.value }); }, style: sel }, h('option', { value: '' }, 'Phone default'), voices.map(function (v) { return h('option', { key: v.name + v.lang, value: v.name }, (/natural|neural|premium|enhanced|google|siri/i.test(v.name) ? '★ ' : '') + v.name + ' (' + v.lang + ')'); })),
+    h('div', { style: lab }, 'Voice for QUESTIONS (the ASK lines) — pick a different one so questions sound different'),
+    h('select', { value: cfg.voice2 || '', onChange: function (e) { save({ voice2: e.target.value }); }, style: sel }, h('option', { value: '' }, 'Same voice (slightly higher pitch)'), voices.map(function (v) { return h('option', { key: 'q' + v.name + v.lang, value: v.name }, (/natural|neural|premium|enhanced|google|siri/i.test(v.name) ? '★ ' : '') + v.name + ' (' + v.lang + ')'); })),
+    h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 4 } }, 'Quick styles'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, [['Calm teacher', 0.95, 0.95], ['Storyteller', 0.9, 1.1], ['Cheerful', 1.1, 1.25], ['Slow & clear', 0.75, 1], ['Deep & steady', 0.95, 0.75]].map(function (x) { var on = Math.abs((+cfg.rate || 1) - x[1]) < .01 && Math.abs((+cfg.pitch || 1) - x[2]) < .01; return h('button', { key: x[0], onClick: function () { save({ rate: x[1], pitch: x[2] }); }, style: { background: on ? '#9C8DC4' : 'rgba(255,255,255,.12)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 14, padding: '8px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, x[0]); })),
+    h('div', { style: lab }, 'Speed: ' + (+cfg.rate || 1).toFixed(2) + '×'),
+    h('input', { type: 'range', min: 0.6, max: 1.6, step: 0.05, value: +cfg.rate || 1, onChange: function (e) { save({ rate: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }),
+    h('div', { style: lab }, 'Pitch: ' + (+cfg.pitch || 1).toFixed(2)),
+    h('input', { type: 'range', min: 0.7, max: 1.3, step: 0.05, value: +cfg.pitch || 1, onChange: function (e) { save({ pitch: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }));
   return h('div', { style: { position: 'sticky', top: 0, zIndex: 15, background: 'rgba(28,24,48,.97)', border: '2px solid #9C8DC4', borderRadius: 16, padding: 12, marginBottom: 10, boxShadow: '0 4px 14px rgba(0,0,0,.35)' } },
-    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#C5B8E8', letterSpacing: 1, marginBottom: 6 } }, '🎧 LISTEN — ' + (speakOnly && !fell ? 'ONLY WHAT YOU SAY TO THE CHILDREN' : 'WHOLE MANUAL')),
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#C5B8E8', letterSpacing: 1, marginBottom: 6 } }, '🎧 LISTEN — ' + (speakOnly && !fell ? 'ONLY WHAT YOU SAY TO THE CHILDREN' : 'WHOLE MANUAL') + (nat ? ' · NATURAL VOICE' : '')),
     fell && h('div', { style: { fontSize: 11, color: '#FFB74D', marginBottom: 6 } }, 'No green “say it” lines on this day, so it will read the whole page.'),
     h('div', { style: { height: 6, background: 'rgba(255,255,255,.12)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 } }, h('div', { style: { height: '100%', width: pct + '%', background: '#9C8DC4', transition: 'width .3s' } })),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'stretch' } },
@@ -37990,31 +38159,25 @@ function ListenBar(props) {
       playing ? b('#FFD54F', '#000', pause, '⏸ Pause', true) : b('#4CAF82', '#000', play, mode === 'pause' ? '▶ Resume' : '▶ Play', true),
       b('rgba(255,255,255,.14)', '#fff', function () { jump(5); }, '⏩'),
       mode !== 'stop' && b('rgba(239,83,80,.8)', '#fff', stop, '⏹')),
-    h('div', { style: { fontSize: 12, color: '#b8b8c8', marginTop: 6 } }, (mode === 'stop' ? 'Ready' : playing ? 'Reading…' : 'Paused') + ' · ' + Math.min(pos + 1, chunks.length) + ' of ' + chunks.length + ' parts · ⏪⏩ skip ~5 sentences'),
+    h('div', { style: { fontSize: 12, color: '#b8b8c8', marginTop: 6 } }, (mode === 'stop' ? 'Ready' : busy ? 'Getting the next sentence ready…' : playing ? 'Reading…' : 'Paused') + ' · ' + Math.min(pos + 1, chunks.length) + ' of ' + chunks.length + ' parts · ⏪⏩ skip ~5 sentences'),
+    err && h('div', { style: { fontSize: 12, color: '#FFB4AB', marginTop: 4 } }, '⚠ ' + err),
+    slow && h('div', { style: { fontSize: 12, color: '#FFD54F', marginTop: 4 } }, '⏳ This phone makes the voice a bit slower than it speaks. Open “Voice & speed” and tap “Save this lesson” once — then it plays smoothly.'),
+    natCard,
     h('button', { onClick: function () { setOpen(!open); }, style: { background: 'transparent', border: 'none', color: '#C5B8E8', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: '8px 0 0' } }, (open ? '▲ ' : '▼ ') + 'Voice & speed'),
     open && h('div', { style: { marginTop: 6 } },
-      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Voice (these are the voices on this phone — the ones marked ★ usually sound most natural)'),
-      h('select', { value: cfg.voice || '', onChange: function (e) { save({ voice: e.target.value }); }, style: sel }, h('option', { value: '' }, 'Phone default'), voices.map(function (v) { return h('option', { key: v.name + v.lang, value: v.name }, (/natural|neural|premium|enhanced|google|siri/i.test(v.name) ? '★ ' : '') + v.name + ' (' + v.lang + ')'); })),
-      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Voice for QUESTIONS (the ASK lines) — pick a different one so questions sound different'),
-      h('select', { value: cfg.voice2 || '', onChange: function (e) { save({ voice2: e.target.value }); }, style: sel }, h('option', { value: '' }, 'Same voice (slightly higher pitch)'), voices.map(function (v) { return h('option', { key: 'q' + v.name + v.lang, value: v.name }, (/natural|neural|premium|enhanced|google|siri/i.test(v.name) ? '★ ' : '') + v.name + ' (' + v.lang + ')'); })),
-      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 4 } }, 'Quick styles'),
-      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, [['Calm teacher', 0.95, 0.95], ['Storyteller', 0.9, 1.1], ['Cheerful', 1.1, 1.25], ['Slow & clear', 0.75, 1], ['Deep & steady', 0.95, 0.75]].map(function (x) { var on = Math.abs((+cfg.rate || 1) - x[1]) < .01 && Math.abs((+cfg.pitch || 1) - x[2]) < .01; return h('button', { key: x[0], onClick: function () { save({ rate: x[1], pitch: x[2] }); }, style: { background: on ? '#9C8DC4' : 'rgba(255,255,255,.12)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 14, padding: '8px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, x[0]); })),
-      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Speed: ' + (+cfg.rate || 1).toFixed(2) + '×'),
-      h('input', { type: 'range', min: 0.6, max: 1.6, step: 0.05, value: +cfg.rate || 1, onChange: function (e) { save({ rate: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }),
-      h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 3 } }, 'Pitch: ' + (+cfg.pitch || 1).toFixed(2)),
-      h('input', { type: 'range', min: 0.7, max: 1.3, step: 0.05, value: +cfg.pitch || 1, onChange: function (e) { save({ pitch: +e.target.value }); }, style: { width: '100%', marginBottom: 8 } }),
+      natPanel, phonePanel,
+      !nat && h('button', { onClick: function () { try { synth.cancel(); var u = new SpeechSynthesisUtterance('Good morning! This is how I will sound reading your lesson.'); var vv = (synth.getVoices() || []).filter(function (x) { return x.name === cfg.voice; })[0]; if (vv) u.voice = vv; u.rate = +cfg.rate || 1; u.pitch = +cfg.pitch || 1; synth.speak(u); } catch (e) {} }, style: { background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, cursor: 'pointer', marginBottom: 8 } }, '🔊 Hear this voice'),
       h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 6 } }, h('input', { type: 'checkbox', checked: !!cfg.all, onChange: function (e) { save({ all: e.target.checked }); } }), ' Read the WHOLE manual out loud (instructions too). Off = only what you say to the children'),
       cfg.all && h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 6, marginLeft: 18 } }, h('input', { type: 'checkbox', checked: notes, onChange: function (e) { save({ notes: e.target.checked }); } }), ' include the [bracket] teacher notes'),
       h('label', { style: { display: 'block', fontSize: 13, color: '#fff', marginBottom: 8 } }, h('input', { type: 'checkbox', checked: !!cfg.auto, onChange: function (e) { save({ auto: e.target.checked }); } }), ' When this day ends, go straight to the next day'),
-      h('button', { onClick: function () { try { synth.cancel(); var u = new SpeechSynthesisUtterance('Good morning! This is how I will sound reading your lesson.'); var vv = (synth.getVoices() || []).filter(function (x) { return x.name === cfg.voice; })[0]; if (vv) u.voice = vv; u.rate = +cfg.rate || 1; u.pitch = +cfg.pitch || 1; synth.speak(u); } catch (e) {} }, style: { background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' } }, '🔊 Hear this voice'),
-      h('details', { style: { marginTop: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10 } },
-        h('summary', { style: { fontWeight: 800, fontSize: 13, color: '#FFD54F', cursor: 'pointer' } }, '🎙 The voices sound robotic? Get free, much nicer ones'),
+      inst === true && h('div', { style: { marginBottom: 8 } }, pill('rgba(255,255,255,.1)', '#ffb4ab', removeAll, '🗑 Remove natural voice & saved lessons from this phone')),
+      !nat && inst !== true && h('details', { style: { marginTop: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10 } },
+        h('summary', { style: { fontWeight: 800, fontSize: 13, color: '#FFD54F', cursor: 'pointer' } }, '🎙 Other free phone voices'),
         h('div', { style: { fontSize: 12, color: '#e0e0ee', lineHeight: 1.7, marginTop: 8 } },
-          h('div', null, h('b', null, 'iPhone / iPad: '), 'Settings → Accessibility → Spoken Content → Voices → English. Download one marked ', h('b', null, 'Enhanced'), ' or ', h('b', null, 'Premium'), ' (try Ava, Zoe, Evan or Nicky). Free. Then reopen this app and pick it above.'),
-          h('div', { style: { marginTop: 6 } }, h('b', null, 'Android: '), 'Settings → search “Text-to-speech” → Google Speech Services (or Samsung text-to-speech) → Install voice data → download an English voice with ', h('b', null, 'high quality'), '. Free. Pick it above afterward.'),
-          h('div', { style: { marginTop: 6 } }, h('b', null, 'Computer: '), 'Open the app in ', h('b', null, 'Microsoft Edge'), '. Edge includes “Natural” voices (Aria, Jenny, Guy…) that sound close to a real person, and they appear in the list automatically.'),
-          h('div', { style: { marginTop: 6 } }, 'The kids can each choose their own style and voice on their own device.'))),
-      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 8, lineHeight: 1.5 } }, 'Free — nothing is uploaded; your phone does the talking. While driving: start it, then you can lock the screen on most Android phones. iPhones may stop reading when the screen locks, so keep the screen on (plug in the charger) or use a car mount. Your settings are remembered on this phone.')));
+          h('div', null, h('b', null, 'iPhone / iPad: '), 'Settings → Accessibility → Spoken Content → Voices → English. Download one marked ', h('b', null, 'Enhanced'), ' or ', h('b', null, 'Premium'), ' (try Ava, Zoe, Evan or Nicky). Free.'),
+          h('div', { style: { marginTop: 6 } }, h('b', null, 'Android: '), 'Settings → search “Text-to-speech” → Google Speech Services → Install voice data → a high-quality English voice. Free.'),
+          h('div', { style: { marginTop: 6 } }, h('b', null, 'Computer: '), 'Open the app in ', h('b', null, 'Microsoft Edge'), ' — it includes “Natural” voices.'))),
+      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 8, lineHeight: 1.5 } }, 'Free — nothing is uploaded; your phone does the talking. While driving: start it, then lock the screen on most Android phones. iPhones may stop reading when the screen locks, so keep the screen on (plug in the charger) or use a car mount. Your settings are remembered on this phone.')));
 }
 
 </script>
@@ -38043,6 +38206,109 @@ function SchoolNav(props) {
       link('rgba(26,115,232,.35)', 'https://classroom.google.com', '🎓 Google Classroom'),
       typeof ClassroomButton === 'function' ? h('div', { style: { display: 'flex' } }, h(ClassroomButton, { who: props.personId, title: 'Day ' + props.dayNum + ': ' + (props.title || ''), body: 'Scripture: ' + scr + ' — Discovering Kids Academy day ' + props.dayNum + ' of 180' })) : null),
     h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 8, lineHeight: 1.5 } }, 'This screen remembers where you were today, so leaving the app to look something up never loses your place. Tomorrow it opens on the new day.'));
+}
+
+</script>
+<script>
+// ═══ MY SCHEDULE — the front of Start My Day: where I should be right now, what is next, where to clock in ═══
+function msFmt(m) { var h = Math.floor(m / 60) % 24, mi = m % 60, ap = h >= 12 ? 'PM' : 'AM'; return ((h % 12) || 12) + ':' + (mi < 10 ? '0' : '') + mi + ' ' + ap; }
+function msIn(mins) { if (mins < 1) return 'now'; if (mins < 60) return 'in ' + mins + ' min'; var h = Math.floor(mins / 60), m = mins % 60; return 'in ' + h + ' hr' + (m ? ' ' + m + ' min' : ''); }
+function msTourGet(pid) { try { return localStorage.getItem('fm_schedtour_' + pid) === '1'; } catch (e) { return false; } }
+function MySchedule(props) {
+  var h = React.createElement, pid = props.personId, nm = props.name || '', day = planDayKey(), clocked = !!props.clocked, ready = !!props.ready;
+  var dnS = ktUse('plansdone/' + day + '/' + pid, {}), done = dnS[0] || {};
+  var msS = ktUse('mysched/' + pid, null);
+  var tkS = React.useState(0), setTk = tkS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(iv); }; }, []);
+  var tourS = React.useState(function () { return !msTourGet(pid); }), tour = tourS[0], setTour = tourS[1];
+  var addS = React.useState(false), addOpen = addS[0], setAdd = addS[1], fS = React.useState({ title: '', time: '', act: '', when: 'today' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var listS = React.useState(false), allOpen = listS[0], setAllOpen = listS[1];
+  var d = new Date(), nowM = d.getHours() * 60 + d.getMinutes();
+  var blocks = planBlocksFor(props.schedHook, pid, day);
+  var timed = blocks.filter(function (b) { return b._t != null; });
+  blocks.forEach(function (b) { b._end = null; });
+  timed.forEach(function (b, i) { var nx = timed[i + 1]; b._end = nx ? nx._t : b._t + 60; });
+  var cur = null, next = null;
+  timed.forEach(function (b) { if (b._t <= nowM && nowM < b._end) cur = b; else if (b._t > nowM && !next) next = b; });
+  var data = (props.sessions || {})[pid] || {}, running = typeof clockActiveList === 'function' ? clockActiveList(data) : [], runIds = running.map(function (r) { return r.activity; });
+  var acts = typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : [];
+  var actLbl = function (id) { return typeof planActLabel === 'function' ? planActLabel(id) : id; };
+  function scrollTo(id) { try { var el = document.getElementById(id); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.style.transition = 'box-shadow .3s'; el.style.boxShadow = '0 0 0 4px #FFD54F'; setTimeout(function () { el.style.boxShadow = 'none'; }, 1800); } } catch (e) {} }
+  function clockTo(act) { if (typeof clockInActivity === 'function') clockInActivity(pid, props.sessions || {}, props.onUpdate, act); }
+  function isSchool(b) { return b && (b.activity === 'school' || b.activity === 'spiritual' || /school|lesson|bible|worship|reading|math|scripture/i.test(b.title || '')); }
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 4000); }
+  function addItem() {
+    var title = (f.title || '').trim(); if (!title) { say('Type what it is first.'); return; }
+    if (!f.time) { say('Pick a time.'); return; }
+    var p = f.time.split(':'), m = (+p[0]) * 60 + (+p[1]), id = 'own' + Date.now().toString(36);
+    var blk = { id: id, title: title, time: msFmt(m), activity: f.act || '', own: true, by: pid, ts: Date.now() };
+    var path = f.when === 'daily' ? 'mysched/' + pid + '/daily/' + id : 'mysched/' + pid + '/' + (function () { var t = new Date(); if (f.when === 'tomorrow') t.setDate(t.getDate() + 1); var z = function (n) { return (n < 10 ? '0' : '') + n; }; return t.getFullYear() + '-' + z(t.getMonth() + 1) + '-' + z(t.getDate()); })() + '/' + id;
+    try { syncSet(path, blk); } catch (e) {}
+    try { props.addNotif && props.addNotif('info', pid, '📅 ' + (nm || pid) + ' added to their schedule', blk.time + ' — ' + title + (f.when === 'daily' ? ' (every day)' : f.when === 'tomorrow' ? ' (tomorrow)' : ' (today)'), { adminOnly: true }); } catch (e) {}
+    setF({ title: '', time: '', act: '', when: 'today' }); setAdd(false); say('✅ Added — it is on your schedule now' + (f.when === 'tomorrow' ? ' for tomorrow' : f.when === 'daily' ? ' every day' : '') + '.');
+  }
+  function removeOwn(b) {
+    if (!window.confirm('Take “' + b.title + '” off your schedule?')) return;
+    try { if (b.daily) syncSet('mysched/' + pid + '/daily/' + b.id, null); else syncSet('mysched/' + pid + '/' + day + '/' + b.id, null); } catch (e) {}
+  }
+  function closeTour() { try { localStorage.setItem('fm_schedtour_' + pid, '1'); } catch (e) {} setTour(false); }
+  var card = { background: 'rgba(255,213,79,.08)', border: '2px solid #FFD54F', borderRadius: 18, padding: 14, marginBottom: 12 };
+  var bigBtn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { width: '100%', background: bg, color: fg, border: 'none', borderRadius: 16, padding: 15, fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 8 } }, t); };
+  var want = cur && cur.activity ? cur.activity : null, match = want && runIds.indexOf(want) !== -1;
+  var inp = { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 15, width: '100%', boxSizing: 'border-box', marginBottom: 8 };
+  // what the child should do about it right now
+  function action(b) {
+    if (!b.activity) return h('div', { style: { fontSize: 14, color: '#d8d8e8', marginTop: 6 } }, 'No clock for this one — do it, then check it off in “My day”.');
+    if (runIds.indexOf(b.activity) !== -1) return h('div', { style: { fontSize: 15, color: '#81C784', fontWeight: 800, marginTop: 6 } }, '✅ You are clocked into ' + actLbl(b.activity) + ' — you are on track');
+    var wrong = runIds.length ? h('div', { style: { fontSize: 14, color: '#FF8A80', fontWeight: 800, marginTop: 6 } }, '⚠️ You are clocked into ' + runIds.map(actLbl).join(' + ') + ' but this block is ' + actLbl(b.activity)) : h('div', { style: { fontSize: 14, color: '#FFB74D', fontWeight: 800, marginTop: 6 } }, '⏱ Not clocked in yet — this block clocks into ' + actLbl(b.activity));
+    if (!clocked) return h('div', null, wrong, bigBtn('#4CAF82', '#000', function () { scrollTo('fm-step-1'); }, '⬇ First: Start my day'));
+    if (!ready && b.activity !== 'free') return h('div', null, wrong, bigBtn('#4CAF82', '#000', function () { scrollTo('fm-step-2'); }, '⬇ Tap “I am ready for the day” to unlock this'));
+    return h('div', null, wrong, bigBtn('#4CAF82', '#000', function () { clockTo(b.activity); }, '▶ Clock in to ' + actLbl(b.activity)));
+  }
+  var lessonBtn = function (b) { return isSchool(b) && props.onGo && bigBtn('#039BE5', '#fff', function () { props.onGo('work'); }, '📖 Open today’s lesson'); };
+  var heroNext = next && h('div', { style: { fontSize: 14, color: '#fff', marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.14)' } }, h('b', { style: { color: '#FFD54F' } }, 'UP NEXT ' + msIn(next._t - nowM) + ' · ' + next.time), h('div', { style: { fontSize: 17, fontWeight: 900, marginTop: 2 } }, (next.emoji ? next.emoji + ' ' : '') + next.title), next.activity && h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'You will clock into ' + actLbl(next.activity)));
+  var statusOf = function (b) { var dn = done[b.id], st = dn && dn.status; if (st === 'approved' || st === 'submitted') return 'done'; if (b._t == null) return 'later'; if (b === cur) return 'now'; if (b === next) return 'next'; if (b._end != null && b._end <= nowM) return 'missed'; return 'later'; };
+  var ICON = { done: '✅', now: '▶️', next: '⏭', missed: '⚠️', later: '•' };
+  var list = allOpen ? blocks : blocks.filter(function (b) { var s = statusOf(b); return s === 'now' || s === 'next' || s === 'later' || s === 'missed'; }).slice(0, 6);
+  var STEPS = [['🕒', 'The time on the left', 'tells you WHEN something starts.'], ['▶️', 'The yellow “RIGHT NOW” box', 'is where you should be this minute. Do this one.'], ['⏱', 'The green Clock in button', 'starts the clock for that job. Tap it when you begin, and clock out when you finish.'], ['⏭', '“Up next”', 'shows what is coming and how many minutes until it starts — get ready before it.'], ['➕', 'Need to add something?', 'Tap “Add to my schedule”. It shows up in your day right away.']];
+  return h('div', { id: 'fm-step-0', style: card },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+      h('div', { style: { flex: 1, fontSize: 18, fontWeight: 900, color: '#fff' } }, '📅 My schedule'),
+      h('button', { onClick: function () { tour ? closeTour() : setTour(true); }, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '7px 11px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, tour ? '✕ Close help' : '❓ How do I read this?')),
+    tour && h('div', { style: { background: 'rgba(3,155,229,.15)', border: '1px solid rgba(3,155,229,.5)', borderRadius: 14, padding: 12, marginBottom: 10 } },
+      h('div', { style: { fontWeight: 900, color: '#fff', fontSize: 15, marginBottom: 6 } }, 'Your schedule tells you where to be'),
+      STEPS.map(function (s, i) { return h('div', { key: i, style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '5px 0', color: '#e8e8f4', fontSize: 14, lineHeight: 1.5 } }, h('div', { style: { fontSize: 22, width: 30, textAlign: 'center' } }, s[0]), h('div', null, h('b', null, s[1]), ' ' + s[2])); }),
+      h('div', { style: { fontSize: 13, color: '#bfe3ff', marginTop: 6 } }, 'Every morning: look here first → tap Start my day → do what the yellow box says.'),
+      bigBtn('#039BE5', '#fff', closeTour, '👍 Got it')),
+    cur ? h('div', null,
+      h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', letterSpacing: 1 } }, 'RIGHT NOW · ' + cur.time + ' to ' + msFmt(cur._end)),
+      h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff', margin: '2px 0' } }, (cur.emoji ? cur.emoji + ' ' : '') + cur.title),
+      action(cur), lessonBtn(cur), heroNext)
+      : h('div', null,
+        h('div', { style: { fontSize: 16, color: '#fff', fontWeight: 800 } }, blocks.length === 0 ? 'Nothing is on your schedule yet today.' : (next ? 'Nothing right now.' : 'Your schedule is finished for today. 🎉')),
+        blocks.length === 0 && h('div', { style: { fontSize: 13, color: '#c8c8d8', marginTop: 4 } }, 'Ask Mom or Dad, or add your own with the button below.'),
+        heroNext),
+    msg && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '1px solid #4CAF82', borderRadius: 12, padding: 8, marginTop: 8, color: '#fff', fontSize: 13 } }, msg),
+    blocks.length > 0 && h('div', { style: { marginTop: 12 } },
+      h('div', { style: { fontSize: 12, fontWeight: 800, color: '#c8c8d8', letterSpacing: 1, marginBottom: 4 } }, allOpen ? 'THE WHOLE DAY' : 'COMING UP TODAY'),
+      list.map(function (b) {
+        var s = statusOf(b), col = b.color || '#9C8DC4';
+        return h('div', { key: b.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', marginBottom: 5, background: s === 'now' ? 'rgba(255,213,79,.18)' : col + '14', border: '1px solid ' + (s === 'now' ? '#FFD54F' : col + '44'), borderRadius: 12, opacity: s === 'done' ? .6 : 1 } },
+          h('div', { style: { width: 64, fontSize: 13, fontWeight: 800, color: '#fff' } }, b.time || 'Anytime'),
+          h('div', { style: { fontSize: 16 } }, ICON[s]),
+          h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, (b.emoji ? b.emoji + ' ' : '') + b.title + (b.own ? '  ⭐' : '')), b.activity && h('div', { style: { fontSize: 11, color: '#b8b8c8' } }, '⏱ clocks into ' + actLbl(b.activity))),
+          b.own && h('button', { onClick: function () { removeOwn(b); }, style: { background: 'transparent', border: 'none', color: '#EF9A9A', fontSize: 16, cursor: 'pointer' } }, '✕'));
+      }),
+      h('div', { style: { display: 'flex', gap: 8, marginTop: 4 } },
+        h('button', { onClick: function () { setAllOpen(!allOpen); }, style: { flex: 1, background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, allOpen ? '▲ Show less' : '▼ Show the whole day'))),
+    h('button', { onClick: function () { setAdd(!addOpen); }, style: { width: '100%', background: 'rgba(0,188,212,.18)', color: '#fff', border: '1px solid rgba(0,188,212,.6)', borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 10 } }, addOpen ? '✕ Cancel' : '➕ Add to my schedule'),
+    addOpen && h('div', { style: { marginTop: 10 } },
+      h('input', { value: f.title, onChange: function (e) { setF(Object.assign({}, f, { title: e.target.value })); }, placeholder: 'What is it? (example: Practice piano)', style: inp }),
+      h('input', { type: 'time', value: f.time, onChange: function (e) { setF(Object.assign({}, f, { time: e.target.value })); }, style: inp }),
+      h('select', { value: f.act, onChange: function (e) { setF(Object.assign({}, f, { act: e.target.value })); }, style: inp }, h('option', { value: '' }, 'No clock needed'), acts.filter(function (a) { return a.id !== 'meals'; }).map(function (a) { return h('option', { key: a.id, value: a.id }, 'Clock into ' + a.label); })),
+      h('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } }, [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['daily', 'Every day']].map(function (x) { var on = f.when === x[0]; return h('button', { key: x[0], onClick: function () { setF(Object.assign({}, f, { when: x[0] })); }, style: { flex: 1, background: on ? '#00BCD4' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, x[1]); })),
+      bigBtn('#00BCD4', '#000', addItem, '✅ Put it on my schedule'),
+      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Mom and Dad get a note when you add something. Things you add yourself (⭐) do not earn points.')));
 }
 
 </script>
