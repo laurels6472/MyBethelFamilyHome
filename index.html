@@ -7567,7 +7567,7 @@ function Dashboard({
     addNotif: addNotif,
     topEl: typeof AttendanceCard === 'function' ? /*#__PURE__*/React.createElement(AttendanceCard, { personId: effectiveId, name: effectivePerson && effectivePerson.name, isAdmin: !viewingAs && (isAdmin || isOwner), sessions: sessions, onUpdate: onUpdate }) : null,
     safetyEl: typeof SafetyCard !== 'undefined' ? /*#__PURE__*/React.createElement(SafetyCard, { personId: effectiveId, name: effectivePerson && effectivePerson.name }) : null,
-    dayEl: typeof DayClock === 'function' ? /*#__PURE__*/React.createElement(DayClock, { personId: effectiveId, sessions: sessions, onUpdate: onUpdate, canReset: !!(isAdmin || isOwner), inside: null }) : null,
+    dayEl: typeof DayClock === 'function' ? /*#__PURE__*/React.createElement(DayClock, { personId: effectiveId, sessions: sessions, onUpdate: onUpdate, canReset: !viewingAs && !!(isAdmin || isOwner), inside: null }) : null,
     rightNow: typeof PlanRightNow === 'function' ? /*#__PURE__*/React.createElement(PlanRightNow, { schedHook: schedHook, personId: effectiveId, sessions: sessions, onUpdate: onUpdate }) : null,
     clockEl: null,
     habitsEl: typeof HabitsPanel === 'function' ? /*#__PURE__*/React.createElement(HabitsPanel, { personId: effectiveId, name: effectivePerson && effectivePerson.name, only: 'morning' }) : null,
@@ -31121,14 +31121,22 @@ function ClockDepartments(props) {
             h('button', { className: 'cd-btn', onClick: function () { toggle(a); }, style: { padding: '8px 14px', borderRadius: 20, border: 'none', fontWeight: 900, fontSize: 12, cursor: 'pointer', background: r ? '#EF5350' : d.color, color: '#fff', minWidth: 84 } }, r ? '⏹ Out' : '▶ In')), r && props.panelFor ? h('div', { style: { margin: '6px 0 0', padding: 10, borderRadius: 14, background: 'rgba(0,0,0,.25)', border: '1px solid ' + d.color + '66' } }, props.panelFor(a.id, r, d)) : null);
         }), d.id === 'extra' && runOf('fun') && h('div', { style: { marginTop: 8 } }, h('input', { type: 'text', key: 'w' + (runOf('fun') || {}).startTime, defaultValue: (runOf('fun') || {}).with || '', placeholder: '👫 Who are you with? (friends\u2019 names)', onBlur: function (e) { cdSetWith(pid, sessions, onUpdate, 'fun', e.target.value.trim()); }, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(0,0,0,.25)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, color: '#fff', padding: '10px 12px', fontSize: 14 } })));
     }),
-    h('div', { style: { marginTop: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14 } },
+    !props.noWhere && h(ClockWhereBlock, { personId: pid, sessions: sessions }));
+}
+
+function ClockWhereBlock(props) {
+  var h = React.createElement, data = (props.sessions || {})[props.personId] || {}, acts = typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : [];
+  var entries = cdEntries(data), nameOf = function (id) { return (acts.find(function (x) { return x.id === id; }) || { label: id }).label; };
+  var deptOf = function (id) { return CD_DEPTS.find(function (d) { return d.acts.indexOf(id) !== -1; }) || {}; };
+  var tk = React.useState(0), setTick = tk[1]; React.useEffect(function () { var iv = setInterval(function () { setTick(function (x) { return x + 1; }); }, 30000); return function () { clearInterval(iv); }; }, []);
+  return h('div', { style: { marginTop: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 14 } },
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '🗓 Where my time went today'),
       h('div', { style: { fontSize: 10, color: 'rgba(255,255,255,.4)', marginBottom: 8 } }, 'Every clock-in with its start and end. 🔀 means I was doing it at the same time as something else.'),
       entries.length === 0 && h('div', { style: { fontSize: 12, color: 'rgba(255,255,255,.4)' } }, 'Nothing yet — tap an ▶ In button to start.'),
       entries.map(function (e, i) { var d = deptOf(e.activity); return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i ? '1px solid rgba(255,255,255,.06)' : 'none' } },
         h('div', { style: { width: 8, height: 8, borderRadius: '50%', background: d.color || '#888', flexShrink: 0 } }),
         h('div', { style: { flex: 1, fontSize: 12, color: '#fff' } }, nameOf(e.activity) + (e.with ? ' with ' + e.with : ''), e.overlap && h('span', { style: { marginLeft: 6, fontSize: 10, color: '#FFB74D' } }, '🔀 multitasking')),
-        h('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.55)', textAlign: 'right' } }, cdTime(e.start) + ' – ' + (e.live ? 'now' : cdTime(e.end)), h('div', { style: { fontWeight: 800, color: e.live ? '#81C784' : '#fff' } }, cdDur((e.end - e.start) / 1000)))); })));
+        h('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.55)', textAlign: 'right' } }, cdTime(e.start) + ' – ' + (e.live ? 'now' : cdTime(e.end)), h('div', { style: { fontWeight: 800, color: e.live ? '#81C784' : '#fff' } }, cdDur((e.end - e.start) / 1000)))); }));
 }
 
 // Parents: everyone's clock-ins at a glance (who is clocked into what, since when, and the day so far)
@@ -31703,7 +31711,7 @@ function StartMyDay(props) {
   })();
   // what drops down under each clock-in
   function panelFor(actId) {
-    if (actId === 'free') return h('div', null, props.habitsAllEl, props.role === 'parent' && typeof RoutinesAdmin === 'function' && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 2 } }, 'Parents: change the morning, afternoon and evening habit lists here.'), h(RoutinesAdmin, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], initial: pid })), ready && h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Morning, afternoon and evening habits live here. Tap “Clock in” on a step, then the circle when you finish.'));
+    if (actId === 'free') return h('div', null, props.role === 'parent' && typeof RoutinesAdmin === 'function' && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 2 } }, 'Parents: change the morning, afternoon and evening habit lists here.'), h(RoutinesAdmin, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], initial: pid })), h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Your morning, afternoon and evening habits are in the checklist above.'));
     var base = { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, compact: true };
     if (actId === 'chores') return h(MyDayList, Object.assign({}, base, { kinds: ['chore', 'block'], blockAct: 'chores' }));
     if (['animals', 'school', 'spiritual', 'service', 'va_work', 'eric_work', 'consulting', 'el_sales'].indexOf(actId) !== -1)
@@ -31711,7 +31719,7 @@ function StartMyDay(props) {
         (actId === 'school' || actId === 'spiritual') && big('#039BE5', '#fff', go('work'), actId === 'school' ? '📚 Open my school lessons' : '📖 Open Bible & worship'));
     return null;
   }
-  var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: ready ? [] : ['work', 'chores'], panelFor: panelFor }) : null;
+  var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: ready ? [] : ['work', 'chores'], panelFor: panelFor, noWhere: true }) : null;
   function secHead(open, icon, title, sub, state, onTap) {
     var col = state === 'done' ? C.done : state === 'now' ? C.now : C.lock;
     return h('div', { onClick: onTap, style: { display: 'flex', alignItems: 'center', gap: 12, cursor: onTap ? 'pointer' : 'default' } },
@@ -31738,16 +31746,19 @@ function StartMyDay(props) {
       secHead(true, '✅', '2. My day — check things off', !clocked ? 'Start your day first' : ready ? 'Clock in to what you are doing, then check it off' : 'Get ready first, then Work and Household Work unlock', s2, null),
       clocked && h('div', { style: { marginTop: 10 } },
         !ready && countdown,
+        typeof HabitsStack === 'function' ? h(HabitsStack, { personId: pid, name: nm }) : props.habitsAllEl,
         !ready && mornDone && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 10, color: '#fff', fontWeight: 900, fontSize: 16, textAlign: 'center' } }, '✅ Every morning step is checked off!'),
         !ready && big('#4CAF82', '#000', readyGo, "✅ I'm ready for the day — unlock Work & Household Work"),
         ready && h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } },
           h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
           !submitted && h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null })); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Not ready')),
+        typeof ClockNextStrip === 'function' && h(ClockNextStrip, { personId: pid, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, ready: ready }),
         props.clockEl,
         depts,
-        ready && big('rgba(3,155,229,.25)', '#fff', go('work'), '🏫  School & Worship — full lessons'),
+        ready && big('rgba(3,155,229,.25)', '#fff', go('work'), '🏫  Work & School — full lessons'),
         ready && big('rgba(38,166,154,.25)', '#fff', go('chores'), '🧹  Chores & order of operations — full list'),
-        savedCard)))),
+        savedCard,
+        typeof ClockWhereBlock === 'function' && h(ClockWhereBlock, { personId: pid, sessions: props.sessions }))))),
     // ── DONE FOR THE DAY ──
     clocked && !submitted && h('div', { style: { marginTop: 4 } },
       subAsk && runNow.length > 0 && h('div', { style: { background: 'rgba(239,83,80,.15)', border: '2px solid #EF5350', borderRadius: 16, padding: 12, marginBottom: 8, color: '#fff' } },
@@ -37339,36 +37350,57 @@ var BC_SUBS = ['bible', 'lang', 'math', 'science', 'history'];
 function bcCfg() { try { return syncGet('school/bigcatch') || null; } catch (e) { return null; } }
 function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
 function bcStudent(sid) { return (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).filter(function (s) { return s.id === sid; })[0] || { id: sid, grade: 8, name: sid }; }
+var BC_ROT = ['bible', 'science', 'lang', 'math', 'history', 'comp'];
+function bcTopic(L) { return (L && L.focus ? String(L.focus) : '').replace(/\s+/g, ' ').replace(/\s+[—-]\s+(Learn & Practice|Practice|Introduce|Apply|Review|Assessment)(\s*\([^)]*\))?\s*$/i, '').trim(); }
+function bcWrite(path, val, onErr) {
+  try { syncSet(path, val); } catch (e) {}
+  try { if (typeof db !== 'undefined' && db) db.ref('argilan/' + path).set(val === undefined ? null : val).catch(function (err) { if (onErr) onErr(err && err.message ? err.message : 'not allowed'); }); } catch (e) {}
+}
+// 2 real questions for every missed school day, pulled from that day's actual lessons
 function bcQuestions(sid, through) {
-  var st = bcStudent(sid), out = [];
-  BC_SUBS.forEach(function (sub, i) {
-    var meta = (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).filter(function (x) { return x.id === sub; })[0]; if (!meta) return;
-    var d = Math.max(1, Math.min(through, Math.round(through * (i + 1) / (BC_SUBS.length + 1)))), L = null;
-    try { L = getLessonForDay(sub, d, st.grade); } catch (e) {}
-    var focus = (L && L.focus ? String(L.focus) : '').replace(/\s+/g, ' ').replace(/\s+[—-]\s+(Learn & Practice|Practice|Introduce|Apply|Review|Assessment)(\s*\([^)]*\))?\s*$/i, '').trim();
-    if (sub === 'bible' || !focus) { try { var en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[d - 1] : null; if (en) focus = String(en[3] || '') + (en[4] ? ' (' + en[4] + ')' : ''); } catch (e) {} }
-    if (!focus) focus = 'what we learned in ' + meta.l;
-    var key = ''; try { key = (L && L.answerKey && L.answerKey.short) ? String(L.answerKey.short) : ''; } catch (e) {}
-    out.push({ id: sub, day: d, label: meta.l, focus: focus, key: key });
-  });
+  var st = bcStudent(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
+  for (var d = 1; d <= through; d++) {
+    var picks = [BC_ROT[(d - 1) % 6], BC_ROT[(d + 2) % 6]];
+    picks.forEach(function (sub) {
+      var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, L = null, text = '', key = '', en = null;
+      try { L = getLessonForDay(sub, d, st.grade); } catch (e) {}
+      try { en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[d - 1] : null; } catch (e) {}
+      var topic = bcTopic(L); try { key = (L && L.answerKey && L.answerKey.short) ? String(L.answerKey.short) : ''; } catch (e) {}
+      if (sub === 'bible') {
+        var title = en ? String(en[3] || '') : '', scr = en ? String(en[4] || '') : '', theme = en ? String(en[6] || '') : '';
+        text = 'Bible lesson' + (title ? ' — “' + title + '”' : '') + (scr ? ' (' + scr + ')' : '') + '. Read the scripture again. What is this lesson mainly teaching us about Jehovah' + (theme ? ' (the theme was “' + theme + '”)' : '') + ', and what is one thing from the account that shows it?';
+        key = theme ? 'Theme: ' + theme + (scr ? ' — ' + scr : '') : key;
+      } else if (!topic) {
+        text = meta.l + ': explain the main idea of the lesson you did on this day and give one example.';
+      } else if (sub === 'science') text = 'Science — “' + topic + '”. Explain the main idea of this lesson, and describe one example or step that shows how it works.';
+      else if (sub === 'lang') text = 'Language arts — “' + topic + '”. What does this mean, and write one sentence of your own that uses it correctly.';
+      else if (sub === 'history') text = 'History — “' + topic + '”. Tell who, where and when (or what happened), and explain why it matters.';
+      else if (sub === 'comp') text = 'Writing — “' + topic + '”. What is the main idea of this lesson? Then write two sentences that show you can use it.';
+      else if (sub === 'math') {
+        var act = String((L && L.activity) || ''), pm = act.match(/^\s*1[.)]\s*(.+)$/m), mk = key.match(/1\.\s*(\S[^]*?)(?=\s+2\.|$)/);
+        if (pm) { text = 'Math (' + topic + ') — solve this problem and show your steps: ' + pm[1].trim(); key = mk ? 'Answer: ' + mk[1].trim() : key; }
+        else text = 'Math — “' + topic + '”. Explain the rule or idea in your own words and show one example with the answer.';
+      } else text = meta.l + ' — “' + topic + '”. Explain the main idea and give one example.';
+      out.push({ id: 'd' + d + '_' + sub, day: d, sub: sub, label: meta.l || sub, text: text, key: key });
+    });
+  }
   return out;
 }
-function bcAsk(grade) { return grade <= 5 ? 'Tell a grown-up in your own words, then type one short sentence.' : grade <= 9 ? 'Write 2 sentences in your own words.' : 'Write 3–4 sentences in your own words and give one example.'; }
-function bcProject(sid) { var M = { ryan: 'Write 5 sentences about what you learned, with one cross-reference scripture.', kayla: 'Write one paragraph about what you learned, with one scripture.', ashelyn: 'Write 3 complete sentences about it and use 3 vocabulary words.', mykah: 'Draw a picture of it and tell a grown-up what you learned.' }; return M[sid] || 'Show what you learned.'; }
+function bcAsk(grade) { return grade <= 5 ? 'Tell a grown-up your answer out loud, then type one short sentence.' : grade <= 9 ? 'Answer in 1–3 sentences in your own words.' : 'Answer in 2–4 sentences in your own words and include a detail from the lesson.'; }
 function bcApprove(sid, through) {
   var prog = {}; try { prog = syncGet('school/progress') || {}; } catch (e) {}
   var n = 0; (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).forEach(function (s) { for (var d = 1; d <= through; d++) { if (!cuDone(prog[sid + '_d' + d + '_' + s.id])) { cuMark(sid, d, s.id); n++; } } });
   return n;
 }
 function BigCatchSetup(props) {
-  var h = React.createElement, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, nS = React.useState(''), nv = nS[0], setNv = nS[1], todayDay = props.todayDay || cuTodayDay();
+  var h = React.createElement, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, mgS = React.useState(''), bmsg = mgS[0], setMsg = mgS[1], nS = React.useState(''), nv = nS[0], setNv = nS[1], todayDay = props.todayDay || cuTodayDay();
   var box = { background: 'rgba(26,115,232,.14)', border: '2px solid #1A73E8', borderRadius: 14, padding: 12, marginBottom: 10 };
   var through = nv !== '' ? Math.max(1, Math.min(180, +nv || 1)) : (cfg.through || todayDay);
-  function turnOn() { try { syncSet('school/bigcatch', { on: true, through: through, ts: Date.now() }); } catch (e) {} }
-  function turnOff() { if (!window.confirm('Turn the Big Catch-Up Assignment off? Anything already approved stays caught up.')) return; try { syncSet('school/bigcatch', Object.assign({}, cfg, { on: false })); } catch (e) {} }
+  function turnOn() { bcWrite('school/bigcatch', { on: true, through: through, ts: Date.now() }, function (er) { setMsg('⚠️ Could not save (' + er + ')'); }); setMsg('✅ Saved. The kids’ orange button is on.'); setTimeout(function () { setMsg(''); }, 6000); }
+  function turnOff() { if (!window.confirm('Turn the Big Catch-Up Assignment off? Anything already approved stays caught up.')) return; bcWrite('school/bigcatch', Object.assign({}, cfg, { on: false })); setMsg('Turned off.'); }
   return h('div', { style: box },
     h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🎒 Big Catch-Up Assignment'),
-    h('div', { style: { fontSize: 13, color: '#dbe8ff', lineHeight: 1.6, margin: '4px 0 8px' } }, 'Instead of making up every old lesson and homework page, each child does ONE short quiz (5 questions pulled from the real lessons) and ONE small project. When you approve it, all the old lessons up to the day you choose are marked caught up. Nothing is deleted.'),
+    h('div', { style: { fontSize: 13, color: '#dbe8ff', lineHeight: 1.6, margin: '4px 0 8px' } }, 'Instead of making up every old lesson and homework page, each child answers 2 questions for every missed day (10 days = 20 questions). Each question is pulled from that day’s real lessons. When you approve it, all the old lessons up to the day you choose are marked caught up. Nothing is deleted.'),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
       h('span', { style: { fontSize: 13, color: '#fff' } }, 'Cover school Day 1 through Day'),
       h('input', { type: 'number', min: 1, max: 180, value: nv !== '' ? nv : through, onChange: function (e) { setNv(e.target.value); }, style: { width: 70, padding: 8, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 15 } }),
@@ -37376,61 +37408,66 @@ function BigCatchSetup(props) {
     h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
       h('button', { onClick: turnOn, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, cfg.on ? '💾 Save the day number' : '✅ Turn it on'),
       cfg.on && h('button', { onClick: turnOff, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, 'Turn off')),
+    bmsg && h('div', { style: { fontSize: 13, color: /⚠/.test(bmsg) ? '#FF8A80' : '#9be3bd', marginTop: 6, fontWeight: 800 } }, bmsg),
     cfg.on && h('div', { style: { fontSize: 12, color: '#9be3bd', marginTop: 6 } }, '✅ On — covers Day 1 through Day ' + cfg.through + '. The daily homework for those days now says it is covered by this assignment.'));
 }
 function BigCatchCard(props) {
   var h = React.createElement, s = props.student, sid = s.id, admin = !!props.isAdmin;
   var cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, subS = ktUse('school/bigcatch_sub/' + sid, null), sub = subS[0] || null;
-  var aS = React.useState(null), local = aS[0], setLocal = aS[1], mS = React.useState('');
+  var aS = React.useState(null), local = aS[0], setLocal = aS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   if (!cfg.on) return null;
-  var through = +cfg.through || 1, qs = bcQuestions(sid, through), ans = local || (sub && sub.answers) || {}, proj = (ans.__project != null ? ans.__project : '');
+  var through = +cfg.through || 1, qs = bcQuestions(sid, through), ans = local || (sub && sub.answers) || {};
   var status = sub && sub.status;
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 7000); }
   var card = { background: 'rgba(255,152,0,.12)', border: '2px solid #FFB74D', borderRadius: 16, padding: 14, marginBottom: 10 };
   var ta = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 15, fontFamily: 'inherit', marginBottom: 8 };
   function setA(k, v) { var n = Object.assign({}, ans); n[k] = v; setLocal(n); }
-  function save(st) { var rec = Object.assign({}, sub || {}, { answers: ans, through: through, status: st, ts: Date.now() }); if (st === 'submitted') rec.submittedAt = Date.now(); try { syncSet('school/bigcatch_sub/' + sid, rec); } catch (e) {} }
-  var answered = qs.filter(function (q) { return (ans[q.id] || '').trim().length > 2; }).length, projDone = (proj || '').trim().length > 2;
-  function approve() { var n = bcApprove(sid, through); try { syncSet('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'approved', approvedAt: Date.now(), marked: n })); } catch (e) {} }
-  function excuse() { if (!window.confirm('Mark ALL of ' + s.name + '’s lessons from Day 1 to Day ' + through + ' as caught up without a turn-in?')) return; var n = bcApprove(sid, through); try { syncSet('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { answers: ans, status: 'approved', approvedAt: Date.now(), marked: n, excused: true })); } catch (e) {} }
-  function redo() { var note = ''; try { note = window.prompt('What should ' + s.name + ' fix? (optional)', '') || ''; } catch (e) {} try { syncSet('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'redo', note: note })); } catch (e) {} }
+  function save(st, quiet) { var rec = Object.assign({}, sub || {}, { answers: ans, through: through, status: st, ts: Date.now() }); if (st === 'submitted') rec.submittedAt = Date.now(); bcWrite('school/bigcatch_sub/' + sid, rec, function (er) { say('⚠️ Could not save (' + er + '). Tell Mom or Dad.'); }); if (!quiet) say(st === 'submitted' ? '✅ Turned in!' : '💾 Saved'); }
+  var answered = qs.filter(function (q) { return (ans[q.id] || '').trim().length > 2; }).length;
+  function approve() { var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'approved', approvedAt: Date.now(), marked: n }), function (er) { say('⚠️ Could not save (' + er + ')'); }); say('✅ Approved — ' + n + ' lessons marked caught up.'); }
+  function excuse() { if (!window.confirm('Mark ALL of ' + s.name + '’s lessons from Day 1 to Day ' + through + ' as caught up without a turn-in?')) return; var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { answers: ans, status: 'approved', approvedAt: Date.now(), marked: n, excused: true })); say('✅ Excused — ' + n + ' lessons marked caught up.'); }
+  function redo() { var note = ''; try { note = window.prompt('What should ' + s.name + ' fix? (optional)', '') || ''; } catch (e) {} bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'redo', note: note })); say('🔁 Sent back to ' + s.name + '.'); }
   if (status === 'approved') return h('div', { style: Object.assign({}, card, { background: 'rgba(76,175,130,.14)', borderColor: '#4CAF82' }) }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#9be3bd' } }, '✅ ' + s.name + ' is all caught up through Day ' + through + (sub.excused ? ' (excused)' : '') + '!'), admin && sub.marked != null && h('div', { style: { fontSize: 11, color: '#b8d8c8' } }, sub.marked + ' lessons were marked caught up.'));
-  var locked = status === 'submitted';
+  var locked = status === 'submitted' && !admin, byDay = {}; qs.forEach(function (q) { (byDay[q.day] = byDay[q.day] || []).push(q); });
+  var btn = function (bg, fg, fn, t, grow) { return h('button', { onClick: fn, style: { flex: grow ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
   return h('div', { style: card },
     h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Big Catch-Up Assignment' + (admin ? ' — ' + s.name : '')),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 10px' } }, 'This ONE assignment replaces ALL the homework from Day 1 to Day ' + through + '. No old pages to make up. Two parts, about 30 minutes.'),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions replace ALL the homework from Day 1 to Day ' + through + ' (2 questions for each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, answered + ' of ' + qs.length + ' answered'),
+    h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 } }, h('div', { style: { height: '100%', width: (qs.length ? answered / qs.length * 100 : 0) + '%', background: '#4CAF82' } })),
     status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
-    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, 'Part 1 — Quiz (' + answered + ' of ' + qs.length + ' answered)'),
-    h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 6 } }, bcAsk(s.grade)),
-    qs.map(function (q, i) {
-      return h('div', { key: q.id, style: { marginBottom: 6 } },
-        h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 800, marginBottom: 3 } }, (i + 1) + '. ' + q.label + ' (Day ' + q.day + '): ' + q.focus),
-        h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked && !admin, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked) save(status || 'draft'); }, placeholder: 'What did you learn?', style: ta }),
-        admin && q.key && h('div', { style: { fontSize: 11, color: '#9be3bd', marginBottom: 6 } }, '🔑 Check against: ' + q.key.slice(0, 220)));
+    Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; }).map(function (d) {
+      return h('div', { key: d, style: { marginBottom: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.14)' } },
+        h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, 'Day ' + d + (typeof schoolDayLabel === 'function' ? ' · ' + schoolDayLabel(d) : '')),
+        byDay[d].map(function (q, i) {
+          return h('div', { key: q.id, style: { marginBottom: 6 } },
+            h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 4, lineHeight: 1.5 } }, (i + 1) + '. ' + q.text),
+            h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked && local) save(status || 'draft', true); }, placeholder: 'Type your answer here', style: ta }),
+            admin && q.key && h('div', { style: { fontSize: 11, color: '#9be3bd', marginBottom: 6 } }, '🔑 ' + q.key.slice(0, 240)));
+        }));
     }),
-    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', margin: '10px 0 4px' } }, 'Part 2 — One small project'),
-    h('div', { style: { fontSize: 13, color: '#e8e8f4', marginBottom: 6 } }, 'Pick your favorite lesson from these days. ' + bcProject(sid)),
-    h('textarea', { rows: 3, value: proj, disabled: locked && !admin, onChange: function (e) { setA('__project', e.target.value); }, onBlur: function () { if (!locked) save(status || 'draft'); }, placeholder: 'Write or describe what you did (you can also show Mom or Dad the paper or drawing).', style: ta }),
-    !admin && !locked && h('button', { onClick: function () { if (answered < qs.length || !projDone) { if (!window.confirm('Some answers are empty. Turn it in anyway?')) return; } save('submitted'); }, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '📤 Turn it in'),
-    !admin && locked && h('div', { style: { background: 'rgba(255,213,79,.15)', borderRadius: 10, padding: 10, color: '#FFD54F', fontWeight: 800, fontSize: 14 } }, '🕓 Turned in — waiting for Mom or Dad to check it.'),
+    !admin && !locked && h('div', { style: { display: 'flex', gap: 8 } }, btn('rgba(255,255,255,.14)', '#fff', function () { save(status || 'draft'); }, '💾 Save for later', true), btn('#4CAF82', '#000', function () { if (answered < qs.length) { if (!window.confirm((qs.length - answered) + ' questions are still empty. Turn it in anyway?')) return; } save('submitted'); }, '📤 Turn it in', true)),
+    !admin && status === 'submitted' && h('div', { style: { background: 'rgba(255,213,79,.15)', borderRadius: 10, padding: 10, color: '#FFD54F', fontWeight: 800, fontSize: 14 } }, '🕓 Turned in — waiting for Mom or Dad to check it.'),
     admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 } },
-      status === 'submitted' && h('button', { onClick: approve, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '✓ Approve — mark everything caught up'),
-      status === 'submitted' && h('button', { onClick: redo, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '🔁 Send back'),
-      h('button', { onClick: excuse, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, 'Skip the turn-in — excuse all')));
+      status === 'submitted' && btn('#4CAF82', '#000', approve, '✓ Approve — mark everything caught up', true),
+      status === 'submitted' && btn('rgba(239,83,80,.3)', '#FF8A80', redo, '🔁 Send back'),
+      btn('rgba(255,255,255,.12)', '#fff', excuse, 'Skip the turn-in — excuse all')),
+    msg && h('div', { style: { marginTop: 8, padding: 8, borderRadius: 10, background: 'rgba(0,0,0,.3)', color: /⚠/.test(msg) ? '#FF8A80' : '#9be3bd', fontWeight: 800, fontSize: 13 } }, msg));
 }
 
 // Big orange button where the family actually works: School screen and Start My Day
 function BigCatchPrompt(props) {
-  var h = React.createElement, admin = !!props.isAdmin, pid = props.personId, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, sS = ktUse('school/bigcatch_sub/' + pid, null), sub = sS[0] || {}, aS = ktUse('school/bigcatch_sub', {}), all = aS[0] || {};
+  var h = React.createElement, admin = !!props.isAdmin, pid = props.personId, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, sS = ktUse('school/bigcatch_sub/' + pid, null), sub = sS[0] || {}, aS = ktUse('school/bigcatch_sub', {}), all = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/bigcatch_sub', {}) : null) || {}, aS[0] || {});
   var isKid = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).some(function (s) { return s.id === pid; });
   var btn = function (bg, fg, border, t, sub2) { return h('button', { onClick: props.onOpen, style: { display: 'block', width: '100%', textAlign: 'left', background: bg, color: fg, border: '2px solid ' + border, borderRadius: 16, padding: 14, margin: '8px 0', cursor: 'pointer', fontWeight: 900, fontSize: 16 } }, t, sub2 && h('div', { style: { fontWeight: 600, fontSize: 12, marginTop: 3, opacity: .9 } }, sub2)); };
   if (admin) {
     var waiting = Object.keys(all).filter(function (k) { return all[k] && all[k].status === 'submitted'; }).length;
-    if (!cfg.on) return btn('rgba(26,115,232,.18)', '#fff', '#1A73E8', '🎒 Set up the Big Catch-Up Assignment', 'One quiz + one project replaces all the old homework. Tap to set it up.');
+    if (!cfg.on) return btn('rgba(26,115,232,.18)', '#fff', '#1A73E8', '🎒 Set up the Big Catch-Up Assignment', 'Two questions per missed day replace all the old homework. Tap to set it up.');
     if (waiting) return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', '📝 ' + waiting + ' Big Catch-Up turn-in' + (waiting > 1 ? 's' : '') + ' waiting for you', 'Tap to review and approve.');
     return btn('rgba(255,255,255,.07)', '#fff', 'rgba(255,255,255,.18)', '🎒 Big Catch-Up Assignment', 'On through Day ' + cfg.through + ' — tap to see each child.');
   }
   if (!cfg.on || !isKid || sub.status === 'approved') return null;
-  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment', 'One short quiz and one small project. Tap here.');
+  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment', 'Two questions for each missed day. Tap here.');
 }
 
 // ═══ BULK ASSIGN (teacher only, lives under Assignments): pick days + students, swap in a shorter assignment, undo ═══
@@ -38407,6 +38444,7 @@ function MySchedule(props) {
   React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(iv); }; }, []);
   var tourS = React.useState(function () { return !msTourGet(pid); }), tour = tourS[0], setTour = tourS[1];
   var addS = React.useState(false), addOpen = addS[0], setAdd = addS[1], fS = React.useState({ title: '', time: '', act: '', when: 'today' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var permS = ktUse('mysched_perm', {}), canEdit = props.role === 'parent' || !!(Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('mysched_perm', {}) : null) || {}, permS[0] || {})[pid]);
   var listS = React.useState(false), allOpen = listS[0], setAllOpen = listS[1];
   var rootOwn = (typeof ktLocal === 'function' ? ktLocal('mysched/' + pid, null) : null) || {}, pendOwn = [];
   Object.keys(rootOwn).forEach(function (k) { var o = rootOwn[k]; if (!o || typeof o !== 'object') return; if (k !== 'daily' && k < day) return; Object.keys(o).forEach(function (id) { var b = o[id]; if (b && b.title && (b.status === 'pending' || b.status === 'denied')) pendOwn.push(Object.assign({}, b, { id: b.id || id, dayK: k })); }); });
@@ -38476,6 +38514,7 @@ function MySchedule(props) {
         blocks.length === 0 && h('div', { style: { fontSize: 13, color: '#c8c8d8', marginTop: 4 } }, 'Ask Mom or Dad, or add your own with the button below.'),
         heroNext),
     props.role === 'parent' && h(SchedAddApprovals, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], compact: true }),
+    props.role === 'parent' && typeof SchedPermCard === 'function' && h(SchedPermCard, { family: typeof FAMILY !== 'undefined' ? FAMILY : [] }),
     pendOwn.length > 0 && h('div', { style: { marginTop: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10 } },
       h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', letterSpacing: 1, marginBottom: 4 } }, 'YOUR REQUESTS'),
       pendOwn.map(function (b) { return h('div', { key: b.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', color: '#fff', fontSize: 14 } }, h('div', { style: { flex: 1 } }, (b.status === 'denied' ? '❌ ' : '⏳ ') + b.time + ' · ' + b.title + (b.status === 'denied' ? ' — not this time' + (b.note ? ': ' + b.note : '') : ' — waiting for Mom or Dad')), h('button', { onClick: function () { try { syncSet('mysched/' + pid + '/' + (b.when === 'daily' ? 'daily' : b.dayK) + '/' + b.id, null); } catch (e) {} }, style: { background: 'transparent', border: 'none', color: '#EF9A9A', fontSize: 16, cursor: 'pointer' } }, '✕')); })),
@@ -38488,12 +38527,12 @@ function MySchedule(props) {
           h('div', { style: { width: 64, fontSize: 13, fontWeight: 800, color: '#fff' } }, b.time || 'Anytime'),
           h('div', { style: { fontSize: 16 } }, ICON[s]),
           h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, (b.emoji ? b.emoji + ' ' : '') + b.title + (b.own ? '  ⭐' : '')), b.activity && h('div', { style: { fontSize: 11, color: '#b8b8c8' } }, '⏱ clocks into ' + actLbl(b.activity))),
-          b.own && h('button', { onClick: function () { removeOwn(b); }, style: { background: 'transparent', border: 'none', color: '#EF9A9A', fontSize: 16, cursor: 'pointer' } }, '✕'));
+          b.own && canEdit && h('button', { onClick: function () { removeOwn(b); }, style: { background: 'transparent', border: 'none', color: '#EF9A9A', fontSize: 16, cursor: 'pointer' } }, '✕'));
       }),
       h('div', { style: { display: 'flex', gap: 8, marginTop: 4 } },
         h('button', { onClick: function () { setAllOpen(!allOpen); }, style: { flex: 1, background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, allOpen ? '▲ Show less' : '▼ Show the whole day'))),
-    h('button', { onClick: function () { setAdd(!addOpen); }, style: { width: '100%', background: 'rgba(0,188,212,.18)', color: '#fff', border: '1px solid rgba(0,188,212,.6)', borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 10 } }, addOpen ? '✕ Cancel' : '➕ Add to my schedule'),
-    addOpen && h('div', { style: { marginTop: 10 } },
+    canEdit && h('button', { onClick: function () { setAdd(!addOpen); }, style: { width: '100%', background: 'rgba(0,188,212,.18)', color: '#fff', border: '1px solid rgba(0,188,212,.6)', borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 10 } }, addOpen ? '✕ Cancel' : '➕ Add to my schedule'),
+    canEdit && addOpen && h('div', { style: { marginTop: 10 } },
       h('input', { value: f.title, onChange: function (e) { setF(Object.assign({}, f, { title: e.target.value })); }, placeholder: 'What is it? (example: Practice piano)', style: inp }),
       h('input', { type: 'time', value: f.time, onChange: function (e) { setF(Object.assign({}, f, { time: e.target.value })); }, style: inp }),
       h('select', { value: f.act, onChange: function (e) { setF(Object.assign({}, f, { act: e.target.value })); }, style: inp }, h('option', { value: '' }, 'No clock needed'), acts.filter(function (a) { return a.id !== 'meals'; }).map(function (a) { return h('option', { key: a.id, value: a.id }, 'Clock into ' + a.label); })),
@@ -38619,6 +38658,76 @@ function WebPushCard(props) {
       h('div', { style: { display: 'flex', gap: 6 } }, h('input', { value: inp, onChange: function (e) { setInp(e.target.value); }, placeholder: 'Paste the address that ends in .workers.dev', style: { flex: 1, minWidth: 0, background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 13 } }), btn('#FFB74D', '#000', saveRelay, 'Save'))),
     h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, btn('#4CAF82', '#000', enable, mine ? '🔔 Re-register this phone' : '🔔 Turn on closed-app alerts'), mine && btn('#FFD54F', '#000', testMe, '🧪 Send me a test')),
     mine && h('div', { style: { fontSize: 12, color: '#7be3ae', marginTop: 6 } }, '✓ This phone is registered.'));
+}
+
+</script>
+<script>
+// ═══ START MY DAY: one habits checklist (morning + afternoon + evening), "clock in next" strip, schedule permission ═══
+function HabitsStack(props) {
+  var h = React.createElement, pid = props.personId, name = props.name || '';
+  var dn = ktUse('habitsdone/' + rtDay() + '/' + pid, {})[0] || {}, sk = ktUse('skips/' + rtDay() + '/' + pid, {})[0] || {}, own = ktUse('habits/' + pid, null)[0], all = ktUse('habits/__all', null)[0];
+  var oS = React.useState({}), openMap = oS[0], setOpenMap = oS[1], cur = rtNowPeriod();
+  function stat(p) { var list = rtHabits(name, pid, p, own, all), n = 0; list.forEach(function (label) { var id = p + '_' + rtHash(label); if (dn[id] || sk['h_' + id]) n++; }); return { total: list.length, n: n }; }
+  var stats = {}; RT_PERIODS.forEach(function (p) { stats[p[0]] = stat(p[0]); });
+  var firstOpen = null; RT_PERIODS.forEach(function (p) { if (!firstOpen && stats[p[0]].total && stats[p[0]].n < stats[p[0]].total && p[0] >= '') firstOpen = p[0]; });
+  function isOpen(p) { return openMap[p] != null ? openMap[p] : (p === cur); }
+  return h('div', { id: 'fm-habits-stack', style: { marginBottom: 10 } },
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '🌱 My daily habits'),
+    RT_PERIODS.map(function (p) {
+      var s = stats[p[0]], open = isOpen(p[0]), done = s.total > 0 && s.n === s.total;
+      if (!s.total) return null;
+      return h('div', { key: p[0], style: { marginBottom: 8, border: '1px solid ' + (done ? 'rgba(76,175,130,.6)' : 'rgba(255,255,255,.15)'), borderRadius: 14, background: done ? 'rgba(76,175,130,.1)' : 'rgba(255,255,255,.04)', overflow: 'hidden' } },
+        h('button', { onClick: function () { var n = Object.assign({}, openMap); n[p[0]] = !open; setOpenMap(n); }, style: { width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#fff', padding: '12px', fontSize: 15, fontWeight: 900, cursor: 'pointer', textAlign: 'left' } },
+          h('span', { style: { flex: 1 } }, p[1] + (p[0] === cur ? '  · now' : '')), h('span', { style: { fontSize: 13, color: done ? '#81C784' : '#c8c8d8' } }, done ? '✅ done' : s.n + ' of ' + s.total), h('span', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
+        open && h('div', { style: { padding: '0 8px 8px' } }, h(HabitsPanel, { personId: pid, name: name, only: p[0] })));
+    }));
+}
+// where to clock in right now + what is next, with a live countdown
+function ClockNextStrip(props) {
+  var h = React.createElement, pid = props.personId, day = planDayKey();
+  var tS = React.useState(0), setT = tS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
+  ktUse('mysched/' + pid, null);
+  var blocks = typeof planBlocksFor === 'function' ? planBlocksFor(props.schedHook, pid, day) : [];
+  var timed = blocks.filter(function (b) { return b._t != null; });
+  timed.forEach(function (b, i) { var nx = timed[i + 1]; b._end = nx ? nx._t : b._t + 60; });
+  var d = new Date(), nowS = d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds(), cur = null, next = null;
+  timed.forEach(function (b) { if (b._t * 60 <= nowS && nowS < b._end * 60) cur = b; else if (b._t * 60 > nowS && !next) next = b; });
+  var data = (props.sessions || {})[pid] || {}, running = typeof clockActiveList === 'function' ? clockActiveList(data) : [], runIds = running.map(function (r) { return r.activity; });
+  var lbl = function (id) { return typeof planActLabel === 'function' ? planActLabel(id) : id; };
+  function clockTo(a) { if (typeof clockInActivity === 'function') clockInActivity(pid, props.sessions || {}, props.onUpdate, a, { stack: true }); }
+  function hm(sec) { sec = Math.max(0, sec); var m = Math.floor(sec / 60), s = sec % 60; return (m >= 60 ? Math.floor(m / 60) + ':' + ('0' + (m % 60)).slice(-2) : m) + ':' + ('0' + s).slice(-2); }
+  var card = { background: 'rgba(255,213,79,.1)', border: '2px solid #FFD54F', borderRadius: 14, padding: 12, marginBottom: 10 };
+  var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { display: 'block', width: '100%', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 8 } }, t); };
+  function nowRow() {
+    if (!cur) return h('div', { style: { color: '#e8e8f4', fontSize: 14 } }, timed.length ? 'Nothing is scheduled this minute.' : 'Nothing is on your schedule yet.');
+    var a = cur.activity, on = a && runIds.indexOf(a) !== -1;
+    return h('div', null,
+      h('div', { style: { fontSize: 11, fontWeight: 800, color: '#FFD54F', letterSpacing: 1 } }, 'CLOCK IN HERE · RIGHT NOW'),
+      h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, (cur.emoji ? cur.emoji + ' ' : '') + cur.title + '  ', h('span', { style: { fontSize: 13, color: '#c8c8d8', fontWeight: 600 } }, cur.time + ' – ' + msFmt(cur._end))),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Ends in ' + hm(cur._end * 60 - nowS)),
+      !a ? h('div', { style: { fontSize: 13, color: '#d8d8e8', marginTop: 4 } }, 'No clock for this one — do it and check it off.')
+        : on ? h('div', { style: { fontSize: 14, color: '#81C784', fontWeight: 800, marginTop: 4 } }, '✅ Clocked into ' + lbl(a) + ' — on track')
+        : !props.ready && a !== 'free' ? h('div', { style: { fontSize: 13, color: '#FFB74D', fontWeight: 800, marginTop: 4 } }, '🔒 Tap “I’m ready for the day” first, then clock in to ' + lbl(a))
+        : btn('#4CAF82', '#000', function () { clockTo(a); }, '▶ Clock in to ' + lbl(a)));
+  }
+  return h('div', { style: card },
+    nowRow(),
+    next && h('div', { style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.18)' } },
+      h('div', { style: { fontSize: 11, fontWeight: 800, color: '#FFD54F', letterSpacing: 1 } }, 'NEXT · ' + next.time),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+        h('div', { style: { flex: 1, fontSize: 15, fontWeight: 800, color: '#fff' } }, (next.emoji ? next.emoji + ' ' : '') + next.title + (next.activity ? '  ⏱ ' + lbl(next.activity) : '')),
+        h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, hm(next._t * 60 - nowS)))));
+}
+// Parents choose which members may add their own schedule items
+function SchedPermCard(props) {
+  var h = React.createElement, pS = ktUse('mysched_perm', {}), perm = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('mysched_perm', {}) : null) || {}, pS[0] || {}), oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var kids = (props.family || []).filter(function (p) { return p.role !== 'parent' && !p.deleted; });
+  return h('div', { style: { marginTop: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: 0 } }, (open ? '▾ ' : '▸ ') + '👪 Who can add to their own schedule?'),
+    open && h('div', { style: { marginTop: 6 } },
+      h('div', { style: { fontSize: 11, color: '#9aa', marginBottom: 6 } }, 'Only the people you tick can add or remove their own schedule items. Everyone else just follows the schedule you set.'),
+      kids.map(function (k) { var on = !!perm[k.id]; return h('button', { key: k.id, onClick: function () { try { syncSet('mysched_perm/' + k.id, on ? null : true); } catch (e) {} }, style: { display: 'block', width: '100%', textAlign: 'left', background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 10, padding: 10, marginBottom: 4, fontWeight: 800, cursor: 'pointer' } }, (on ? '☑ ' : '☐ ') + (k.emoji || '') + ' ' + k.name); })));
 }
 
 </script>
