@@ -3372,6 +3372,13 @@ const CLOCK_ACTS = [{
   expectedMin: 480,
   pts: 1
 }, {
+  id: 'detailing',
+  label: '🚗 Car Detailing',
+  color: '#00897B',
+  productive: true,
+  expectedMin: 120,
+  pts: 1
+}, {
   id: 'consulting',
   label: '🌿 Consult',
   color: '#33B679',
@@ -7257,6 +7264,7 @@ function Dashboard({
   const effectiveRole = viewingAs ? effectivePerson.role : role;
   const effectivePerms = getPerms(effectiveId, effectiveRole);
   const homeNow = effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock';
+  React.useEffect(() => { try { window.scrollTo(0, 0); } catch (e) {} }, [tab]);
   const goBack = () => { const st = tabStack.current; st.pop(); const prev = st[st.length - 1] || homeNow; if (prev !== tab) { backing.current = true; setTab(prev); } try { window.scrollTo(0, 0); } catch (e) {} };
 
   // Build tabs for the effective person (who we're viewing)
@@ -21464,6 +21472,10 @@ function WorkPanel({
       l: '🏢 E&L Sales'
     });
     subTabs.push({
+      id: 'detailing',
+      l: '🚗 Car Detailing'
+    });
+    subTabs.push({
       id: 'consulting',
       l: '🌿 Consulting'
     });
@@ -21478,7 +21490,9 @@ function WorkPanel({
   const [subTab, setSubTab] = React.useState(() => { const w = window._workStart; window._workStart = null; return w || (typeof nvGet === 'function' && nvGet('worksub', null)) || subTabs[0]?.id || 'school'; });
   React.useEffect(() => { if (typeof nvSet === 'function') nvSet('worksub', subTab); }, [subTab]);
   React.useEffect(() => { if (onSub) onSub(subTab); }, [subTab]);
-  return /*#__PURE__*/React.createElement("div", null, subTabs.length > 0 && /*#__PURE__*/React.createElement("div", {
+  const wpRef = React.useRef(null);
+  React.useEffect(() => { try { window.scrollTo(0, 0); } catch (e) {} }, []);
+  return /*#__PURE__*/React.createElement("div", { ref: wpRef }, subTabs.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       flexWrap: 'wrap',
@@ -21489,7 +21503,7 @@ function WorkPanel({
     }
   }, subTabs.map(t => /*#__PURE__*/React.createElement("button", {
     key: t.id,
-    onClick: () => setSubTab(t.id),
+    onClick: () => { setSubTab(t.id); setTimeout(() => { try { if (wpRef.current) wpRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }, 60); },
     style: {
       padding: '10px 14px',
       borderRadius: '10px 10px 0 0',
@@ -21501,7 +21515,7 @@ function WorkPanel({
       color: subTab === t.id ? '#C0CA33' : 'rgba(255,255,255,.3)',
       borderBottom: subTab === t.id ? '2px solid #C0CA33' : '2px solid transparent'
     }
-  }, t.l))), (isAdmin || isOwner) && (subTab === 'va' || subTab === 'el' || subTab === 'consulting') && typeof AdminQuickTiles === 'function' && React.createElement(AdminQuickTiles, { onSwitchTab: onSwitchTab || function(){} }), subTab === 'school' && (isAdmin || isOwner) && typeof ClassroomDaily === 'function' && React.createElement(ClassroomDaily, { personId: personId, isAdmin: isAdmin || isOwner }), subTab === 'jobs' && typeof ChoresJob === 'function' && React.createElement(ChoresJob, { personId: personId, name: personId, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'school' && typeof ClassGlance === 'function' && React.createElement(ClassGlance, { isAdmin: isAdmin || isOwner, personId: personId, sessions: sessions }), subTab === 'school' && typeof SchoolMoneyStrip === 'function' && React.createElement(SchoolMoneyStrip, { personId: personId, isAdmin: isAdmin || isOwner, onSwitchTab: onSwitchTab, sessions: sessions, onUpdate: onUpdate }), subTab === 'school' && typeof MoneyLessonDaily === 'function' && ['mykah', 'ashelyn', 'kayla', 'ryan'].indexOf(personId) >= 0 && React.createElement(MoneyLessonDaily, { pid: personId, admin: false }), subTab === 'school' && typeof SchoolKitchenFold === 'function' && React.createElement(SchoolKitchenFold, { personId: personId, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'el' && (isParent || isOwner) && typeof ElSales === 'function' && React.createElement(ElSales, { isAdmin: isAdmin || isOwner }), subTab === 'school' && typeof DKAModule !== 'undefined' && React.createElement(DKAModule, {
+  }, t.l))), (isAdmin || isOwner) && (subTab === 'va' || subTab === 'el' || subTab === 'detailing' || subTab === 'consulting') && typeof AdminQuickTiles === 'function' && React.createElement(AdminQuickTiles, { onSwitchTab: onSwitchTab || function(){} }), subTab === 'school' && (isAdmin || isOwner) && typeof ClassroomDaily === 'function' && React.createElement(ClassroomDaily, { personId: personId, isAdmin: isAdmin || isOwner }), subTab === 'jobs' && typeof ChoresJob === 'function' && React.createElement(ChoresJob, { personId: personId, name: personId, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'school' && typeof ClassGlance === 'function' && React.createElement(ClassGlance, { isAdmin: isAdmin || isOwner, personId: personId, sessions: sessions }), subTab === 'school' && typeof SchoolMoneyStrip === 'function' && React.createElement(SchoolMoneyStrip, { personId: personId, isAdmin: isAdmin || isOwner, onSwitchTab: onSwitchTab, sessions: sessions, onUpdate: onUpdate }), subTab === 'school' && typeof MoneyLessonDaily === 'function' && ['mykah', 'ashelyn', 'kayla', 'ryan'].indexOf(personId) >= 0 && React.createElement(MoneyLessonDaily, { pid: personId, admin: false }), subTab === 'school' && typeof SchoolKitchenFold === 'function' && React.createElement(SchoolKitchenFold, { personId: personId, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'el' && (isParent || isOwner) && typeof ElSales === 'function' && React.createElement(ElSales, { isAdmin: isAdmin || isOwner }), subTab === 'school' && typeof DKAModule !== 'undefined' && React.createElement(DKAModule, {
     personId: personId,
     isTeacher: isAdmin || isOwner,
     isAdmin: isAdmin || isOwner,
@@ -21514,7 +21528,7 @@ function WorkPanel({
       color: 'rgba(255,255,255,.4)',
       textAlign: 'center'
     }
-  }, '💻 VA Scheduler coming soon')), subTab === 'consulting' && (isParent || isOwner) && (typeof MoldingConsultingModule !== 'undefined' ? React.createElement(MoldingConsultingModule, {
+  }, '💻 VA Scheduler coming soon')), subTab === 'detailing' && (isParent || isOwner) && typeof DetailingModule === 'function' && React.createElement(DetailingModule, { isAdmin: isAdmin || isOwner }), subTab === 'consulting' && (isParent || isOwner) && (typeof MoldingConsultingModule !== 'undefined' ? React.createElement(MoldingConsultingModule, {
     reminders: reminders || {},
     onSaveRem: onSaveRem || ((k, v) => {}),
     onDelRem: onDelRem || (() => {})
@@ -31049,7 +31063,7 @@ function SF_Terms(props) {
 // ═══ CLOCK-INS BY DEPARTMENT — four big cards, each with its own running timer; several can run at once ═══
 var CD_DEPTS = [
   { id: 'extra', label: 'My Time & Extracurricular', sub: 'Getting ready, daily habits, free time, fun and errands', emoji: '🎨', color: '#EC407A', acts: ['free', 'fun', 'driving'] },
-  { id: 'work', label: 'Work', sub: 'School, worship, service, and the family businesses', emoji: '💼', color: '#F4511E', acts: ['school', 'spiritual', 'service', 'va_work', 'eric_work', 'consulting', 'el_sales'] },
+  { id: 'work', label: 'Work', sub: 'School, worship, service, and the family businesses', emoji: '💼', color: '#F4511E', acts: ['school', 'spiritual', 'service', 'va_work', 'eric_work', 'el_sales', 'detailing', 'consulting'] },
   { id: 'chores', label: 'Household Work', sub: 'Chores, order of operations and caring for the animals', emoji: '🧹', color: '#26A69A', acts: ['chores', 'animals'] }
 ];
 function cdHms(sec) { sec = Math.max(0, Math.floor(sec)); var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2) + ':' + ('0' + s).slice(-2); }
@@ -31670,6 +31684,8 @@ function StartMyDay(props) {
   var mornDone = mornList.length > 0 && mornList.every(function (lb) { var id = 'morning_' + rtHash(lb); return !!(mdS[0] || {})[id] || !!(mSk[0] || {})['h_' + id]; });
   var hour = new Date().getHours(), greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   var go = function (t) { return function () { props.onSwitchTab && props.onSwitchTab(t); }; };
+  var goWork = function (sub) { return function () { window._workStart = sub; props.onSwitchTab && props.onSwitchTab('work'); try { window.scrollTo(0, 0); } catch (e) {} }; };
+  var WORK_SUB = { va_work: ['va', '💻 Open VA Work ›'], el_sales: ['el', '🏢 Open E&L Sales ›'], detailing: ['detailing', '🚗 Open Car Detailing ›'], consulting: ['consulting', '🌿 Open Consulting ›'] };
   var big = function (bg, fg, fn, label) { return h('button', { onClick: fn, style: { display: 'block', width: '100%', background: bg, color: fg, border: 'none', borderRadius: 16, padding: '16px 14px', fontWeight: 900, fontSize: 17, marginTop: 8, cursor: 'pointer', textAlign: 'left' } }, label); };
   var tm = function (ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   var fm = function (sec) { var a = Math.abs(Math.round(sec)); return Math.floor(a / 60) + ':' + ('0' + (a % 60)).slice(-2); };
@@ -31714,9 +31730,10 @@ function StartMyDay(props) {
     if (actId === 'free') return h('div', null, props.role === 'parent' && typeof RoutinesAdmin === 'function' && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 2 } }, 'Parents: change the morning, afternoon and evening habit lists here.'), h(RoutinesAdmin, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], initial: pid })), h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 6 } }, 'Your morning, afternoon and evening habits are in the checklist above.'));
     var base = { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, compact: true };
     if (actId === 'chores') return h(MyDayList, Object.assign({}, base, { kinds: ['chore', 'block'], blockAct: 'chores' }));
-    if (['animals', 'school', 'spiritual', 'service', 'va_work', 'eric_work', 'consulting', 'el_sales'].indexOf(actId) !== -1)
+    if (['animals', 'school', 'spiritual', 'service', 'va_work', 'eric_work', 'consulting', 'el_sales', 'detailing'].indexOf(actId) !== -1)
       return h('div', null, h(MyDayList, Object.assign({}, base, { kinds: ['block'], blockAct: actId })),
-        (actId === 'school' || actId === 'spiritual') && big('#039BE5', '#fff', go('work'), actId === 'school' ? '📚 Open my school lessons' : '📖 Open Bible & worship'));
+        (actId === 'school' || actId === 'spiritual') && big('#039BE5', '#fff', goWork(actId === 'school' ? 'school' : 'school'), actId === 'school' ? '📚 Open my school lessons' : '📖 Open Bible & worship'),
+        WORK_SUB[actId] && props.role === 'parent' && big('#039BE5', '#fff', goWork(WORK_SUB[actId][0]), WORK_SUB[actId][1]));
     return null;
   }
   var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: ready ? [] : ['work', 'chores'], panelFor: panelFor, noWhere: true }) : null;
@@ -38676,6 +38693,50 @@ function SchedPermCard(props) {
     open && h('div', { style: { marginTop: 6 } },
       h('div', { style: { fontSize: 11, color: '#9aa', marginBottom: 6 } }, 'Only the people you tick can add or remove their own schedule items. Everyone else just follows the schedule you set.'),
       kids.map(function (k) { var on = !!perm[k.id]; return h('button', { key: k.id, onClick: function () { try { syncSet('mysched_perm/' + k.id, on ? null : true); } catch (e) {} }, style: { display: 'block', width: '100%', textAlign: 'left', background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 10, padding: 10, marginBottom: 4, fontWeight: 800, cursor: 'pointer' } }, (on ? '☑ ' : '☐ ') + (k.emoji || '') + ' ' + k.name); })));
+}
+
+</script>
+<script>
+// ═══ CAR DETAILING (E&L) — jobs, services & prices, supplies. Lives in Work ▸ Car Detailing ═══
+var DT_STAGES = [['lead', '📞 Lead'], ['booked', '📅 Booked'], ['done', '🧽 Done'], ['paid', '💵 Paid']];
+function dtId() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function DetailingModule(props) {
+  var h = React.createElement, S = crS(), admin = !!props.isAdmin;
+  var vS = React.useState('jobs'), v = vS[0], setV = vS[1], fS = React.useState({}), f = fS[0], setF = fS[1];
+  var JB = fpDoc('detailing/jobs', {}), jobsO = JB[0], putJ = JB[1], SV = fpDoc('detailing/services', {}), svO = SV[0], putS = SV[1], SP = fpDoc('detailing/supplies', {}), spO = SP[0], putSp = SP[1];
+  var list = function (o) { return Object.keys(o || {}).map(function (i) { return Object.assign({ id: i }, o[i]); }).filter(function (x) { return x && x.n !== undefined || (x && x.cust !== undefined); }); };
+  var jobs = list(jobsO).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); }), svcs = list(svO), sups = list(spO);
+  var money = function (n) { return '$' + (+n || 0).toFixed(2); };
+  var paid = jobs.filter(function (j) { return j.stage === 'paid'; }), rev = paid.reduce(function (a, j) { return a + (+j.price || 0); }, 0), open = jobs.filter(function (j) { return j.stage !== 'paid'; }).reduce(function (a, j) { return a + (+j.price || 0); }, 0);
+  var inp = function (key, ph, w, type) { return h('input', { value: f[key] || '', type: type || 'text', placeholder: ph, onChange: function (e) { var n = Object.assign({}, f); n[key] = e.target.value; setF(n); }, style: Object.assign({}, S.inp, { width: w || '100%', boxSizing: 'border-box', marginBottom: 6 }) }); };
+  var clear = function () { setF({}); };
+  var tabs = [['jobs', '🚗 Jobs'], ['services', '🧽 Services & prices'], ['supplies', '🧴 Supplies']];
+  var body;
+  if (v === 'jobs') body = h('div', null,
+    h('div', { style: { display: 'flex', gap: 8, marginBottom: 10 } }, [['Paid', money(rev), '#81C784'], ['Not paid yet', money(open), '#90CAF9'], ['Jobs', String(jobs.length), '#FFD54F']].map(function (x) { return h('div', { key: x[0], style: { flex: 1, background: 'rgba(255,255,255,.06)', borderRadius: 10, padding: 8, textAlign: 'center' } }, h('div', { style: { fontSize: 10, color: '#9ad' } }, x[0]), h('div', { style: { fontSize: 16, fontWeight: 900, color: x[2] } }, x[1])); })),
+    admin ? h('div', { style: S.card }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '➕ New job'), inp('cust', 'Customer name'), inp('veh', 'Vehicle (year, make, model, color)'), inp('svc', 'Service (e.g. Full interior + exterior)'),
+      h('div', { style: { display: 'flex', gap: 6 } }, inp('price', 'Price $', '50%', 'number'), inp('date', 'Date', '50%', 'date')), inp('addr', 'Address / notes'),
+      h('button', { onClick: function () { if (f.cust) { putJ(dtId(), { cust: f.cust, veh: f.veh || '', svc: f.svc || '', price: +f.price || 0, date: f.date || '', addr: f.addr || '', stage: 'lead', ts: Date.now() }); clear(); } }, style: S.btn('#039BE5') }, 'Add job')) : null,
+    jobs.map(function (j) { var si = DT_STAGES.map(function (x) { return x[0]; }).indexOf(j.stage), nx = DT_STAGES[si + 1];
+      return h('div', { key: j.id, style: S.card }, h('div', { style: { display: 'flex', justifyContent: 'space-between' } }, h('b', { style: { fontSize: 13, color: '#fff' } }, j.cust), h('span', { style: { fontSize: 13, color: '#81C784', fontWeight: 800 } }, money(j.price))),
+        h('div', { style: { fontSize: 11, color: '#cfd8dc' } }, [j.veh, j.svc, j.date, j.addr].filter(Boolean).join(' · ')), h('div', { style: { fontSize: 11, color: '#9ad', margin: '3px 0' } }, (DT_STAGES[si] || DT_STAGES[0])[1]),
+        admin ? h('div', { style: { display: 'flex', gap: 6, marginTop: 4 } }, nx && h('button', { onClick: function () { putJ(j.id + '/stage', nx[0]); }, style: S.btn('#4CAF82') }, 'Move to ' + nx[1]), h('button', { onClick: function () { if (window.confirm('Remove this job?')) putJ(j.id, null); }, style: S.btn('#EF5350') }, 'Remove')) : null); }),
+    jobs.length === 0 ? h('div', { style: { fontSize: 12, color: '#9ad' } }, 'No jobs yet.') : null);
+  else if (v === 'services') body = h('div', null,
+    admin ? h('div', { style: S.card }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '➕ Add a service or package'), inp('n', 'Name (e.g. Interior detail)'), h('div', { style: { display: 'flex', gap: 6 } }, inp('price', 'Price $', '50%', 'number'), inp('mins', 'Minutes', '50%', 'number')), inp('inc', 'What is included'),
+      h('button', { onClick: function () { if (f.n) { putS(dtId(), { n: f.n, price: +f.price || 0, mins: +f.mins || 0, inc: f.inc || '' }); clear(); } }, style: S.btn('#039BE5') }, 'Add service')) : null,
+    svcs.map(function (s) { return h('div', { key: s.id, style: S.card }, h('div', { style: { display: 'flex', justifyContent: 'space-between' } }, h('b', { style: { fontSize: 13, color: '#fff' } }, s.n), h('span', { style: { fontSize: 13, color: '#81C784', fontWeight: 800 } }, money(s.price))), h('div', { style: { fontSize: 11, color: '#cfd8dc' } }, (s.mins ? s.mins + ' min · ' : '') + (s.inc || '')), admin ? h('button', { onClick: function () { putS(s.id, null); }, style: Object.assign({}, S.btn('#EF5350'), { marginTop: 6 }) }, 'Remove') : null); }),
+    svcs.length === 0 ? h('div', { style: { fontSize: 12, color: '#9ad' } }, 'No services yet. Add your packages and prices.') : null);
+  else body = h('div', null,
+    admin ? h('div', { style: S.card }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '➕ Add a supply'), inp('n', 'Item (soap, towels, wax, vacuum bags…)'), h('div', { style: { display: 'flex', gap: 6 } }, inp('qty', 'On hand', '50%', 'number'), inp('cost', 'Cost $', '50%', 'number')),
+      h('button', { onClick: function () { if (f.n) { putSp(dtId(), { n: f.n, qty: +f.qty || 0, cost: +f.cost || 0 }); clear(); } }, style: S.btn('#039BE5') }, 'Add supply')) : null,
+    sups.map(function (s) { return h('div', { key: s.id, style: S.card }, h('div', { style: { display: 'flex', justifyContent: 'space-between' } }, h('b', { style: { fontSize: 13, color: '#fff' } }, s.n), h('span', { style: { fontSize: 12, color: s.qty < 2 ? '#FFB74D' : '#cfd8dc' } }, s.qty + ' on hand · ' + money(s.cost))), admin ? h('button', { onClick: function () { putSp(s.id, null); }, style: Object.assign({}, S.btn('#EF5350'), { marginTop: 6 }) }, 'Remove') : null); }),
+    sups.length === 0 ? h('div', { style: { fontSize: 12, color: '#9ad' } }, 'No supplies yet.') : null);
+  return h('div', { style: { padding: '10px 14px' } },
+    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '🚗 Car Detailing'),
+    h('div', { style: { fontSize: 12, color: '#9ad', marginBottom: 8 } }, 'E&L mobile detailing: track jobs, your services and prices, and supplies.'),
+    h('div', { style: { display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' } }, tabs.map(function (t) { return h('button', { key: t[0], onClick: function () { setV(t[0]); }, style: S.btn(v === t[0] ? '#4CAF82' : 'rgba(255,255,255,.1)') }, t[1]); })),
+    body);
 }
 
 </script>
