@@ -23090,6 +23090,9 @@ function DKAModuleFull(_ref2) {
     id: 'plan',
     l: '🎯 Today'
   }, {
+    id: 'catchup',
+    l: '🎒 Big Catch-Up'
+  }, {
     id: 'schedule',
     l: '⏰ Schedule'
   }, {
@@ -23110,6 +23113,9 @@ function DKAModuleFull(_ref2) {
   }] : [{
     id: 'plan',
     l: '🎯 Today'
+  }, {
+    id: 'catchup',
+    l: '🎒 Big Catch-Up'
   }, {
     id: 'schedule',
     l: '⏰ Schedule'
@@ -23275,7 +23281,7 @@ function DKAModuleFull(_ref2) {
         outline: ((week - 1) * 5 + d === _schoolInfo.dayNum) ? '2px solid #F6BF26' : 'none'
       }
     }, "Day " + d, React.createElement("br"), React.createElement("span", { style: { fontSize: 8, fontWeight: 600 } }, schoolDayDate((week - 1) * 5 + d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })));
-  }))), (typeof SchoolNav === 'function' ? React.createElement(SchoolNav, { view: view, setView: setView, VIEWS: VIEWS, isTeacher: isTeacher, isAdmin: isAdmin, personId: personId, dayNum: dayNum, scripture: visibleScripture, title: visibleTitle }) : null), /*#__PURE__*/React.createElement("div", {
+  }))), (typeof SchoolNav === 'function' ? React.createElement(SchoolNav, { view: view, setView: setView, VIEWS: VIEWS, isTeacher: isTeacher, isAdmin: isAdmin, personId: personId, dayNum: dayNum, scripture: visibleScripture, title: visibleTitle }) : null), (typeof BigCatchPrompt === 'function' ? React.createElement(BigCatchPrompt, { isAdmin: isTeacher || isAdmin, personId: personId, onOpen: function () { setView('catchup'); } }) : null), /*#__PURE__*/React.createElement("div", {
     style: {
       display: (typeof SchoolNav === 'function') ? 'none' : 'flex',
       overflowX: 'auto',
@@ -23722,6 +23728,7 @@ function DKAModuleFull(_ref2) {
     dayNum: dayNum
   }),
   view === 'music' && typeof JwSongProgram === 'function' && /*#__PURE__*/React.createElement(JwSongProgram, { personId: personId }),
+  view === 'catchup' && typeof CatchUpPlanner === 'function' && React.createElement(CatchUpPlanner, { student: (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).filter(function (s) { return s.id === personId; })[0] || {}, isAdmin: isTeacher || isAdmin, todayDay: (typeof cuTodayDay === 'function' ? cuTodayDay() : dayNum) }),
   view === 'attendance' && /*#__PURE__*/React.createElement(SchoolAttendanceClock, {
     personId: personId,
     isAdmin: isTeacher || isAdmin,
@@ -31725,6 +31732,7 @@ function StartMyDay(props) {
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 10px' } }, new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })),
     clocked && h(NowBanner, { personId: pid, name: nm, sessions: props.sessions }),
     lateModal,
+    typeof BigCatchPrompt === 'function' && h(BigCatchPrompt, { isAdmin: props.role === 'parent', personId: pid, onOpen: function () { try { window._workStart = 'school'; if (typeof nvGet === 'function') nvSet('dka', Object.assign({}, nvGet('dka', null) || {}, { view: 'catchup' })); } catch (e) {} props.onSwitchTab && props.onSwitchTab('work'); } }),
     typeof MySchedule === 'function' && h(MySchedule, { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, clocked: clocked, ready: ready, role: props.role, addNotif: props.addNotif, onGo: function (t) { props.onSwitchTab && props.onSwitchTab(t); } }),
     sd.dayEnd && h('div', { style: { background: 'rgba(76,175,130,.18)', border: '2px solid #4CAF82', borderRadius: 16, padding: 14, marginBottom: 12, color: '#fff' } }, h('div', { style: { fontSize: 17, fontWeight: 900 } }, '🎉 Day complete' + (nm ? ', ' + nm : '') + '!'), h('div', { style: { fontSize: 13, color: '#d8f0e2', marginTop: 4, lineHeight: 1.5 } }, 'You ended your day at ' + tm(sd.dayEnd) + '. Your time is saved for Mom & Dad to review. Start My Day clears itself and is ready fresh tomorrow morning.')),
     // ── 1. START MY DAY (drop-down) ──
@@ -37416,6 +37424,21 @@ function BigCatchCard(props) {
       h('button', { onClick: excuse, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, 'Skip the turn-in — excuse all')));
 }
 
+// Big orange button where the family actually works: School screen and Start My Day
+function BigCatchPrompt(props) {
+  var h = React.createElement, admin = !!props.isAdmin, pid = props.personId, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, sS = ktUse('school/bigcatch_sub/' + pid, null), sub = sS[0] || {}, aS = ktUse('school/bigcatch_sub', {}), all = aS[0] || {};
+  var isKid = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).some(function (s) { return s.id === pid; });
+  var btn = function (bg, fg, border, t, sub2) { return h('button', { onClick: props.onOpen, style: { display: 'block', width: '100%', textAlign: 'left', background: bg, color: fg, border: '2px solid ' + border, borderRadius: 16, padding: 14, margin: '8px 0', cursor: 'pointer', fontWeight: 900, fontSize: 16 } }, t, sub2 && h('div', { style: { fontWeight: 600, fontSize: 12, marginTop: 3, opacity: .9 } }, sub2)); };
+  if (admin) {
+    var waiting = Object.keys(all).filter(function (k) { return all[k] && all[k].status === 'submitted'; }).length;
+    if (!cfg.on) return btn('rgba(26,115,232,.18)', '#fff', '#1A73E8', '🎒 Set up the Big Catch-Up Assignment', 'One quiz + one project replaces all the old homework. Tap to set it up.');
+    if (waiting) return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', '📝 ' + waiting + ' Big Catch-Up turn-in' + (waiting > 1 ? 's' : '') + ' waiting for you', 'Tap to review and approve.');
+    return btn('rgba(255,255,255,.07)', '#fff', 'rgba(255,255,255,.18)', '🎒 Big Catch-Up Assignment', 'On through Day ' + cfg.through + ' — tap to see each child.');
+  }
+  if (!cfg.on || !isKid || sub.status === 'approved') return null;
+  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment', 'One short quiz and one small project. Tap here.');
+}
+
 </script>
 <script>
 // ═══ LIVE PRESENCE — each device reports "I'm clocked in" every 45 seconds, so the parents' board is live and shows when a device went quiet ═══
@@ -38289,7 +38312,7 @@ function ListenBar(props) {
 function nvToday() { try { return new Date().toLocaleDateString('en-CA'); } catch (e) { return ''; } }
 function nvGet(key, def) { try { var o = JSON.parse(localStorage.getItem('fm_nv_' + key) || 'null'); if (o && o.d === nvToday() && o.v !== undefined) return o.v; } catch (e) {} return def; }
 function nvSet(key, v) { try { localStorage.setItem('fm_nv_' + key, JSON.stringify({ d: nvToday(), v: v })); } catch (e) {} }
-var SN_LABEL = { plan: ['🎯', "Today's lesson"], schedule: ['⏰', 'Schedule'], manual: ['📖', 'Teacher manual & script'], worship: ['✨', 'Worship'], levels: ['✍️', 'Assignments'], music: ['🎵', 'Music'], attendance: ['📋', 'Attendance'] };
+var SN_LABEL = { plan: ['🎯', "Today's lesson"], catchup: ['🎒', 'Big Catch-Up'], schedule: ['⏰', 'Schedule'], manual: ['📖', 'Teacher manual & script'], worship: ['✨', 'Worship'], levels: ['✍️', 'Assignments'], music: ['🎵', 'Music'], attendance: ['📋', 'Attendance'] };
 function SchoolNav(props) {
   var h = React.createElement, view = props.view, VIEWS = props.VIEWS || [], teacher = !!props.isTeacher;
   var scr = String(props.scripture || '').replace(/\s+/g, ' ').trim(), q = encodeURIComponent(scr.split(';')[0] || scr);
