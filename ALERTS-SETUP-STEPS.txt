@@ -1,0 +1,66 @@
+BETHEL FAMILY ALERTS — SETUP (about 15 minutes, free, no credit card)
+=====================================================================
+You do Part A and B ONE time. Part C is done once on each phone.
+
+PART A — Make the free alert helper (on your computer or phone browser)
+-----------------------------------------------------------------------
+1. Go to:  dash.cloudflare.com/sign-up
+   Type your email and a password. Tap Sign up.
+   Open the email Cloudflare sends you and tap the verify link.
+   (If it asks for a plan, choose FREE. It never asks for a card.)
+
+2. After you sign in, look at the menu on the left.
+   Tap  "Workers & Pages"  (it may be under "Compute").
+   Tap the blue  "Create"  button.
+   Tap  "Create Worker"  (or "Start with Hello World!").
+
+3. In the name box, type:  bethel-alerts
+   Tap  "Deploy".
+
+4. When it says it is deployed, tap  "Edit code".
+   A code box opens. Click inside it, press Select All
+   (Ctrl+A on a computer, or touch-and-hold then "Select all" on a phone),
+   and press Delete so the box is EMPTY.
+
+5. Open the file I gave you named  bethel-alerts-worker.js
+   Select ALL of it, Copy it, then Paste it into the empty code box.
+   Tap  "Deploy"  (top right).
+
+6. Look for the address of your helper. It looks like:
+       https://bethel-alerts.YOURNAME.workers.dev
+   Copy that whole address.
+   (Test: open it in a new tab. You should see:  Bethel alert relay is running. ✅ )
+
+   Keep bethel-alerts-worker.js private. Do not post it anywhere.
+
+PART B — Tell the app the address (Laurel, one time)
+----------------------------------------------------
+7. Upload the new app files to GitHub like always (v114).
+8. Open the app. Tap Menu ▸ Settings ▸ "Alerts & sound on this device".
+   Find the box  "RELAY ADDRESS".
+   Paste the address from step 6. Tap  Save.
+
+PART C — Turn alerts on, on EACH phone (parents and kids)
+---------------------------------------------------------
+9. iPHONE / iPAD only: first open the app in Safari, tap the Share button,
+   tap "Add to Home Screen", and then ALWAYS open the app from that new icon.
+   ANDROID: tap the 3 dots ▸ "Install app" (or "Add to Home screen").
+
+10. In the app: Menu ▸ Settings ▸ "Alerts & sound on this device".
+    Tap  "Turn on closed-app alerts".  When the phone asks, tap  ALLOW.
+
+11. Tap  "Send me a test".  Then close the app (swipe it away) or lock the screen.
+    In a few seconds the phone should light up and make its alert sound.
+
+IF SOMETHING DOESN'T WORK
+-------------------------
+- "Not allowed / blocked": open the phone's Settings ▸ Notifications ▸ find the app ▸ turn Allow ON.
+- Nothing arrives on iPhone: make sure you opened the app from the Home Screen icon (not Safari).
+- Wrong address: in step 8 the address must start with https:// and end with .workers.dev
+- Still stuck: tell me exactly which step number and what you see on the screen.
+
+WHO GETS ALERTS
+---------------
+The same rules as before: parents get clock-ins and requests that need approval,
+kids get their own messages and approvals. A phone that has these alerts on will
+not also get the old ntfy alerts, so there are no doubles.

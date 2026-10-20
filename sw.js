@@ -1,4 +1,11 @@
 // MyBethelFamilyHome service worker: lets the app install to the Home Screen and show alerts.
+// Closed-app alerts sent by the family relay (Web Push). Registered BEFORE the Firebase helper so our alerts show once.
+self.addEventListener('push', function (e) {
+  var d = null; try { d = e.data ? e.data.json() : null; } catch (x) { d = null; }
+  if (!d || !d.fm) return;
+  e.stopImmediatePropagation();
+  e.waitUntil(self.registration.showNotification(d.title || 'MyBethelFamilyHome', { body: d.body || '', tag: d.tag || undefined, renotify: !!d.tag, icon: 'icon-192.png', badge: 'icon-192.png', requireInteraction: !!d.urgent, vibrate: [200, 100, 200, 100, 300], data: { url: d.url || './index.html' } }));
+});
 try {
   importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
   firebase.initializeApp({

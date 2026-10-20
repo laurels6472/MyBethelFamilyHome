@@ -22614,10 +22614,10 @@ var DKA_BLOCKS = [
 ];
 
 var DKA_STUDENT_TASKS = {
-  ryan: 'Read all scriptures + build research chain (scripture → cross-ref → Insight → Watchtower). Write weekly research paper 2-3 pages. Peer review Kayla\'s essay. Teach one concept to Mykah.',
-  kayla: 'Read scriptures + Insight on the Scriptures entry. Write 2-paragraph essay daily. Proofread Ashelyn\'s work. Find one Watchtower article on wol.jw.org.',
-  ashelyn: 'Read scriptures. Write 5 complete-sentence answers. Define 5 vocabulary words. Find one jw.org article (3-sentence summary). Grammar: subject and predicate in 3 scripture sentences.',
-  mykah: 'Listen to lecture. Oral narration: "Today I learned that Jehovah..." Draw one scene from the lesson. Practice memory verse. Reading block: 15 min phonics + 15 min leveled reader.'
+  ryan: '1) Read today\'s scriptures and write 5 sentences on what you learned (add one cross-reference). 2) Do one small piece of your research paper.',
+  kayla: '1) Read today\'s scriptures and write one paragraph on what you learned. 2) Find one jw.org article that matches and write 2 sentences about it.',
+  ashelyn: '1) Read today\'s scriptures and write 3 complete-sentence answers. 2) Learn 3 vocabulary words from today\'s lesson.',
+  mykah: '1) Listen to the lesson, then tell a grown-up one thing you learned and draw a picture of it. 2) Reading time: 15 minutes (phonics or your leveled reader).'
 };
 
 // ─── School Attendance Clock ──────────────────────────────────────────────────
@@ -22997,6 +22997,7 @@ var FIELD_TRIP_DAYS_MAP = {
 };
 
 function DKAModuleFull(_ref2) {
+  ktUse('school/bigcatch', null);
   var isTeacher = _ref2.isTeacher,
     isAdmin = _ref2.isAdmin,
     personId = _ref2.personId,
@@ -23644,7 +23645,7 @@ function DKAModuleFull(_ref2) {
   }, lessonLocked ? visibleScripture : scripture)), (family || DEFAULT_FAMILY).filter(function (p) {
     return ['ryan', 'kayla', 'ashelyn', 'mykah'].includes(p.id);
   }).map(function (s) {
-    var task = (typeof syncGet === 'function' && (syncGet('school/assign/' + dayNum + '/' + s.id) || null)) || DKA_STUDENT_TASKS[s.id] || 'See teacher for today\'s assignment.';
+    var task = (typeof bcActive === 'function' && bcActive(dayNum)) ? '✅ Covered by the Big Catch-Up Assignment — no separate homework for this day.' : ((typeof syncGet === 'function' && (syncGet('school/assign/' + dayNum + '/' + s.id) || null)) || DKA_STUDENT_TASKS[s.id] || 'See teacher for today\'s assignment.');
     var isMe = s.id === personId;
     return /*#__PURE__*/React.createElement("div", {
       id: 'dka_stu_' + s.id,
@@ -34055,6 +34056,7 @@ function AlertsSetup(props) {
       !standalone && h('div', { style: { fontSize: 13, color: '#e0e6f0', lineHeight: 1.6, marginBottom: 8 } }, ios ? '📲 iPhone/iPad: tap the Share button ▸ "Add to Home Screen", then open the app from that new icon. Alerts only work from the Home Screen icon.' : '📲 Android: tap ⋮ ▸ "Install app" / "Add to Home screen", then open it from the new icon.'),
       h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, btn('#4CAF82', '#000', turnOn, perm === 'granted' ? '🔔 Re-register this device' : '🔔 Turn on alerts'), btn('#FFD54F', '#000', testAlert, '🔊 Test sound & alert')),
       h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 8, lineHeight: 1.5 } }, 'The happy chime plays when the app is open (turn the volume up; iPhone silent switch mutes it). When the app is closed the phone uses its own notification sound.'),
+      typeof WebPushCard === 'function' && h(WebPushCard, { personId: pid, isAdmin: admin }),
       typeof NtfyCard === 'function' && h(NtfyCard, { personId: pid, isAdmin: admin, family: props.family }),
       admin && h('div', { style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.1)' } },
         h('div', { style: { fontSize: 12, color: '#C5B8E8', fontWeight: 800, marginBottom: 4 } }, 'ADVANCED — PUSH KEY (Laurel, one time) ' + (vapid ? '✓ saved' : '— not set')),
@@ -34073,7 +34075,7 @@ window._ntfyNotif = function (n) {
     var T = window._ntfyTopics || {}, cfg = null; try { cfg = syncGet('notify_cfg'); } catch (e) {}
     var me = window._loginPersonId, pr = n.type === 'page' || n.urgent ? 5 : (n.type === 'message' || n.requiresApproval ? 4 : 3), tag = n.type === 'page' ? ['rotating_light'] : n.type === 'message' ? ['speech_balloon'] : ['bell'];
     Object.keys(T).forEach(function (id) {
-      if (!T[id] || (id === me && n.type !== 'test')) return;
+      if (!T[id] || (id === me && n.type !== 'test') || (window._pushOn && window._pushOn[id])) return;
       var want = typeof ncWants === 'function' ? ncWants(id, n, cfg) : (n.personId === id || n.personId === 'all');
       if (n.type === 'page' || n.type === 'test') want = n.personId === id;
       if (n.requiresApproval && id === 'laurel') want = true;
@@ -37277,6 +37279,13 @@ function cuPlanFor(sid, prog, cfg, todayDay) {
 // Small card on the Today tab so a child sees today's catch-up
 function CatchUpBanner(props) {
   var h = React.createElement, sid = props.student.id, pS = ktUse('school/progress', {}), prog = pS[0] || {}, cS = ktUse('school/catchup_cfg', {}), cfg = cS[0] || {};
+  var bcS = ktUse('school/bigcatch', null), bc = bcS[0] || {}, bsS = ktUse('school/bigcatch_sub/' + sid, null), bsub = bsS[0] || {};
+  if (bc.on) {
+    if (bsub.status === 'approved') return null;
+    return h('div', { onClick: props.onOpen, style: { cursor: 'pointer', margin: '0 0 10px', padding: 14, borderRadius: 14, background: 'rgba(255,152,0,.16)', border: '2px solid #FFB74D' } },
+      h('div', { style: { fontSize: 15, fontWeight: 900, color: '#FFB74D' } }, bsub.status === 'submitted' ? '🕓 Big Catch-Up turned in — waiting for Mom or Dad' : '📝 Do your Big Catch-Up Assignment'),
+      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'One short quiz and one small project replace ALL the old homework (Day 1 to Day ' + bc.through + '). Tap here.'));
+  }
   var P = cuPlanFor(sid, prog, cfg, props.todayDay);
   if (!P.today.length) return null;
   return h('div', { onClick: props.onOpen, style: { cursor: 'pointer', margin: '0 0 10px', padding: 12, borderRadius: 14, background: 'rgba(255,152,0,.12)', border: '1px solid rgba(255,152,0,.55)' } },
@@ -37292,6 +37301,8 @@ function CatchUpPlanner(props) {
   var card = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 12, marginBottom: 10 };
   function setCfg(sid, k, v) { var o = Object.assign({}, cfg[sid] || {}); o[k] = v; try { syncSet('school/catchup_cfg/' + sid, o); } catch (e) {} }
   return h('div', { style: { padding: '4px 0' } },
+    admin && typeof BigCatchSetup === 'function' && h(BigCatchSetup, { todayDay: todayDay }),
+    studs.map(function (s) { return typeof BigCatchCard === 'function' ? h(BigCatchCard, { key: 'bc' + s.id, student: s, isAdmin: admin, todayDay: todayDay }) : null; }),
     h('div', { style: card },
       h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🧭 Catch-Up Plan'),
       h('div', { style: { fontSize: 12, color: '#c8c8d8', lineHeight: 1.6, marginTop: 4 } }, 'Nothing is lost. Every lesson from Day 1 up to yesterday that is not finished is listed here. A few catch-up lessons are added to each school day, oldest first, until they are all done. Lessons drop off the list by themselves as they are finished. If the work was already done on paper, a parent can tap “Already did it.”'),
@@ -37318,6 +37329,91 @@ function CatchUpPlanner(props) {
             h('div', { style: { fontSize: 12, color: '#b8c0d0' } }, byDay[d].map(function (m) { return m.sub.l; }).join(' · ')));
         }));
     }));
+}
+
+// ═══ BIG CATCH-UP TURN-IN — ONE short quiz + ONE small project replaces all the old homework from the first day of school up to a chosen day.
+// Nothing is deleted: when a parent approves it, the missed lessons are marked "caught up" (only the ones not already done). ═══
+var BC_SUBS = ['bible', 'lang', 'math', 'science', 'history'];
+function bcCfg() { try { return syncGet('school/bigcatch') || null; } catch (e) { return null; } }
+function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
+function bcStudent(sid) { return (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []).filter(function (s) { return s.id === sid; })[0] || { id: sid, grade: 8, name: sid }; }
+function bcQuestions(sid, through) {
+  var st = bcStudent(sid), out = [];
+  BC_SUBS.forEach(function (sub, i) {
+    var meta = (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).filter(function (x) { return x.id === sub; })[0]; if (!meta) return;
+    var d = Math.max(1, Math.min(through, Math.round(through * (i + 1) / (BC_SUBS.length + 1)))), L = null;
+    try { L = getLessonForDay(sub, d, st.grade); } catch (e) {}
+    var focus = (L && L.focus ? String(L.focus) : '').replace(/\s+/g, ' ').replace(/\s+[—-]\s+(Learn & Practice|Practice|Introduce|Apply|Review|Assessment)(\s*\([^)]*\))?\s*$/i, '').trim();
+    if (sub === 'bible' || !focus) { try { var en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[d - 1] : null; if (en) focus = String(en[3] || '') + (en[4] ? ' (' + en[4] + ')' : ''); } catch (e) {} }
+    if (!focus) focus = 'what we learned in ' + meta.l;
+    var key = ''; try { key = (L && L.answerKey && L.answerKey.short) ? String(L.answerKey.short) : ''; } catch (e) {}
+    out.push({ id: sub, day: d, label: meta.l, focus: focus, key: key });
+  });
+  return out;
+}
+function bcAsk(grade) { return grade <= 5 ? 'Tell a grown-up in your own words, then type one short sentence.' : grade <= 9 ? 'Write 2 sentences in your own words.' : 'Write 3–4 sentences in your own words and give one example.'; }
+function bcProject(sid) { var M = { ryan: 'Write 5 sentences about what you learned, with one cross-reference scripture.', kayla: 'Write one paragraph about what you learned, with one scripture.', ashelyn: 'Write 3 complete sentences about it and use 3 vocabulary words.', mykah: 'Draw a picture of it and tell a grown-up what you learned.' }; return M[sid] || 'Show what you learned.'; }
+function bcApprove(sid, through) {
+  var prog = {}; try { prog = syncGet('school/progress') || {}; } catch (e) {}
+  var n = 0; (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).forEach(function (s) { for (var d = 1; d <= through; d++) { if (!cuDone(prog[sid + '_d' + d + '_' + s.id])) { cuMark(sid, d, s.id); n++; } } });
+  return n;
+}
+function BigCatchSetup(props) {
+  var h = React.createElement, cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, nS = React.useState(''), nv = nS[0], setNv = nS[1], todayDay = props.todayDay || cuTodayDay();
+  var box = { background: 'rgba(26,115,232,.14)', border: '2px solid #1A73E8', borderRadius: 14, padding: 12, marginBottom: 10 };
+  var through = nv !== '' ? Math.max(1, Math.min(180, +nv || 1)) : (cfg.through || todayDay);
+  function turnOn() { try { syncSet('school/bigcatch', { on: true, through: through, ts: Date.now() }); } catch (e) {} }
+  function turnOff() { if (!window.confirm('Turn the Big Catch-Up Assignment off? Anything already approved stays caught up.')) return; try { syncSet('school/bigcatch', Object.assign({}, cfg, { on: false })); } catch (e) {} }
+  return h('div', { style: box },
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🎒 Big Catch-Up Assignment'),
+    h('div', { style: { fontSize: 13, color: '#dbe8ff', lineHeight: 1.6, margin: '4px 0 8px' } }, 'Instead of making up every old lesson and homework page, each child does ONE short quiz (5 questions pulled from the real lessons) and ONE small project. When you approve it, all the old lessons up to the day you choose are marked caught up. Nothing is deleted.'),
+    h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+      h('span', { style: { fontSize: 13, color: '#fff' } }, 'Cover school Day 1 through Day'),
+      h('input', { type: 'number', min: 1, max: 180, value: nv !== '' ? nv : through, onChange: function (e) { setNv(e.target.value); }, style: { width: 70, padding: 8, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 15 } }),
+      h('span', { style: { fontSize: 12, color: '#bcd' } }, '(today is Day ' + todayDay + ')')),
+    h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
+      h('button', { onClick: turnOn, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, cfg.on ? '💾 Save the day number' : '✅ Turn it on'),
+      cfg.on && h('button', { onClick: turnOff, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, 'Turn off')),
+    cfg.on && h('div', { style: { fontSize: 12, color: '#9be3bd', marginTop: 6 } }, '✅ On — covers Day 1 through Day ' + cfg.through + '. The daily homework for those days now says it is covered by this assignment.'));
+}
+function BigCatchCard(props) {
+  var h = React.createElement, s = props.student, sid = s.id, admin = !!props.isAdmin;
+  var cS = ktUse('school/bigcatch', null), cfg = cS[0] || {}, subS = ktUse('school/bigcatch_sub/' + sid, null), sub = subS[0] || null;
+  var aS = React.useState(null), local = aS[0], setLocal = aS[1], mS = React.useState('');
+  if (!cfg.on) return null;
+  var through = +cfg.through || 1, qs = bcQuestions(sid, through), ans = local || (sub && sub.answers) || {}, proj = (ans.__project != null ? ans.__project : '');
+  var status = sub && sub.status;
+  var card = { background: 'rgba(255,152,0,.12)', border: '2px solid #FFB74D', borderRadius: 16, padding: 14, marginBottom: 10 };
+  var ta = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 15, fontFamily: 'inherit', marginBottom: 8 };
+  function setA(k, v) { var n = Object.assign({}, ans); n[k] = v; setLocal(n); }
+  function save(st) { var rec = Object.assign({}, sub || {}, { answers: ans, through: through, status: st, ts: Date.now() }); if (st === 'submitted') rec.submittedAt = Date.now(); try { syncSet('school/bigcatch_sub/' + sid, rec); } catch (e) {} }
+  var answered = qs.filter(function (q) { return (ans[q.id] || '').trim().length > 2; }).length, projDone = (proj || '').trim().length > 2;
+  function approve() { var n = bcApprove(sid, through); try { syncSet('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'approved', approvedAt: Date.now(), marked: n })); } catch (e) {} }
+  function excuse() { if (!window.confirm('Mark ALL of ' + s.name + '’s lessons from Day 1 to Day ' + through + ' as caught up without a turn-in?')) return; var n = bcApprove(sid, through); try { syncSet('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { answers: ans, status: 'approved', approvedAt: Date.now(), marked: n, excused: true })); } catch (e) {} }
+  function redo() { var note = ''; try { note = window.prompt('What should ' + s.name + ' fix? (optional)', '') || ''; } catch (e) {} try { syncSet('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'redo', note: note })); } catch (e) {} }
+  if (status === 'approved') return h('div', { style: Object.assign({}, card, { background: 'rgba(76,175,130,.14)', borderColor: '#4CAF82' }) }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#9be3bd' } }, '✅ ' + s.name + ' is all caught up through Day ' + through + (sub.excused ? ' (excused)' : '') + '!'), admin && sub.marked != null && h('div', { style: { fontSize: 11, color: '#b8d8c8' } }, sub.marked + ' lessons were marked caught up.'));
+  var locked = status === 'submitted';
+  return h('div', { style: card },
+    h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Big Catch-Up Assignment' + (admin ? ' — ' + s.name : '')),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 10px' } }, 'This ONE assignment replaces ALL the homework from Day 1 to Day ' + through + '. No old pages to make up. Two parts, about 30 minutes.'),
+    status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
+    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, 'Part 1 — Quiz (' + answered + ' of ' + qs.length + ' answered)'),
+    h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 6 } }, bcAsk(s.grade)),
+    qs.map(function (q, i) {
+      return h('div', { key: q.id, style: { marginBottom: 6 } },
+        h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 800, marginBottom: 3 } }, (i + 1) + '. ' + q.label + ' (Day ' + q.day + '): ' + q.focus),
+        h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked && !admin, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked) save(status || 'draft'); }, placeholder: 'What did you learn?', style: ta }),
+        admin && q.key && h('div', { style: { fontSize: 11, color: '#9be3bd', marginBottom: 6 } }, '🔑 Check against: ' + q.key.slice(0, 220)));
+    }),
+    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', margin: '10px 0 4px' } }, 'Part 2 — One small project'),
+    h('div', { style: { fontSize: 13, color: '#e8e8f4', marginBottom: 6 } }, 'Pick your favorite lesson from these days. ' + bcProject(sid)),
+    h('textarea', { rows: 3, value: proj, disabled: locked && !admin, onChange: function (e) { setA('__project', e.target.value); }, onBlur: function () { if (!locked) save(status || 'draft'); }, placeholder: 'Write or describe what you did (you can also show Mom or Dad the paper or drawing).', style: ta }),
+    !admin && !locked && h('button', { onClick: function () { if (answered < qs.length || !projDone) { if (!window.confirm('Some answers are empty. Turn it in anyway?')) return; } save('submitted'); }, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '📤 Turn it in'),
+    !admin && locked && h('div', { style: { background: 'rgba(255,213,79,.15)', borderRadius: 10, padding: 10, color: '#FFD54F', fontWeight: 800, fontSize: 14 } }, '🕓 Turned in — waiting for Mom or Dad to check it.'),
+    admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 } },
+      status === 'submitted' && h('button', { onClick: approve, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '✓ Approve — mark everything caught up'),
+      status === 'submitted' && h('button', { onClick: redo, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '🔁 Send back'),
+      h('button', { onClick: excuse, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, 'Skip the turn-in — excuse all')));
 }
 
 </script>
@@ -38337,6 +38433,110 @@ function SchedAddApprovals(props) {
       h('div', { style: { flex: 1, fontSize: 14, color: '#fff' } }, h('b', null, nm(r.pid)), ' — ' + r.b.time + ' · ' + r.b.title, h('div', { style: { fontSize: 11, color: '#b8b8c8' } }, (r.k === 'daily' ? 'every day' : r.k) + (r.b.activity ? ' · clocks into ' + (typeof planActLabel === 'function' ? planActLabel(r.b.activity) : r.b.activity) : ''))),
       h('button', { onClick: function () { decide(r, true); }, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 16, padding: '9px 13px', fontWeight: 900, cursor: 'pointer' } }, '✓ Yes'),
       h('button', { onClick: function () { decide(r, false); }, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 16, padding: '9px 13px', fontWeight: 900, cursor: 'pointer' } }, '✕ No')); }));
+}
+
+</script>
+<script>
+// ═══ CLOSED-APP ALERTS (free, no extra app): phones subscribe to Web Push; a free Cloudflare Worker "relay" delivers the alert ═══
+var WP_PUB = 'BBjU7NtgZ4cxZ0BJ9b7FhQUOvCCqY9sK8UOmzzMxQXsRmRKVWcuGmHgjXhQjX492y9qkuCJbQmDE5nofrWz_IZc';
+function wpB64(buf) { var s = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function wpUnb64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+function wpHash(s) { var x = 5381; for (var i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return 'e' + (x >>> 0).toString(36); }
+function wpLocal(path) {
+  var v = null; try { v = syncGet(path); } catch (e) {} if (v != null) return v;
+  try { if (typeof _backupData !== 'undefined' && _backupData && _backupData[path] !== undefined) return _backupData[path]; } catch (e) {}
+  try { if (typeof ktLocal === 'function') return ktLocal(path, null); } catch (e) {} return null;
+}
+function wpRead(path, cb) {
+  var done = false, fin = function (v) { if (done) return; done = true; cb(v); };
+  try { if (typeof db !== 'undefined' && db) { setTimeout(function () { fin(wpLocal(path)); }, 2500); db.ref('argilan/' + path).once('value').then(function (s) { var v = s.val(); fin(v != null ? v : wpLocal(path)); }).catch(function () { fin(wpLocal(path)); }); return; } } catch (e) {}
+  fin(wpLocal(path));
+}
+// remember who has closed-app alerts on, so the old ntfy alerts stay quiet for them (no double alerts)
+window._pushOn = window._pushOn || {};
+function wpWatch() {
+  if (window._wpWatching || typeof syncOn !== 'function') return; window._wpWatching = true;
+  var relay = null, subs = {};
+  function upd() { var o = {}; if (relay) Object.keys(subs || {}).forEach(function (id) { if (subs[id] && Object.keys(subs[id]).length) o[id] = true; }); window._pushOn = o; }
+  try { syncOn('push_cfg/relay', function (d) { relay = d || null; upd(); }); syncOn('push_subs', function (d) { subs = d || {}; upd(); }); } catch (e) { window._wpWatching = false; }
+}
+setTimeout(wpWatch, 4000);
+function wpPost(relay, subs, payload, owners) {
+  var chunks = []; for (var i = 0; i < subs.length; i += 30) chunks.push(i);
+  chunks.forEach(function (i) {
+    try {
+      fetch(relay, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subs: subs.slice(i, i + 30), payload: payload }) }).then(function (r) { return r.json(); }).then(function (d) {
+        (d.results || []).forEach(function (r, j) { if (r.status === 404 || r.status === 410) { var o = owners[i + j]; if (o) { try { syncSet('push_subs/' + o[0] + '/' + o[1], null); } catch (e) {} } } });
+      }).catch(function () {});
+    } catch (e) {}
+  });
+}
+function wpSend(n) {
+  try {
+    wpRead('push_cfg/relay', function (relay) {
+      if (!relay || typeof relay !== 'string') return;
+      wpRead('push_subs', function (all) {
+        all = all || {}; var ids = Object.keys(all); if (!ids.length) return;
+        var cfg = null; try { cfg = syncGet('notify_cfg'); } catch (e) {}
+        var me = window._loginPersonId, mine = window._wpMyEndpoint || '', subs = [], owners = [];
+        ids.forEach(function (id) {
+          if (id === me && n.type !== 'test') return;
+          var want = typeof ncWants === 'function' ? ncWants(id, n, cfg) : (n.personId === id || n.personId === 'all');
+          if (n.type === 'page' || n.type === 'test') want = n.personId === id;
+          if (n.requiresApproval && id === 'laurel') want = true;
+          if (!want) return;
+          Object.keys(all[id] || {}).forEach(function (k) { var s = all[id][k] && all[id][k].sub; if (s && s.endpoint && (s.endpoint !== mine || n.type === 'test')) { subs.push(s); owners.push([id, k]); } });
+        });
+        if (!subs.length) return;
+        wpPost(relay, subs, { title: n.title, body: n.message, urgent: n.type === 'page' || !!n.urgent, tag: String(n.id || '').slice(0, 50), url: location.href.split('#')[0] }, owners);
+      });
+    });
+  } catch (e) {}
+}
+(function () { var o = window._ntfyNotif; if (o && !o._wp) { var w = function (n) { try { o(n); } catch (e) {} try { wpSend(n); } catch (e) {} }; w._wp = 1; window._ntfyNotif = w; } })();
+
+function WebPushCard(props) {
+  var h = React.createElement, pid = props.personId, admin = !!props.isAdmin;
+  var rS = ktUse('push_cfg/relay', ''), relay = (typeof rS[0] === 'string' ? rS[0] : '') || '', inS = React.useState(''), inp = inS[0], setInp = inS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var tS = React.useState(0), setT = tS[1]; React.useEffect(function () { wpWatch(); }, []);
+  var lk = 'fm_wp_' + pid, mine = ''; try { mine = localStorage.getItem(lk) || ''; } catch (e) {}
+  var ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var standalone = false; try { standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) {}
+  var can = typeof Notification !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
+  var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 14, padding: '12px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, t); };
+  function saveRelay() { var v = inp.trim(); if (!/^https:\/\/[^ ]+$/.test(v)) { setMsg('That does not look right. It should start with https:// and end with .workers.dev'); return; } syncSet('push_cfg/relay', v.replace(/\/+$/, '')); setInp(''); setMsg('✅ Saved. Now turn alerts on for each phone.'); }
+  function enable() {
+    setMsg('Working…');
+    if (!can) { setMsg(ios && !standalone ? 'On iPhone/iPad, first tap Share ▸ "Add to Home Screen", then open the app from the new icon and tap this again.' : 'This browser cannot do closed-app alerts. Try Chrome on Android, or the Home Screen app on iPhone.'); return; }
+    var ask = new Promise(function (res) { try { var r = Notification.requestPermission(function (p) { res(p); }); if (r && r.then) r.then(res); } catch (e) { res(Notification.permission); } });
+    ask.then(function (p) {
+      if (p !== 'granted') { setMsg('Alerts were not allowed. Open your phone Settings ▸ Notifications, allow this app, then tap again.'); return null; }
+      return navigator.serviceWorker.register('sw.js').then(function () { return navigator.serviceWorker.ready; }).then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (sub) {
+          if (sub) { var cur = ''; try { cur = wpB64(sub.options.applicationServerKey); } catch (e) {} if (cur !== WP_PUB) return sub.unsubscribe().then(function () { return null; }); }
+          return sub;
+        }).then(function (sub) { return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: wpUnb64(WP_PUB) }); });
+      }).then(function (sub) {
+        var j = sub.toJSON(); syncSet('push_subs/' + pid + '/' + wpHash(j.endpoint), { sub: { endpoint: j.endpoint, keys: j.keys }, ua: ua.slice(0, 80), at: Date.now() });
+        try { localStorage.setItem(lk, j.endpoint); } catch (e) {} window._wpMyEndpoint = j.endpoint; setT(function (x) { return x + 1; });
+        setMsg('✅ This phone is ready for closed-app alerts.' + (relay ? ' Tap “Send me a test” to check.' : ' (Still needed: Laurel pastes the relay address.)'));
+      });
+    }).catch(function (e) { setMsg('Could not turn on: ' + (e && e.message ? e.message : e)); });
+  }
+  function testMe() {
+    if (!relay) { setMsg('The relay address is not saved yet.'); return; }
+    wpRead('push_subs/' + pid, function (mine2) { var subs = [], owners = []; Object.keys(mine2 || {}).forEach(function (k) { if (mine2[k] && mine2[k].sub) { subs.push(mine2[k].sub); owners.push([pid, k]); } }); if (!subs.length) { setMsg('Turn alerts on for this phone first.'); return; } wpPost(relay, subs, { title: '🧪 Test alert', body: 'If you see this, closed-app alerts work!', urgent: true, tag: 'test', url: location.href.split('#')[0] }, owners); setMsg('Sent! Now lock the screen or close the app — it should pop up within a few seconds.'); });
+  }
+  return h('div', { style: { marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.12)' } },
+    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 4 } }, '🔔 Alerts when the app is closed (free — no extra app)'),
+    h('div', { style: { fontSize: 12, color: '#c8c8d8', lineHeight: 1.6, marginBottom: 8 } }, 'The phone itself shows the alert with its own sound, even with the app closed or the screen off.' + (ios ? ' iPhone: the app must be added to the Home Screen first.' : '')),
+    msg && h('div', { style: { background: 'rgba(0,0,0,.3)', borderRadius: 10, padding: 8, fontSize: 13, color: '#fff', marginBottom: 8, lineHeight: 1.5 } }, msg),
+    admin && h('div', { style: { marginBottom: 8 } },
+      h('div', { style: { fontSize: 12, color: '#C5B8E8', fontWeight: 800, marginBottom: 4 } }, 'RELAY ADDRESS (Laurel, one time) ' + (relay ? '✓ saved' : '— not set yet')),
+      relay && h('div', { style: { fontSize: 11, color: '#9aa', wordBreak: 'break-all', marginBottom: 4 } }, relay),
+      h('div', { style: { display: 'flex', gap: 6 } }, h('input', { value: inp, onChange: function (e) { setInp(e.target.value); }, placeholder: 'Paste the address that ends in .workers.dev', style: { flex: 1, minWidth: 0, background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 13 } }), btn('#FFB74D', '#000', saveRelay, 'Save'))),
+    h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, btn('#4CAF82', '#000', enable, mine ? '🔔 Re-register this phone' : '🔔 Turn on closed-app alerts'), mine && btn('#FFD54F', '#000', testMe, '🧪 Send me a test')),
+    mine && h('div', { style: { fontSize: 12, color: '#7be3ae', marginTop: 6 } }, '✓ This phone is registered.'));
 }
 
 </script>
