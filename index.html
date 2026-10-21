@@ -36258,7 +36258,7 @@ function crLesson(subj, day, kid) {
   if (!l) return null;
   return { title: l.focus || l.unit || '', body: (l.activity || '') };
 }
-function crUrl(title, body, type) { return 'https://classroom.google.com/share?url=' + encodeURIComponent(CR_APP_URL) + '&title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body) + '&itemtype=' + (type || 'assignment'); }
+function crUrl(title, body, type, link) { return 'https://classroom.google.com/share?url=' + encodeURIComponent(link || CR_APP_URL) + '&title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body) + '&itemtype=' + (type || 'assignment'); }
 var CR_DT_DEFAULT = 'https://wol.jw.org/en/wol/h/r1/lp-e';
 function crIsBible(t) { return !!t && /bible discussion/i.test(String(t[0] || '')); }
 function crBibleBody(link) { return 'For: Ryan, Kayla, Ashelyn and Mykah together.\nGo over the day\u2019s text together.\n* Read: Daily text' + (link ? ' ' + link : '') + '\nEach person shares their comment on one thing it teaches about Jehovah and one way to apply it today.\nText your comments, in:\n* 1.) \u201cFamily Study Text Message Group\u201d\n* 2.) \u201cGoogle Classroom\u201d\nThen everyone writes the scripture in their journal book with a pencil. Each day improving your handwriting.'; }
@@ -36282,7 +36282,7 @@ function ClassroomDaily(props) {
   }
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === k) rows.push({ s: ['c_' + id, '📝 ' + (c.subj || 'Assignment')], L: { title: c.title, body: c.body }, cid: id }); });
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === 'all') tgRows.push([c.title, c.body || '', '', 'c' + id, id]); });
-  function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.'; window.open(crUrl(title, bodyTxt, 'assignment'), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
+  function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.'; window.open(crUrl(title, bodyTxt, 'assignment', crIsBible(t) ? dtLink : null), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
   function one(r) { var title = crHead(day) + ' · ' + crName(k).toUpperCase() + ' · ' + r.s[1].replace(/^\S+\s/, '') + ': ' + r.L.title; window.open(crUrl(title, r.L.body || ('Complete today’s ' + r.s[1] + ' lesson.'), 'assignment'), '_blank'); putP(k + '/' + r.s[0], Date.now()); }
   function allText() { return crHead(day) + '\nAssignments for ' + crName(k) + '\n\n' + rows.map(function (r) { return r.s[1] + ': ' + r.L.title + (r.L.body ? '\n   ' + r.L.body.replace(/\n/g, '\n   ') : ''); }).join('\n\n'); }
   function announce() { window.open(crUrl(crHead(day) + ' · ' + crName(k).toUpperCase(), allText(), 'announcement'), '_blank'); rows.forEach(function (r) { putP(k + '/' + r.s[0], Date.now()); }); }
@@ -36304,7 +36304,7 @@ function ClassroomDaily(props) {
           h('input', { value: dtLink, onChange: function (e) { putDT('link', e.target.value); }, placeholder: 'https://wol.jw.org/en/wol/h/r1/lp-e', style: Object.assign({}, S.inp, { flex: 1, minWidth: 160 }) }),
           h('button', { onClick: function () { try { var d = schoolDayDate(day); putDT('link', CR_DT_DEFAULT + '/' + d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate()); } catch (e) {} }, style: S.btn('rgba(255,255,255,.15)') }, '\ud83d\udcc5 Use this day\u2019s date'),
           h('button', { onClick: function () { putDT('link', CR_DT_DEFAULT); }, style: S.btn('rgba(255,255,255,.1)') }, 'Reset')) : null,
-        tgRows.map(function (t, i) { var dn = (posted.all || {})[t[3] || 't' + i]; return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 'none' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, t[0]), t[1] ? ' — ' + t[1].slice(0, 90) + (t[1].length > 90 ? '…' : '') : ''), h('button', { onClick: function () { oneAll(t, i); }, style: S.btn(dn ? '#4CAF82' : '#F9A825') }, dn ? '✓ Added' : '➕ All kids'), admin && t[4] ? h('span', { onClick: function () { putC(t[4], null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
+        tgRows.map(function (t, i) { var dn = (posted.all || {})[t[3] || 't' + i]; return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 'none' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, t[0]), t[1] ? ' — ' + t[1].slice(0, 90) + (t[1].length > 90 ? '…' : '') : '', crIsBible(t) ? h('span', null, ' ', h('a', { href: dtLink, target: '_blank', rel: 'noopener', style: { color: '#90CAF9', fontWeight: 800 } }, '🔗 wol.jw.org daily text')) : null), h('button', { onClick: function () { oneAll(t, i); }, style: S.btn(dn ? '#4CAF82' : '#F9A825') }, dn ? '✓ Added' : '➕ All kids'), admin && t[4] ? h('span', { onClick: function () { putC(t[4], null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
         tg.length ? null : h('div', { style: { fontSize: 11, color: '#9ad' } }, 'No group lessons yet. Admin → Content Manager → All-together group lessons.')),
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#90CAF9', marginBottom: 2 } }, '🙋 Just ' + crName(k)),
       rows.map(function (r) { var done = (posted[k] || {})[r.s[0]]; return h('div', { key: r.s[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, r.s[1]), ' — ' + r.L.title), h('button', { onClick: function () { one(r); }, style: S.btn(done ? '#4CAF82' : '#1A73E8') }, done ? '✓ Added' : '➕ Add'), admin && r.cid ? h('span', { onClick: function () { putC(r.cid, null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
@@ -39624,7 +39624,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v139';
+var FM_BUILD = 'v140';
 (function () {
   function stamp() {
     try {
