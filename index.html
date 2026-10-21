@@ -17,6 +17,40 @@
 <meta name="apple-mobile-web-app-title" content="MyBethelFamilyHome">
 <meta name="application-name" content="MyBethelFamilyHome">
 <script>
+// ═══ ONE FAMILY CLOCK: every screen uses the same date and time (set by the admin), no matter what a device thinks ═══
+(function () {
+  if (window.__fmClockPatched) return; window.__fmClockPatched = true;
+  var RD = Date, RN = RD.now.bind(RD), off = 0;
+  var cfg = { tz: 'America/New_York', dst: 'auto', nudge: 0 };
+  function zoneOff(t, tz) {
+    var p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }).formatToParts(new RD(t)), g = {};
+    p.forEach(function (x) { g[x.type] = +x.value; });
+    return RD.UTC(g.year, g.month - 1, g.day, g.hour === 24 ? 0 : g.hour, g.minute, g.second) - Math.floor(t / 1000) * 1000;
+  }
+  function recompute() {
+    try {
+      var real = RN(), tz = cfg.tz || 'America/New_York', z = zoneOff(real, tz);
+      var y = new RD(real).getUTCFullYear(), jan = zoneOff(RD.UTC(y, 0, 1), tz), jul = zoneOff(RD.UTC(y, 6, 1), tz), std = Math.min(jan, jul), hasDst = jan !== jul;
+      if (hasDst && cfg.dst === 'on') z = std + 3600000; else if (hasDst && cfg.dst === 'off') z = std;
+      var dev = -new RD(real).getTimezoneOffset() * 60000;
+      off = (z - dev) + (+cfg.nudge || 0);
+    } catch (e) { off = (+cfg.nudge || 0); }
+  }
+  class FD extends RD {
+    constructor() { if (arguments.length === 0) super(RN() + off); else super(...arguments); }
+    static now() { return RN() + off; }
+  }
+  window.Date = FD;
+  window._fmClockRaw = RN;
+  window._fmClockCfg = function () { return Object.assign({}, cfg); };
+  window._fmClockOffset = function () { return off; };
+  window._fmClockSet = function (c) { if (c && typeof c === 'object') { cfg = Object.assign({ tz: 'America/New_York', dst: 'auto', nudge: 0 }, c); } recompute(); };
+  try { var raw = localStorage.getItem('_s_clockcfg'); if (raw) cfg = Object.assign(cfg, JSON.parse(raw)); } catch (e) {}
+  recompute(); setInterval(recompute, 60000);
+})();
+
+</script>
+<script>
 /* startup watchdog: if the app has not drawn anything, show what went wrong + a one-tap clean reload */
 window.__fmErrs=[];
 /* iPhone Safari (not installed to home screen) has no Notification API — provide a harmless stand-in so nothing crashes */
@@ -38229,6 +38263,7 @@ function ClockControl(props) {
       h(DeductQueue, { family: props.family }),
       h(PayModeAll, { family: props.family }),
       h(CcReset, { family: props.family, sessions: sessions }),
+      typeof ClockTimeSettings === 'function' && h(Fold, { id: 'clocktime', title: '🕒 Clock, date & daylight saving' }, h(ClockTimeSettings, null)),
       typeof ReadyTimerSettings === 'function' && h(ReadyTimerSettings, null),
       typeof PciSettings === 'function' && h(PciSettings, null)));
 }
@@ -39650,8 +39685,45 @@ function LabHow(props) {
 
 </script>
 <script>
+// ═══ ADMIN: clock, date & daylight saving for every member ═══
+var CK_ZONES = [['America/New_York', 'Eastern (New York)'], ['America/Chicago', 'Central'], ['America/Denver', 'Mountain'], ['America/Phoenix', 'Arizona (no daylight saving)'], ['America/Los_Angeles', 'Pacific'], ['America/Anchorage', 'Alaska'], ['Pacific/Honolulu', 'Hawaii']];
+(function () {
+  function start() { try { syncOn('clockcfg', function (v) { if (v && typeof v === 'object' && typeof window._fmClockSet === 'function') window._fmClockSet(v); }, false); } catch (e) { setTimeout(start, 1500); } }
+  setTimeout(start, 1200);
+})();
+function ClockTimeSettings() {
+  var h = React.createElement, cS = ktUse('clockcfg', null), saved = cS[0] || {}, cfg = Object.assign({ tz: 'America/New_York', dst: 'auto', nudge: 0 }, saved);
+  var tS = React.useState(0), tk = tS[0], setTk = tS[1], dS = React.useState(''), dt = dS[0], setDt = dS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
+  var now = new Date(), raw = new (Object.getPrototypeOf(Date))(window._fmClockRaw ? window._fmClockRaw() : 0);
+  function save(next) { var c = Object.assign({}, cfg, next); try { syncSet('clockcfg', c); } catch (e) {} try { if (typeof window._fmClockSet === 'function') window._fmClockSet(c); } catch (e) {} try { localStorage.setItem('_s_clockcfg', JSON.stringify(c)); } catch (e) {} setMsg('✓ Saved — every device picks this up.'); setTimeout(function () { setMsg(''); }, 3500); }
+  var btn = function (on, fn, t) { return h('button', { onClick: fn, style: { background: on ? '#4CAF82' : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 10, padding: '9px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, t); };
+  var lbl = { fontSize: 12, fontWeight: 900, color: '#FFD54F', margin: '12px 0 6px' };
+  function setExact() { if (!dt) return; var want = new RD2(dt).getTime(); if (isNaN(want)) return; var base = window._fmClockRaw() + (window._fmClockOffset() - (+cfg.nudge || 0)); save({ nudge: want - base }); }
+  var RD2 = Object.getPrototypeOf(Date);
+  return h('div', { style: { padding: '0 12px 12px' } },
+    h('div', { style: { textAlign: 'center', background: 'rgba(255,255,255,.07)', borderRadius: 14, padding: 12, margin: '6px 0' } },
+      h('div', { style: { fontSize: 30, fontWeight: 900, color: '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })),
+      h('div', { style: { fontSize: 14, color: '#c8c8d8' } }, now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })),
+      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 4 } }, 'This is the time every screen in the app uses. This device says: ' + raw.toLocaleString())),
+    h('div', { style: lbl }, 'Time zone for the whole family'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, CK_ZONES.map(function (z) { return btn(cfg.tz === z[0], function () { save({ tz: z[0] }); }, z[1]); })),
+    h('div', { style: lbl }, 'Daylight saving time'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, btn(cfg.dst === 'auto', function () { save({ dst: 'auto' }); }, 'Automatic'), btn(cfg.dst === 'on', function () { save({ dst: 'on' }); }, 'Always ON (summer time)'), btn(cfg.dst === 'off', function () { save({ dst: 'off' }); }, 'Always OFF (standard time)')),
+    h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 4 } }, 'Automatic switches by itself on the right dates. Use ON or OFF only if it is ever wrong.'),
+    h('div', { style: lbl }, 'Fine-tune the clock'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, [[-60, '−1 hour'], [-1, '−1 min'], [1, '+1 min'], [60, '+1 hour']].map(function (x) { return btn(false, function () { save({ nudge: (+cfg.nudge || 0) + x[0] * 60000 }); }, x[1]); })),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } },
+      h('input', { type: 'datetime-local', value: dt, onChange: function (e) { setDt(e.target.value); }, style: { background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, color: '#fff', padding: 9, fontSize: 14 } }),
+      btn(false, setExact, 'Set this exact date & time')),
+    (+cfg.nudge ? h('div', { style: { fontSize: 11, color: '#FFB74D', marginTop: 8 } }, 'Manual adjustment active: ' + Math.round((+cfg.nudge) / 60000) + ' min. ', h('button', { onClick: function () { save({ nudge: 0 }); }, style: { background: 'none', border: 'none', color: '#90CAF9', textDecoration: 'underline', cursor: 'pointer', fontSize: 11 } }, 'Remove it')) : null),
+    msg && h('div', { style: { fontSize: 12, color: '#81C784', marginTop: 8 } }, msg));
+}
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v142';
+var FM_BUILD = 'v143';
 (function () {
   function stamp() {
     try {
