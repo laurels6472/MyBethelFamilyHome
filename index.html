@@ -36263,7 +36263,7 @@ function crHead(day) { var dl = ''; try { dl = ' · ' + schoolDayLabel(day, fals
 function ClassroomDaily(props) {
   var h = React.createElement, S = crS(), admin = !!props.isAdmin, me = props.personId;
   var kids = admin ? CR_KIDS : CR_KIDS.filter(function (k) { return k === me; });
-  var dS = React.useState(crDayNum()), day = dS[0], setDay = dS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], kS = React.useState(kids[0] || 'ryan'), kid = kS[0], setKid = kS[1];
+  var dS = React.useState(props.startDay || crDayNum()), day = dS[0], setDay = dS[1], oS = React.useState(!!props.startOpen), open = oS[0], setOpen = oS[1], kS = React.useState(kids[0] || 'ryan'), kid = kS[0], setKid = kS[1];
   var nS = React.useState({ subj: '', title: '', body: '', who: 'all' }), nf = nS[0], setNf = nS[1];
   var DT = fpDoc('classroom/dailytext/' + day, {}), dtLink = (DT[0] && DT[0].link) || CR_DT_DEFAULT, putDT = DT[1];
   var P = fpDoc('classroom/posted/' + day, {}), posted = P[0], putP = P[1], CU = fpDoc('classroom/custom/' + day, {}), cust = CU[0], putC = CU[1];
@@ -36291,7 +36291,10 @@ function ClassroomDaily(props) {
     open ? h('div', { style: { marginTop: 10 } },
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' } },
         admin ? kids.map(function (x) { return h('button', { key: x, onClick: function () { setKid(x); }, style: S.btn(k === x ? '#1A73E8' : 'rgba(255,255,255,.1)') }, crName(x)); }) : null,
-        h('button', { onClick: function () { setDay(Math.max(1, day - 1)); }, style: S.btn('rgba(255,255,255,.1)') }, '‹'), h('span', { style: { fontSize: 12, color: '#fff', fontWeight: 800 } }, 'Day ' + day), h('button', { onClick: function () { setDay(Math.min(180, day + 1)); }, style: S.btn('rgba(255,255,255,.1)') }, '›')),
+        h('button', { onClick: function () { setDay(Math.max(1, day - 1)); }, style: S.btn('rgba(255,255,255,.1)') }, '‹'),
+        h('select', { value: day, onChange: function (e) { setDay(+e.target.value); }, style: Object.assign({}, S.inp, { width: 'auto', fontWeight: 800, minWidth: 150 }) }, Array.apply(null, { length: 180 }).map(function (_, i) { var n = i + 1, lb = ''; try { lb = schoolDayLabel(n, false); } catch (e) {} return h('option', { key: n, value: n }, 'Day ' + n + (lb ? ' · ' + lb : '')); })),
+        h('button', { onClick: function () { setDay(Math.min(180, day + 1)); }, style: S.btn('rgba(255,255,255,.1)') }, '›'),
+        h('button', { onClick: function () { setDay(crDayNum()); }, style: S.btn('rgba(255,213,79,.3)') }, 'Today')),
       h('div', { style: { margin: '2px 0 8px', padding: 8, borderRadius: 10, background: 'rgba(255,213,79,.1)', border: '1px solid rgba(255,213,79,.35)' } },
         h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, '👨‍👩‍👧‍👦 All together — one assignment for the whole class'),
         admin ? h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', margin: '2px 0 6px', flexWrap: 'wrap' } }, h('span', { style: { fontSize: 11, color: '#FFD54F', fontWeight: 800 } }, '\ud83d\udd17 Daily text link (Day ' + day + ')'),
@@ -39450,6 +39453,7 @@ function TeacherHome(props) {
   var rows = ssLessons(tk, tday), en = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[tday - 1]) || null;
   var qs = (function () { try { return bcQuestions(tk, Math.min(cfg.through, tday)).filter(function (q) { return q.day === tday; }); } catch (e) { return []; } })();
   return h('div', null,
+    typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + tday, isAdmin: true, personId: 'laurel', startDay: tday, startOpen: true }),
     h('div', { style: { background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', borderRadius: 16, padding: 14, marginBottom: 12 } },
       h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '👩‍🏫 Mom / Teacher'),
       h('div', { style: { fontSize: 14, color: '#C5CAE9', lineHeight: 1.5 } }, 'Day ' + tday + ' · ' + ssDayLabel(tday) + (en ? ' · ' + en[3] : '') + '. What to say, how to say it, and the answers. Only you can see this.'),
@@ -39617,7 +39621,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v137';
+var FM_BUILD = 'v138';
 (function () {
   function stamp() {
     try {
