@@ -22385,7 +22385,7 @@ var SCHOOL_START_DATE = '2026-10-06'; // First day of school — Tuesday Oct 6, 
 var SCHOOL_END_DATE = '2027-06-29'; // 180th school day — Tuesday Jun 29, 2027 (Mon-Fri, minus the 11 holidays listed below, which are days off)
 var SCHOOL_START_MS = new Date(SCHOOL_START_DATE + 'T08:00:00').getTime();
 
-var SC_OFF_DAYS = ['2026-10-12','2026-11-11','2026-11-26','2026-11-27','2026-12-24','2026-12-25','2027-01-01','2027-01-18','2027-02-15','2027-05-10','2027-05-31'];
+var SC_OFF_DAYS = ['2026-11-11','2026-11-26','2026-11-27','2026-12-24','2026-12-25','2027-01-01','2027-01-18','2027-02-15','2027-05-10','2027-05-31'];
 // Calendar date of school day n (Day 1 = Tue Oct 6, 2026; Mon-Fri, holidays are days off)
 function schoolDayDate(n) {
   var d = new Date(SCHOOL_START_DATE + 'T12:00:00'), count = 0, guard = 0;
@@ -22416,7 +22416,6 @@ function getSchoolDayInfo() {
   // SC Federal + state holidays excluded — 2026-27 school year
   // Source: timeanddate.com — 11 holidays are days off so the kids aren't overworked
   var SC_HOLIDAYS_2026_27 = [
-    '2026-10-12', // Columbus Day (day off — not celebrated, just a rest day)
     '2026-11-11', // Veterans Day
     '2026-11-26', // Thanksgiving Day
     '2026-11-27', // Day After Thanksgiving
@@ -36338,11 +36337,12 @@ function ClassroomDaily(props) {
     return function () { clearTimeout(tm); if (u) u(); };
   }, []);
   function isDone(kk, id) { var pk = posted[kk] || {}; if (pk[id]) return true; if (id === 'bible') { if ((posted.all || {}).t0) return true; return CR_KIDS.some(function (x) { return (posted[x] || {}).bible; }); } return false; }
-  function markSame(r) {
-    var now = Date.now(); putP(k + '/' + r.s[0], now);
+  function markSame(r, clear) {
+    var now = clear ? null : Date.now(); putP(k + '/' + r.s[0], now);
     if (r.s[0] === 'bible') { CR_KIDS.forEach(function (x) { putP(x + '/bible', now); }); putP('all/t0', now); return; }
     try { CR_KIDS.forEach(function (x) { if (x === k || typeof ssLessons !== 'function' || !ssKid(x)) return; ssLessons(x, day).forEach(function (o) { if (o.id === r.s[0] && o.topic === r.L.title && ssClassroomBody(x, o, day).replace(crName(x), '') === String(r.L.body).replace(crName(k), '')) putP(x + '/' + o.id, now); }); }); } catch (e) {}
   }
+  function undoAll(t, i) { putP('all/' + (t[3] || 't' + i), null); if (crIsBible(t)) CR_KIDS.forEach(function (x) { putP(x + '/bible', null); }); }
   function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.'; window.open(crUrl(title, bodyTxt, 'assignment', crIsBible(t) ? dtLink : null), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); if (crIsBible(t)) CR_KIDS.forEach(function (x) { putP(x + '/bible', Date.now()); }); }
   function one(r) { var title = crHead(day) + ' · ' + crName(k).toUpperCase() + ' · ' + r.s[1].replace(/^\S+\s/, '') + ': ' + r.L.title; window.open(crUrl(title, r.L.body || ('Complete today’s ' + r.s[1] + ' lesson.'), 'assignment'), '_blank'); markSame(r); }
   function allText() { return crHead(day) + '\nAssignments for ' + crName(k) + '\n\n' + rows.map(function (r) { return r.s[1] + ': ' + r.L.title + (r.L.body ? '\n   ' + r.L.body.replace(/\n/g, '\n   ') : ''); }).join('\n\n'); }
@@ -36365,10 +36365,10 @@ function ClassroomDaily(props) {
           h('input', { value: dtLink, onChange: function (e) { putDT('link', e.target.value); }, placeholder: 'https://wol.jw.org/en/wol/h/r1/lp-e', style: Object.assign({}, S.inp, { flex: 1, minWidth: 160 }) }),
           h('button', { onClick: function () { try { var d = schoolDayDate(day); putDT('link', CR_DT_DEFAULT + '/' + d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate()); } catch (e) {} }, style: S.btn('rgba(255,255,255,.15)') }, '\ud83d\udcc5 Use this day\u2019s date'),
           h('button', { onClick: function () { putDT('link', CR_DT_DEFAULT); }, style: S.btn('rgba(255,255,255,.1)') }, 'Reset')) : null,
-        tgRows.map(function (t, i) { var dn = (posted.all || {})[t[3] || 't' + i]; return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 'none' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, t[0]), t[1] ? ' — ' + t[1].slice(0, 90) + (t[1].length > 90 ? '…' : '') : '', crIsBible(t) ? h('span', null, ' ', h('a', { href: dtLink, target: '_blank', rel: 'noopener', style: { color: '#90CAF9', fontWeight: 800 } }, '🔗 wol.jw.org daily text')) : null), h('button', { onClick: function () { oneAll(t, i); }, style: S.btn(dn ? '#4CAF82' : '#F9A825') }, dn ? '✓ Added' : '➕ All kids'), admin && t[4] ? h('span', { onClick: function () { putC(t[4], null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
+        tgRows.map(function (t, i) { var dn = (posted.all || {})[t[3] || 't' + i]; return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 'none' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, t[0]), t[1] ? ' — ' + t[1].slice(0, 90) + (t[1].length > 90 ? '…' : '') : '', crIsBible(t) ? h('span', null, ' ', h('a', { href: dtLink, target: '_blank', rel: 'noopener', style: { color: '#90CAF9', fontWeight: 800 } }, '🔗 wol.jw.org daily text')) : null), h('button', { onClick: function () { if (dn) undoAll(t, i); else oneAll(t, i); }, style: S.btn(dn ? '#4CAF82' : '#F9A825') }, dn ? '✓ Added · tap to undo' : '➕ All kids'), admin && t[4] ? h('span', { onClick: function () { putC(t[4], null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
         tg.length ? null : h('div', { style: { fontSize: 11, color: '#9ad' } }, 'No group lessons yet. Admin → Content Manager → All-together group lessons.')),
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#90CAF9', marginBottom: 2 } }, '🙋 Just ' + crName(k)),
-      rows.map(function (r) { var done = isDone(k, r.s[0]); return h('div', { key: r.s[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, r.s[1]), ' — ' + r.L.title), h('button', { onClick: function () { one(r); }, style: S.btn(done ? '#4CAF82' : '#1A73E8') }, done ? '✓ Added' : '➕ Add'), admin && r.cid ? h('span', { onClick: function () { putC(r.cid, null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
+      rows.map(function (r) { var done = isDone(k, r.s[0]); return h('div', { key: r.s[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, r.s[1]), ' — ' + r.L.title), h('button', { onClick: function () { if (done) markSame(r, true); else one(r); }, style: S.btn(done ? '#4CAF82' : '#1A73E8') }, done ? '✓ Added · tap to undo' : '➕ Add'), admin && r.cid ? h('span', { onClick: function () { putC(r.cid, null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
       h('div', { style: { display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' } }, h('button', { onClick: copy, style: S.btn('rgba(255,255,255,.15)') }, '📋 Copy the list')),
       admin ? h('div', { style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.1)' } }, h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', marginBottom: 4 } }, '➕ Add your own assignment for Day ' + day),
         h('input', { value: nf.subj, onChange: function (e) { setNf(Object.assign({}, nf, { subj: e.target.value })); }, placeholder: 'Subject (e.g. Art, Music, Life skills)', style: Object.assign({}, S.inp, { width: '100%', marginBottom: 6 }) }),
@@ -37579,7 +37579,7 @@ function bcKidize(t, grade) {
   if (grade > 5) return t;
   return String(t || '').replace(/tell (a )?(grown-up|adult|parent|Mom or Dad)( one thing)?/gi, function (m, a, b, c) { return 'type (or speak) ' + (c ? 'one thing' : 'it'); }).replace(/then talk about/gi, 'then type or speak');
 }
-function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} return { date: (c && c.date) || '2026-10-26', day: (c && +c.day) || 12 }; }
+function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} var legacy = c && c.date === '2026-10-26' && (+c.day || 12) === 12; return { date: (c && !legacy && c.date) || '2026-10-21', day: (c && !legacy && +c.day) || 12 }; }
 function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(ssRestartCfg().day - 1, (typeof cuTodayDay === 'function' ? cuTodayDay() : 11) || 11); return { on: true, through: (c && +c.through) || t }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
 function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
@@ -39264,7 +39264,7 @@ function SchoolCatchCard(props) {
     h('div', { onClick: function () { setOpen(open === n ? '' : n); }, style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' } }, h('div', { style: { fontSize: 22 } }, done ? '✅' : n === 'read' ? '1️⃣' : '2️⃣'), h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff' } }, title), h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, sub2)), h('div', { style: { color: '#c8c8d8' } }, open === n ? '▲' : '▼')), on && content); };
   var qs = bcQuestions(sid, through), ans = sub.answers || {}, answered = qs.filter(function (x) { return (ans[x.id] || '').trim().length > 2; }).length;
   return h('div', { style: card },
-    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, '📝 Review quiz — Oct 6 to Oct 21 (Days 1–' + through + ')'),
+    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, '📝 Review quiz — ' + ssDayLabelShort(1) + ' to ' + ssDayLabelShort(through) + ' (Days 1–' + through + ')'),
     h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.5, marginTop: 2 } }, 'We missed school, so there are no old assignments. Read the review, then answer 2 questions for each school day. Tell what you learned about Jehovah and his creation.'),
     step('read', 'Read the catch-up lesson', readDone ? 'Done' : 'One page with the big ideas', readDone, open === 'read', h('div', { style: { marginTop: 8 } },
       typeof ListenBar === 'function' && h(ListenBar, { text: ssCatchText(groups), title: 'Catch-up lesson' }),
@@ -39302,10 +39302,11 @@ function ssLessonDay(rs) {
   var n = 0, d = new Date(st), g = 0; while (d <= t && g++ < 400) { var w = d.getDay(); if (w !== 0 && w !== 6) n++; d.setDate(d.getDate() + 1); }
   return Math.min(180, (+rs.day || 1) + Math.max(1, n) - 1);
 }
+function ssDayLabelShort(n) { try { return schoolDayDate(n).toLocaleDateString([], { month: 'short', day: 'numeric' }); } catch (e) { return ''; } }
 function ssDayLabel(n) { try { return typeof schoolDayDate === 'function' ? schoolDayDate(n).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : ''; } catch (e) { return ''; } }
 function SchoolSimple(props) {
   var h = React.createElement, kids = ssKids(), admin = !!props.isAdmin;
-  var rsS = ktUse('school/restart', null), rsv = rsS[0] || {}, restart = { date: rsv.date || '2026-10-26', day: +rsv.day || 12 };
+  var rsS = ktUse('school/restart', null), rsv = rsS[0] || {}, restart = (rsv.date === '2026-10-26' && (+rsv.day || 12) === 12) ? { date: '2026-10-21', day: 12 } : { date: rsv.date || '2026-10-21', day: +rsv.day || 12 };
   var vdS = React.useState(null), viewDay = vdS[0], setViewDay = vdS[1];
   var autoDay = ssLessonDay(restart), day = admin && viewDay != null ? viewDay : autoDay, qDay = day || 0;
   var stS = React.useState(false), setOpenSet = stS[0], setSetOpen = stS[1];
@@ -39723,7 +39724,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v143';
+var FM_BUILD = 'v145';
 (function () {
   function stamp() {
     try {
