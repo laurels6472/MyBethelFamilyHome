@@ -7335,6 +7335,7 @@ function Dashboard({
   useEffect(() => { const f = () => setFocusV(v => v + 1); window.addEventListener('fm-focus', f); return () => window.removeEventListener('fm-focus', f); }, []);
   let tabs = buildTabs();
   const _navSaved = ktUse('navorder/' + effectiveId, null)[0];
+  const _ericOK = ktUse('navperm/eric', false)[0];
   if (typeof navApplyOrder === 'function') tabs = navApplyOrder(tabs, _navSaved, effectiveRole);
   if (window._focusOn && !isOwner) tabs = tabs.filter(t => ['money', 'board', 'journal', 'bills', 'accounts'].indexOf(t.id) === -1);
   useEffect(() => { if (window._focusOn && !isOwner && ['money', 'board', 'journal', 'bills', 'accounts'].indexOf(tab) !== -1) setTab(effectiveRole === 'child' ? 'start' : 'clock'); });
@@ -7355,7 +7356,7 @@ function Dashboard({
     fam.filter(p => !p.deleted).map(p => /*#__PURE__*/React.createElement('button', { key: p.id, onClick: () => { handleSwitch(p.id); setShowSwitch(false); }, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: p.color + '22', border: '1px solid ' + p.color + '66', borderRadius: 16, padding: '12px 14px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', textAlign: 'left' } },
       /*#__PURE__*/React.createElement('span', { style: { fontSize: 26 } }, p.emoji), p.name + (p.id === personId ? ' (me)' : ''), effectiveId === p.id ? ' ✓' : '')),
     /*#__PURE__*/React.createElement('button', { onClick: () => setShowSwitch(false), style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 20, padding: 12, fontWeight: 800, marginTop: 8, cursor: 'pointer' } }, 'Close'));
-  if (showArrange && typeof NavArrange === 'function') return React.createElement(NavArrange, { tabs: tabs, color: effectivePerson && effectivePerson.color, onClose: () => setShowArrange(false), onSave: (ids) => { try { syncSet('navorder/' + effectiveId, ids); } catch (e) {} setShowArrange(false); }, onReset: () => { try { syncSet('navorder/' + effectiveId, null); } catch (e) {} setShowArrange(false); } });
+  if (showArrange && typeof NavArrange === 'function') { const _kidP = (isAdmin && (personId === 'laurel' || (personId === 'eric' && _ericOK))) ? fam.filter(p => p.role === 'child' && !p.deleted) : null; const _kt = [{id:'start',l:'⏱ My Day Clock-In'},{id:'work',l:'💼 Work & School'},{id:'habits',l:'🏆 Habit Leaders'},{id:'money',l:'💰 Money'},{id:'menu',l:'🍳 Kitchen'},{id:'journal',l:'📓 Journal'},{id:'health',l:'🩺 Health'}]; return React.createElement(NavArrange, { tabs: tabs, kidTabs: _kt, people: _kidP, permOn: !!_ericOK, onPerm: personId === 'laurel' && _kidP ? (v) => { try { syncSet('navperm/eric', !!v); } catch (e) {} } : null, color: effectivePerson && effectivePerson.color, onClose: () => setShowArrange(false), onSave: (ids, w) => { try { syncSet('navorder/' + (w || effectiveId), ids); } catch (e) {} setShowArrange(false); }, onReset: (w) => { try { syncSet('navorder/' + (w || effectiveId), null); } catch (e) {} setShowArrange(false); } }); }
   if (showNav) return React.createElement('div', { style: { position: 'fixed', inset: 0, background: '#0f0c29', zIndex: 1000, overflowY: 'auto', padding: 20 } },
     React.createElement('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 12 } }, '☰ Menu — where do you want to go?'),
     tabs.map(t => React.createElement('button', { key: t.id, onClick: () => { setTab(t.id); setShowNav(false); try { window.scrollTo({ top: 0 }); } catch (e) {} }, style: { display: 'block', width: '100%', textAlign: 'left', background: tab === t.id ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.07)', border: '1px solid ' + (tab === t.id ? '#FFD54F' : 'rgba(255,255,255,.15)'), borderRadius: 16, padding: '14px 16px', marginBottom: 8, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer' } }, t.l + (tab === t.id ? '  ✓' : ''))),
@@ -31763,6 +31764,14 @@ function StartMyDay(props) {
       onTap && h('span', { style: { color: '#c8c8d8', fontSize: 14 } }, open ? '▲' : '▼'));
   }
   var box = function (state, kids) { return h('div', { style: { background: state === 'now' ? 'rgba(255,213,79,.08)' : 'rgba(255,255,255,.05)', border: '2px solid ' + (state === 'now' ? C.now : state === 'done' ? 'rgba(76,175,130,.5)' : 'rgba(255,255,255,.1)'), borderRadius: 18, padding: 14, marginBottom: 12 } }, kids); };
+  var evenSubmit = h('div', { style: { marginTop: 4 } },
+      subAsk && runNow.length > 0 && h('div', { style: { background: 'rgba(239,83,80,.15)', border: '2px solid #EF5350', borderRadius: 16, padding: 12, marginBottom: 8, color: '#fff' } },
+        h('div', { style: { fontWeight: 900, fontSize: 15 } }, '⏱ You are still clocked into: ' + runNow.map(function (r) { return actName(r.activity); }).join(', ')),
+        h('div', { style: { fontSize: 13, color: '#ffd0d0', margin: '4px 0 8px', lineHeight: 1.5 } }, 'Go clock out of each one first. If you submit anyway, forgetting to clock out takes ' + (typeof otFmt === 'function' && typeof otCfg === 'function' ? otFmt(otCfg().foAmt) : 'a small deduction') + ' for each.'),
+        h('div', { style: { display: 'flex', gap: 8 } },
+          h('button', { onClick: function () { setSubAsk(false); }, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '↩ Go clock out'),
+          h('button', { onClick: function () { submitDay(true); }, style: { flex: 1, background: 'rgba(239,83,80,.8)', color: '#fff', border: 'none', borderRadius: 14, padding: 12, fontWeight: 900, cursor: 'pointer' } }, 'Submit anyway'))),
+      !subAsk && big('#7E57C2', '#fff', function () { if (runNow.length) setSubAsk(true); else submitDay(false); }, '🏁  I’m done with my day — submit my day for points and pay'));
   var s1 = clocked ? 'done' : 'now', s2 = !clocked ? 'lock' : submitted ? 'done' : 'now';
   return h('div', { style: { padding: '8px 14px 24px' } },
     h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff' } }, greet + (nm ? ', ' + nm : '') + '! 👋'),
@@ -31781,12 +31790,16 @@ function StartMyDay(props) {
       secHead(true, '✅', '2. My day — check things off', !clocked ? 'Start your day first' : ready ? 'Clock in to what you are doing, then check it off' : 'Get ready first, then Work and Household Work unlock', s2, null),
       clocked && h('div', { style: { marginTop: 10 } },
         !ready && countdown,
-        typeof HabitsStack === 'function' ? h(HabitsStack, { personId: pid, name: nm }) : props.habitsAllEl,
+        (function () {
+          var mornFoot = h('div', null,
         !ready && mornDone && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 10, color: '#fff', fontWeight: 900, fontSize: 16, textAlign: 'center' } }, '✅ Every morning step is checked off!'),
-        !ready && big('#4CAF82', '#000', readyGo, "✅ I'm ready for the day — unlock Work & Household Work"),
-        ready && h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } },
-          h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
-          !submitted && h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null })); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Not ready')),
+            !ready && big('#4CAF82', '#000', readyGo, "✅ I'm ready for the day — unlock Work & Household Work"),
+            ready && h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } },
+              h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
+              !submitted && h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null })); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Not ready')));
+          var eveFoot = (!submitted && typeof clocked !== 'undefined' && clocked) ? evenSubmit : null;
+          return typeof HabitsStack === 'function' ? h(HabitsStack, { personId: pid, name: nm, ready: ready, morningFoot: mornFoot, eveningFoot: eveFoot }) : h('div', null, props.habitsAllEl, mornFoot);
+        })(),
         typeof ClockNextStrip === 'function' && h(ClockNextStrip, { personId: pid, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, ready: ready }),
         props.clockEl,
         depts,
@@ -31794,15 +31807,6 @@ function StartMyDay(props) {
         ready && big('rgba(38,166,154,.25)', '#fff', go('chores'), '🧹  Chores & order of operations — full list'),
         savedCard,
         typeof ClockWhereBlock === 'function' && h(ClockWhereBlock, { personId: pid, sessions: props.sessions }))))),
-    // ── DONE FOR THE DAY ──
-    clocked && !submitted && h('div', { style: { marginTop: 4 } },
-      subAsk && runNow.length > 0 && h('div', { style: { background: 'rgba(239,83,80,.15)', border: '2px solid #EF5350', borderRadius: 16, padding: 12, marginBottom: 8, color: '#fff' } },
-        h('div', { style: { fontWeight: 900, fontSize: 15 } }, '⏱ You are still clocked into: ' + runNow.map(function (r) { return actName(r.activity); }).join(', ')),
-        h('div', { style: { fontSize: 13, color: '#ffd0d0', margin: '4px 0 8px', lineHeight: 1.5 } }, 'Go clock out of each one first. If you submit anyway, forgetting to clock out takes ' + (typeof otFmt === 'function' && typeof otCfg === 'function' ? otFmt(otCfg().foAmt) : 'a small deduction') + ' for each.'),
-        h('div', { style: { display: 'flex', gap: 8 } },
-          h('button', { onClick: function () { setSubAsk(false); }, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '↩ Go clock out'),
-          h('button', { onClick: function () { submitDay(true); }, style: { flex: 1, background: 'rgba(239,83,80,.8)', color: '#fff', border: 'none', borderRadius: 14, padding: 12, fontWeight: 900, cursor: 'pointer' } }, 'Submit anyway'))),
-      !subAsk && big('#7E57C2', '#fff', function () { if (runNow.length) setSubAsk(true); else submitDay(false); }, '🏁  I am done with the day — submit for points')),
     h('div', { style: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 10, lineHeight: 1.6 } }, 'Your parents can see when you clock in and finish each step.'));
 }
 
@@ -31976,14 +31980,16 @@ function rtWithWaterOLD(list, period) {
 }
 function rtNowPeriod() { var h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
 // Morning has only 15 minutes. Breakfast and the Daily Text are NOT habits (they are family time on the schedule).
-var RT_MORN_MINS = [[/wake/i, 1], [/bathroom|restroom|toilet/i, 2], [/make (your |the )?bed|bed\b/i, 1], [/teeth/i, 2], [/face|skincare/i, 1], [/deodorant/i, 1], [/dress|clothes|outfit/i, 4], [/hair/i, 3]];
+var RT_MORN_MINS = [[/wake/i, 1], [/bathroom|restroom|toilet/i, 2], [/make (your |the )?bed|bed\b/i, 1], [/teeth/i, 2], [/face|skincare/i, 1], [/deodorant/i, 1], [/dress|clothes|outfit/i, 4], [/hair/i, 2], [/medicine|medication|meds/i, 1], [/hands/i, 1]];
 function rtNotMorningHabit(x) { return !/breakfast|daily text|personal bible reading|spiritual (prep|review|preparation)/i.test(String(x)); }
 function rtMornFit(list) {
   return list.map(function (x) { var t = String(x); if (/\|\s*\d/.test(t)) return t; var m = 1; RT_MORN_MINS.some(function (r) { if (r[0].test(t)) { m = r[1]; return true; } return false; }); return t + ' | ' + m; });
 }
+var RT_KID_MORNING = ['Wake up when called | 1', 'Use the bathroom | 2', 'Make your bed | 1', 'Get your medicine | 1', 'Brush your teeth | 2', 'Wash your hands and face | 1', 'Put on deodorant | 1', 'Get dressed | 4', 'Comb your hair | 2'];
 function rtDefaults(name, period) {
   var nm = (typeof MORNING_ITEMS !== 'undefined' && MORNING_ITEMS[name]) ? name : 'Ryan';
-  if (period === 'morning') return rtWithWater(rtMornFit(((typeof MORNING_ITEMS !== 'undefined' ? MORNING_ITEMS[nm] : []) || []).filter(rtNotMorningHabit)), 'morning');
+  if (period === 'morning') return RT_KID_MORNING.slice();
+  if (period === 'morning_old') return rtWithWater(rtMornFit(((typeof MORNING_ITEMS !== 'undefined' ? MORNING_ITEMS[nm] : []) || []).filter(rtNotMorningHabit)), 'morning');
   if (period === 'afternoon') return rtWithWater(RT_AFTERNOON, 'afternoon');
   var b = typeof BEDTIME_ITEMS !== 'undefined' ? BEDTIME_ITEMS : {};
   return rtWithWater(['Devices put away at 8 PM'].concat(b[name] || b.Ryan || []), 'evening');
@@ -32235,6 +32241,7 @@ function RoutinesAdmin(props) {
   return h('div', { style: { margin: '10px 14px' } },
     h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'rgba(126,87,194,.15)', border: '1px solid rgba(126,87,194,.5)', borderRadius: 14, padding: 14, color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '🌱 Set up habits & chores ' + (open ? '▾' : '▸')),
     open && h('div', { style: Object.assign({}, RT_CARD, { marginTop: 8 }) },
+      h(RtAutoTimerToggle, null),
       h('div', { style: { fontSize: 13, color: '#c8c8d8', marginBottom: 8, lineHeight: 1.5 } }, 'Habits are the small daily things (hygiene, getting dressed). One per line. Add " | 3" at the end of a line to give it 3 minutes (it is 2 minutes if you leave it off). Leave a box as it is to use the family default. Pick Everyone or one child.'),
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 } }, [{ id: '__all', name: 'Everyone', emoji: '👪' }].concat(fam).map(function (p) { var on = sel === p.id; return h('button', { key: p.id, onClick: function () { setSel(p.id); }, style: { padding: '8px 12px', borderRadius: 18, border: '1px solid ' + (on ? '#9C8DC4' : 'rgba(255,255,255,.2)'), background: on ? '#9C8DC4' : 'transparent', color: on ? '#000' : '#ddd', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, (p.emoji || '') + ' ' + p.name); })),
       RT_PERIODS.map(function (x) {
@@ -32316,6 +32323,11 @@ function WaterTimes(props) {
       return h('button', { key: i, onClick: function () { drink(i); }, style: { flex: '1 1 30%', minWidth: 88, padding: '7px 4px', borderRadius: 12, border: '2px solid ' + (on ? '#4CAF82' : due ? '#4FC3F7' : 'rgba(255,255,255,.2)'), background: on ? 'rgba(76,175,130,.3)' : due ? 'rgba(79,195,247,.25)' : 'rgba(255,255,255,.06)', color: '#fff', cursor: 'pointer' } }, h('div', { style: { fontSize: 18 } }, on ? '✅' : '💧'), h('div', { style: { fontSize: 11, fontWeight: 800 } }, fmt(m)));
     })),
     msg && h('div', { style: { background: '#039BE5', color: '#fff', borderRadius: 10, padding: 8, fontSize: 13, fontWeight: 800, marginTop: 8 } }, msg));
+}
+
+function RtAutoTimerToggle() {
+  var h = React.createElement, on = !!ktUse('habits/__autotimer', false)[0];
+  return h('button', { onClick: function () { try { syncSet('habits/__autotimer', on ? null : true); } catch (e) {} }, style: { display: 'block', width: '100%', textAlign: 'left', background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.08)', border: '1px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), borderRadius: 12, padding: 12, marginBottom: 10, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, (on ? '✅ ' : '⬜ ') + '⏱ Auto timer for the kids\u2019 habit blocks: ' + (on ? 'ON' : 'OFF'), h('div', { style: { fontSize: 11, fontWeight: 500, color: '#c8c8d8', marginTop: 2 } }, 'When on, each block shows a countdown and the next block opens by itself when time is up.'));
 }
 
 </script>
@@ -36227,7 +36239,7 @@ var CR_KIDS = ['mykah', 'ashelyn', 'kayla', 'ryan'];
 function crS() { return { card: { background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: 12, marginBottom: 10 }, inp: { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 8, color: '#fff', padding: 7, fontSize: 12, boxSizing: 'border-box' }, btn: function (bg) { return { background: bg || '#039BE5', color: '#fff', border: 'none', borderRadius: 18, padding: '7px 13px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }; } }; }
 function crGrade(k) { return k === 'mykah' ? 4 : k === 'ashelyn' ? 8 : 12; }
 function crName(k) { var p = (typeof fmSchoolKids === 'function' ? fmSchoolKids(null) : []).filter(function (x) { return x.id === k; })[0]; return p ? p.name : k; }
-function crDayNum() { try { var i = typeof getSchoolDayInfo === 'function' ? getSchoolDayInfo() : null; return Math.max(1, Math.min(180, (i && i.dayNum) || 1)); } catch (e) { return 1; } }
+function crDayNum() { try { if (typeof ssLessonDay === 'function' && typeof ssRestartCfg === 'function') { var ld = ssLessonDay(ssRestartCfg()); if (ld) return ld; } } catch (e0) {} try { var i = typeof getSchoolDayInfo === 'function' ? getSchoolDayInfo() : null; return Math.max(1, Math.min(180, (i && i.dayNum) || 1)); } catch (e) { return 1; } }
 function crDayKey() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 // One assignment = {title, body}
 function crLesson(subj, day, kid) {
@@ -36261,6 +36273,10 @@ function ClassroomDaily(props) {
   var k = admin ? kid : me, rows = CR_SUBJ.map(function (s) {
     if (s[0] === 'money') { var arr = ml[mnTier(k)] || [], m = arr[(day - 1) % Math.max(1, arr.length)]; return m ? { s: s, L: { title: m[0], body: m[1] + (m[2] ? '\nRead: ' + m[2] : '') } } : null; }
     var L = crLesson(s[0], day, k); return L ? { s: s, L: L } : null; }).filter(Boolean);
+  if (typeof ssLessons === 'function' && typeof ssKid === 'function' && ssKid(k)) {
+    var moneyRows = rows.filter(function (r) { return r.s[0] === 'money'; });
+    rows = ssLessons(k, day).map(function (r) { return { s: [r.id, r.label], L: { title: r.topic, body: ssClassroomBody(k, r, day) } }; }).concat(moneyRows);
+  }
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === k) rows.push({ s: ['c_' + id, '📝 ' + (c.subj || 'Assignment')], L: { title: c.title, body: c.body }, cid: id }); });
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === 'all') tgRows.push([c.title, c.body || '', '', 'c' + id, id]); });
   function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.'; window.open(crUrl(title, bodyTxt, 'assignment'), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
@@ -37705,19 +37721,34 @@ function navApplyOrder(tabs, saved, role) {
 }
 function NavArrange(props) {
   var h = React.createElement, tabs = props.tabs, color = props.color || '#7986CB';
-  var dS = React.useState(tabs.map(function (t) { return t.id; })), draft = dS[0], setDraft = dS[1];
+  var wS = React.useState(null), who = wS[0], setWhoRaw = wS[1];
+  var ids0 = tabs.map(function (t) { return t.id; });
+  var bS = React.useState(ids0), base = bS[0], setBase = bS[1];
+  var dS = React.useState(ids0), draft = dS[0], setDraft = dS[1];
+  var allTabs = tabs.concat((props.kidTabs || []).filter(function (k) { return !tabs.some(function (t) { return t.id === k.id; }); }));
+  function setWho(w) {
+    var list, ids;
+    if (!w) { ids = ids0; } else {
+      var sv = null; try { sv = syncGet('navorder/' + w); } catch (e) {}
+      ids = navApplyOrder(props.kidTabs || [], sv, 'child').map(function (t) { return t.id; });
+    }
+    setWhoRaw(w); setBase(ids); setDraft(ids); setUndo(null); setSure(false);
+  }
   var uS = React.useState(null), undo = uS[0], setUndo = uS[1], dgS = React.useState(null), drag = dgS[0], setDrag = dgS[1], ovS = React.useState(null), over = ovS[0], setOver = ovS[1];
   var sS = React.useState(false), sure = sS[0], setSure = sS[1], mS = React.useState(''), moved = mS[0], setMoved = mS[1];
-  var lbl = function (id) { var t = tabs.filter(function (x) { return x.id === id; })[0]; return t ? t.l : id; };
+  var lbl = function (id) { var t = allTabs.filter(function (x) { return x.id === id; })[0]; return t ? t.l : id; };
   function move(from, to) {
     if (from === to || to < 0 || to >= draft.length) return;
     var n = draft.slice(), it = n.splice(from, 1)[0]; n.splice(to, 0, it);
     setUndo({ prev: draft, id: it, pos: to + 1 }); setDraft(n); setSure(false);
   }
   var btn = function (bg, fg, fn, t, extra) { return h('button', { onClick: fn, style: Object.assign({ background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 15, cursor: 'pointer', minHeight: 46 }, extra || {}) }, t); };
-  var same = draft.join() === tabs.map(function (t) { return t.id; }).join();
+  var same = draft.join() === base.join();
   return h('div', { style: { position: 'fixed', inset: 0, background: '#0f0c29', zIndex: 1000, overflowY: 'auto', padding: 16, paddingBottom: 120 } },
     h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff' } }, '⇅ Arrange my tabs'),
+    props.people && props.people.length ? h('div', { style: { margin: '6px 0 10px' } }, h('div', { style: { fontSize: 13, color: '#FFD54F', fontWeight: 800, marginBottom: 6 } }, 'Whose tabs?'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, [{ id: null, name: 'Me', emoji: '🙋' }].concat(props.people).map(function (p) { var on = who === p.id; return h('button', { key: p.id || 'me', onClick: function () { setWho(p.id); }, style: { background: on ? color : 'rgba(255,255,255,.1)', color: '#fff', border: on ? '2px solid #FFD54F' : '2px solid transparent', borderRadius: 12, padding: '8px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, (p.emoji || '') + ' ' + p.name); })),
+      props.onPerm ? h('label', { style: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, color: '#c8c8d8', cursor: 'pointer' } }, h('input', { type: 'checkbox', checked: !!props.permOn, onChange: function (e) { props.onPerm(e.target.checked); } }), 'Let Dad arrange the kids\u2019 tabs too') : null) : null,
     h('div', { style: { fontSize: 14, color: '#c8c8d8', lineHeight: 1.5, margin: '4px 0 12px' } }, 'Drag a tab (or tap ▲ ▼) to move it. Every move asks “keep it here?” so a slip never changes anything. Nothing is saved until you tap Save.'),
     undo && h('div', { style: { position: 'sticky', top: 0, zIndex: 2, background: '#FFD54F', color: '#000', borderRadius: 14, padding: 12, marginBottom: 10, boxShadow: '0 4px 14px rgba(0,0,0,.4)' } },
       h('div', { style: { fontWeight: 900, fontSize: 15, marginBottom: 8 } }, 'Keep ' + lbl(undo.id) + ' in spot #' + undo.pos + '?'),
@@ -37731,11 +37762,11 @@ function NavArrange(props) {
         btn('rgba(255,255,255,.12)', '#fff', function () { move(i, i + 1); }, '▼', { padding: '8px 14px', opacity: i === draft.length - 1 ? .3 : 1 }));
     }),
     h('div', { style: { position: 'fixed', left: 0, right: 0, bottom: 0, background: '#15122e', borderTop: '1px solid rgba(255,255,255,.15)', padding: 12, zIndex: 3 } },
-      sure ? h('div', null, h('div', { style: { color: '#fff', fontWeight: 900, fontSize: 15, marginBottom: 8, textAlign: 'center' } }, 'Save this tab order?'), h('div', { style: { display: 'flex', gap: 8 } }, btn('#2E7D32', '#fff', function () { props.onSave(draft); }, '✓ Yes, save it', { flex: 1 }), btn('rgba(255,255,255,.14)', '#fff', function () { setSure(false); }, 'Not yet', { flex: 1 })))
+      sure ? h('div', null, h('div', { style: { color: '#fff', fontWeight: 900, fontSize: 15, marginBottom: 8, textAlign: 'center' } }, 'Save this tab order?'), h('div', { style: { display: 'flex', gap: 8 } }, btn('#2E7D32', '#fff', function () { props.onSave(draft, who); }, '✓ Yes, save it', { flex: 1 }), btn('rgba(255,255,255,.14)', '#fff', function () { setSure(false); }, 'Not yet', { flex: 1 })))
         : h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
           btn(same ? 'rgba(255,255,255,.1)' : color, '#fff', function () { if (!same) setSure(true); }, '💾 Save order', { flex: 2, minWidth: 130, opacity: same ? .5 : 1 }),
           btn('rgba(255,255,255,.1)', '#fff', props.onClose, 'Cancel', { flex: 1 }),
-          btn('rgba(255,255,255,.1)', '#fff', function () { if (window.confirm('Put the tabs back in the standard order?')) props.onReset(); }, 'Reset', { flex: 1 }))));
+          btn('rgba(255,255,255,.1)', '#fff', function () { if (window.confirm('Put these tabs back in the standard order?')) props.onReset(who); }, 'Reset', { flex: 1 }))));
 }
 
 </script>
@@ -38903,23 +38934,47 @@ function WebPushCard(props) {
 function HabitsStack(props) {
   var h = React.createElement, pid = props.personId, name = props.name || '';
   var dn = ktUse('habitsdone/' + rtDay() + '/' + pid, {})[0] || {}, sk = ktUse('skips/' + rtDay() + '/' + pid, {})[0] || {}, own = ktUse('habits/' + pid, null)[0], all = ktUse('habits/__all', null)[0];
+  var bd = ktUse('blockdone/' + rtDay() + '/' + pid, {})[0] || {}, auto = !!ktUse('habits/__autotimer', false)[0], bst = ktUse('blockstart/' + rtDay() + '/' + pid, {})[0] || {};
+  var tkS = React.useState(0), setTk = tkS[1];
+  React.useEffect(function () { if (!auto) return; var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, [auto]);
   var oS = React.useState({}), openMap = oS[0], setOpenMap = oS[1], cur = rtNowPeriod();
+  function hidden(p) { return (p === 'morning' && !!props.ready) || (p === 'afternoon' && !!bd.afternoon); }
   function mins(p) { return rtHabits(name, pid, p, own, all).reduce(function (a, l) { return a + (rtParse(l).mins || 0); }, 0); }
   function stat(p) { var list = rtHabits(name, pid, p, own, all), n = 0; list.forEach(function (label) { var id = p + '_' + rtHash(label); if (dn[id] || sk['h_' + id]) n++; }); return { total: list.length, n: n }; }
   var stats = {}; RT_PERIODS.forEach(function (p) { stats[p[0]] = stat(p[0]); });
-  var firstOpen = null; RT_PERIODS.forEach(function (p) { if (!firstOpen && stats[p[0]].total && stats[p[0]].n < stats[p[0]].total && p[0] >= '') firstOpen = p[0]; });
-  var sig = RT_PERIODS.map(function (p) { return stats[p[0]].total && stats[p[0]].n === stats[p[0]].total ? '1' : '0'; }).join('');
+  var firstOpen = null; RT_PERIODS.forEach(function (p) { if (!firstOpen && !hidden(p[0]) && stats[p[0]].total && stats[p[0]].n < stats[p[0]].total) firstOpen = p[0]; });
+  var sig = RT_PERIODS.map(function (p) { return (stats[p[0]].total && stats[p[0]].n === stats[p[0]].total ? '1' : '0') + (hidden(p[0]) ? 'h' : ''); }).join('');
   React.useEffect(function () { setOpenMap({}); }, [sig]);
-  function isOpen(p) { return openMap[p] != null ? openMap[p] : (p === (firstOpen || cur)); }
+  // auto timer: when a block's time is up, the next block opens by itself
+  function timeLeft(p) { var st = bst[p]; return st ? Math.round(mins(p) * 60 - (Date.now() - st) / 1000) : mins(p) * 60; }
+  function isOpen(p) {
+    if (openMap[p] != null) return openMap[p];
+    if (auto) { var i = RT_PERIODS.map(function (x) { return x[0]; }).indexOf(p), prev = i > 0 ? RT_PERIODS[i - 1][0] : null; if (prev && !hidden(prev) && stats[prev].total && bst[prev] && timeLeft(prev) <= 0) return true; }
+    return p === (firstOpen || cur);
+  }
+  function setBd(k, v) { try { syncSet('blockdone/' + rtDay() + '/' + pid + '/' + k, v); } catch (e) {} }
+  var strip = function (txt, undo) { return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } }, h('div', { style: { flex: 1 } }, txt), h('button', { onClick: undo, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Undo')); };
   return h('div', { id: 'fm-habits-stack', style: { marginBottom: 10 } },
     h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '🌱 My daily habits'),
     RT_PERIODS.map(function (p) {
-      var s = stats[p[0]], open = isOpen(p[0]), done = s.total > 0 && s.n === s.total;
-      if (!s.total) return null;
-      return h('div', { key: p[0], style: { marginBottom: 8, border: '1px solid ' + (done ? 'rgba(76,175,130,.6)' : 'rgba(255,255,255,.15)'), borderRadius: 14, background: done ? 'rgba(76,175,130,.1)' : 'rgba(255,255,255,.04)', overflow: 'hidden' } },
-        h('button', { onClick: function () { var n = Object.assign({}, openMap); n[p[0]] = !open; setOpenMap(n); }, style: { width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#fff', padding: '12px', fontSize: 15, fontWeight: 900, cursor: 'pointer', textAlign: 'left' } },
-          h('span', { style: { flex: 1 } }, p[1] + (p[0] === cur ? '  · now' : ''), h('span', { style: { fontSize: 12, color: '#c8c8d8', fontWeight: 600 } }, '  ' + mins(p[0]) + ' min')), h('span', { style: { fontSize: 13, color: done ? '#81C784' : '#c8c8d8' } }, done ? '✅ done' : s.n + ' of ' + s.total), h('span', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
-        open && h('div', { style: { padding: '0 8px 8px' } }, h(HabitsPanel, { personId: pid, name: name, only: p[0] })));
+      var k = p[0], s = stats[k], open = isOpen(k), done = s.total > 0 && s.n === s.total;
+      var foot = k === 'morning' ? props.morningFoot : k === 'evening' ? props.eveningFoot : null;
+      if (hidden(k)) return h('div', { key: k }, foot, k === 'afternoon' ? strip('✅ Afternoon done', function () { setBd('afternoon', null); }) : null);
+      if (!s.total) return foot ? h('div', { key: k }, foot) : null;
+      var tm = null;
+      if (auto && open && !done) {
+        if (!bst[k]) { try { setTimeout(function () { syncSet('blockstart/' + rtDay() + '/' + pid + '/' + k, Date.now()); }, 0); } catch (e) {} }
+        var left = timeLeft(k), a = Math.abs(left);
+        tm = h('div', { style: { textAlign: 'center', padding: '6px 0 0', fontWeight: 900, fontSize: 22, fontFamily: 'ui-monospace,Menlo,monospace', color: left < 0 ? '#FF8A80' : '#FFD54F' } }, '⏱ ' + (left < 0 ? '+' : '') + Math.floor(a / 60) + ':' + ('0' + (a % 60)).slice(-2));
+      }
+      return h('div', { key: k },
+        h('div', { style: { marginBottom: 8, border: '1px solid ' + (done ? 'rgba(76,175,130,.6)' : 'rgba(255,255,255,.15)'), borderRadius: 14, background: done ? 'rgba(76,175,130,.1)' : 'rgba(255,255,255,.04)', overflow: 'hidden' } },
+          h('button', { onClick: function () { var n = Object.assign({}, openMap); n[k] = !open; setOpenMap(n); }, style: { width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#fff', padding: '12px', fontSize: 15, fontWeight: 900, cursor: 'pointer', textAlign: 'left' } },
+            h('span', { style: { flex: 1 } }, p[1] + (k === cur ? '  · now' : ''), h('span', { style: { fontSize: 12, color: '#c8c8d8', fontWeight: 600 } }, '  ' + mins(k) + ' min')), h('span', { style: { fontSize: 13, color: done ? '#81C784' : '#c8c8d8' } }, done ? '✅ done' : s.n + ' of ' + s.total), h('span', { style: { fontSize: 12, color: '#c8c8d8' } }, open ? '▲' : '▼')),
+          tm,
+          open && h('div', { style: { padding: '0 8px 8px' } }, h(HabitsPanel, { personId: pid, name: name, only: k }))),
+        foot,
+        k === 'afternoon' ? h('button', { onClick: function () { setBd('afternoon', Date.now()); }, style: { display: 'block', width: '100%', background: 'rgba(255,255,255,.12)', color: '#fff', border: '1px solid rgba(255,255,255,.3)', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginBottom: 8 } }, '✅ I’m done with my afternoon') : null);
     }));
 }
 // where to clock in right now + what is next, with a live countdown
@@ -39021,6 +39076,12 @@ function DetailingModule(props) {
 function ssKids() { return (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []); }
 function ssKid(id) { return ssKids().filter(function (s) { return s.id === id; })[0] || null; }
 function ssClean(t, n) { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t; }
+var SS_WRITE_NOTE = 'Find examples on jw.org & jw library app. use your digital notebook & tablet pen.';
+function ssIsWriting(subId, topic, act) {
+  if (subId === 'lab') return false;
+  if (subId === 'comp') return true;
+  return /\b(write|writes|writing|written|compose|paragraph|essay|journal|sentence|sentences|summary|summarize|report|story|letter|poem|reflection)\b/i.test(String(topic || '') + ' ' + String(act || ''));
+}
 function ssLessons(sid, day) {
   var st = ssKid(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
   if (!st) return out;
@@ -39034,7 +39095,7 @@ function ssLessons(sid, day) {
       topic = bcTopic(L); if (!topic) return; act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
     }
     try { scr = String((L && L.script) || ''); } catch (e) {}
-    out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, scr: scr, key: sid + '_d' + day + '_' + sub.id });
+    out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, scr: scr, wnote: ssIsWriting(sub.id, topic, act) ? SS_WRITE_NOTE : '', key: sid + '_d' + day + '_' + sub.id });
   });
   // Computer Lab: its own checkoff right under Bible study
   var labRow = { id: 'lab', lab: true, label: '💻 Computer Lab', color: '#00ACC1', topic: 'Your next computer step + typing practice', act: '', key: sid + '_d' + day + '_lab' };
@@ -39110,6 +39171,7 @@ function SchoolLessonRows(props) {
           !admin && !r.lab && (ssKid(sid) || {}).grade <= 5 && h(KidAnswerBox, { sid: sid, day: day, row: r }),
           admin && h(TeacherGuide, { row: r, sid: sid, day: day }),
           r.act && h(LessonWork, { act: r.act, color: r.color }),
+          r.wnote && h('div', { style: { fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.55, background: 'rgba(255,213,79,.14)', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: 12, marginBottom: 8 } }, '✍️ ' + r.wnote),
           h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
             !done && !admin && !going && btn('#4CAF82', '#000', function () { ssStart(sid, sessions, onUpdate, r.label); }, run && run.label && run.label !== r.label ? '▶ Switch to this' : '▶ Clock in', true),
             !done && !admin && going && btn('#7E57C2', '#fff', function () { var m = ssFinish(sid, sessions, onUpdate, r.label); markDone(r, m, 'student'); say('✅ Nice work! ' + m + ' min'); }, '✅ I finished', true),
@@ -39313,7 +39375,7 @@ function TeacherGuide(props) {
     open && h('div', { style: { background: 'rgba(121,134,203,.12)', border: '1px solid rgba(121,134,203,.5)', borderRadius: 14, padding: 14, marginTop: 6 } },
       r.lab ? h(LabTeacherGuide, { sid: sid }) : h('div', null,
         r.scr ? h('div', null, hd('🎙 WHAT TO SAY'), h('div', { style: body }, r.scr)) : h('div', null, hd('🎙 WHAT TO SAY'), h('div', { style: body }, ssSendOff(sid, r, props.day))),
-        r.act && hd('✏️ WHAT ' + (st.name || 'THE STUDENT').toUpperCase() + ' DOES', '#81C784'), r.act && h('div', { style: body }, r.act),
+        r.act && hd('✏️ WHAT ' + (st.name || 'THE STUDENT').toUpperCase() + ' DOES', '#81C784'), r.act && h('div', { style: body }, r.act), r.wnote && h('div', { style: body }, '✍️ ' + r.wnote),
         r.ans && hd('🔑 ANSWER KEY / WHAT TO LOOK FOR', '#90CAF9'), r.ans && h('div', { style: body }, r.ans)),
       hd('📣 SEND-OFF MESSAGE — say it or copy it to Google Classroom', '#FFCC80'), h('div', { style: body }, ssSendOff(sid, r, props.day)),
       h('button', { onClick: function () { try { navigator.clipboard.writeText(ssSendOff(sid, r, props.day)); } catch (e) {} setCopied(true); setTimeout(function () { setCopied(false); }, 2500); }, style: { marginTop: 6, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, copied ? '✅ Copied' : '📋 Copy message'),
@@ -39439,6 +39501,14 @@ function ssSendOff(sid, r, day) {
   return 'Good morning, ' + n + '. Today’s ' + r.label.replace(/^\S+\s/, '') + ' lesson is “' + topic + '.” ' + what + '. Work through it on your own and show your steps or your reasoning. If something does not make sense, reread the lesson first, then try once more, and then message me and I will help. When you are done, turn it in (Google Classroom) and I will go over it with you.';
 }
 
+// What Google Classroom gets for one lesson: the SAME wording the student sees in Today's Lessons, plus the send-off (what to say). Never the answer key or teacher script.
+function ssClassroomBody(sid, r, day) {
+  var parts = [ssSendOff(sid, r, day)];
+  if (r.act) parts.push('WHAT TO DO:\n' + r.act);
+  if (r.wnote) parts.push('\u270d\ufe0f ' + r.wnote);
+  return parts.join('\n\n');
+}
+
 </script>
 <script>
 // ═══ ATTENDANCE REPORT (new): reads each day's saved attendance + clock in/out times, big and readable ═══
@@ -39547,7 +39617,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v134';
+var FM_BUILD = 'v137';
 (function () {
   function stamp() {
     try {
