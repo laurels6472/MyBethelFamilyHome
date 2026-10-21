@@ -4234,7 +4234,7 @@ function Leaderboard({
         current: raw.current
       };
     }
-    return (family || DEFAULT_FAMILY).filter(p => p.inPaySystem).map(p => {
+    return (family || DEFAULT_FAMILY).filter(p => p.inPaySystem && (window._isAdminSession || p.role !== 'parent')).map(p => {
       const today = getWeekData(p.id).today || [];
       const cur = getWeekData(p.id).current;
       const all = cur ? [...today, {
@@ -7736,10 +7736,10 @@ function Dashboard({
     isAdmin: isAdmin
   }), tab === 'work' && workSub === 'school' && /*#__PURE__*/React.createElement("div", null,
     (isAdmin || isOwner) && typeof TakeAttendance === 'function' && /*#__PURE__*/React.createElement(TakeAttendance, { family: fam }),
-    React.createElement(Fold, { id: 'gradesatt', title: '📒 Grades, assignments & attendance report' },
+    React.createElement(Fold, { id: 'gradesatt', title: (isAdmin || isOwner) ? '📒 Grades, assignments & attendance report' : '📒 My grades' },
       typeof AssignmentGrades === 'function' && /*#__PURE__*/React.createElement(AssignmentGrades, { personId: effectiveId, isAdmin: isAdmin || isOwner, family: fam, addNotif: addNotif }),
       /*#__PURE__*/React.createElement(GradebookPanel, {personId: effectiveId, isAdmin: isAdmin || isLaurel, day: 1}),
-      typeof AttendanceReport !== 'undefined' && /*#__PURE__*/React.createElement("div",{style:{marginTop:16}},
+      (isAdmin || isOwner) && typeof AttendanceReport !== 'undefined' && /*#__PURE__*/React.createElement("div",{style:{marginTop:16}},
         /*#__PURE__*/React.createElement(AttendanceReport, {family:fam, isAdmin:isAdmin||isOwner, syncSet:syncSet})
       ))
   ),
@@ -27266,7 +27266,10 @@ function SOPModule(_ref) {
   var activeDept = SOP_DEPARTMENTS.find(function (d) {
     return d.id === dept;
   }) || SOP_DEPARTMENTS[0];
-  var deptSops = sops[dept] || [];
+  var _adultDept = function (id) { return !isAdmin && (id === 'business' || id === 'vehicles'); };
+  var _vis = function (x) { return isAdmin || !/^(eric|laurel|mom|dad|parents?|adults?)$/i.test(String(x.assignedTo || '').trim()); };
+  if (_adultDept(dept)) dept = 'kitchen';
+  var deptSops = (sops[dept] || []).filter(_vis);
   return React.createElement('div', {
     style: {
       paddingBottom: 40
@@ -27303,9 +27306,9 @@ function SOPModule(_ref) {
       padding: '0 8px',
       gap: 2
     }
-  }, SOP_DEPARTMENTS.map(function (d) {
+  }, SOP_DEPARTMENTS.filter(function (d) { return !_adultDept(d.id); }).map(function (d) {
     var active = dept === d.id;
-    var count = (sops[d.id] || []).length;
+    var count = (sops[d.id] || []).filter(_vis).length;
     return React.createElement('button', {
       key: d.id,
       onClick: function onClick() {
@@ -30710,7 +30713,7 @@ function DeviceGuard() {
   }, [dev && dev.cmd && dev.cmd.ts]);
   var me = window._currentPersonId, isOwner = me === 'laurel' || me === 'eric';
   if (dev && dev.locked && !isOwner) return h('div', { style: { position: 'fixed', inset: 0, zIndex: 100000, background: '#0e0c20', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 30 } },
-    h('div', null, h('div', { style: { fontSize: 54 } }, '🔒'), h('div', { style: { fontSize: 20, fontWeight: 900, margin: '10px 0' } }, 'This app is locked'), h('div', { style: { fontSize: 13, color: '#aaa', lineHeight: 1.6 } }, (dev.lockMsg || 'A parent locked this for now.') + ' Ask a parent to unlock it.')));
+    h('div', null, h('div', { style: { fontSize: 54 } }, '🔒'), h('div', { style: { fontSize: 20, fontWeight: 900, margin: '10px 0' } }, 'This app is locked'), h('div', { style: { fontSize: 13, color: '#aaa', lineHeight: 1.6 } }, (dev.lockMsg || 'This is locked for now.'))));
   return null;
 }
 
@@ -30743,7 +30746,7 @@ function SafetyCard(props) {
     msg && h('div', { style: { background: 'rgba(76,175,130,.18)', color: '#9be5bd', borderRadius: 8, padding: '5px 8px', fontSize: 12, marginBottom: 6 } }, msg),
     win && h('div', { style: { background: 'rgba(0,0,0,.25)', borderRadius: 10, padding: 8, marginBottom: 8, fontSize: 12, color: '#fff' } }, 'Right now: ', h('b', null, win.label || 'Scheduled time'), ' · ' + (SF_MODES.find(function (m) { return m[0] === win.mode; }) || ['', ''])[1] + ' until ' + win.end),
     h(SF_AskSite, { pid: pid, name: props.name }),
-    !con ? h('div', null, h('div', { style: { fontSize: 11, color: '#ddd', lineHeight: 1.6, marginBottom: 8 } }, 'Share my location with my parents when I tap "Check in." Nothing is tracked in the background. I can turn this off any time.'), sfBtn('#81C784', '#000', function () { setConsent(true); }, 'I agree — turn on check-ins'))
+    !con ? h('div', null, h('div', { style: { fontSize: 11, color: '#ddd', lineHeight: 1.6, marginBottom: 8 } }, 'Share my location when I tap "Check in." Nothing is tracked in the background. I can turn this off any time.'), sfBtn('#81C784', '#000', function () { setConsent(true); }, 'I agree — turn on check-ins'))
       : h('div', null, h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, sfBtn('#81C784', '#000', function () { checkIn('checkin'); }, busy ? 'Finding you…' : '📍 Check in'), sfBtn('#FF9800', '#000', function () { checkIn('ride'); }, '🚗 I need a ride'), sfBtn('transparent', '#aaa', function () { setConsent(false); }, 'Turn off', true)),
         h('div', { style: { fontSize: 9, color: 'rgba(255,255,255,.4)', marginTop: 6 } }, 'Sharing is ON. Only taps send your location.')));
 }
@@ -30978,7 +30981,7 @@ function SF_AskSite(props) {
   var h = React.createElement, vS = React.useState(''), v = vS[0], setV = vS[1], wS = React.useState(''), why = wS[0], setWhy = wS[1], mS = React.useState(''), m = mS[0], setM = mS[1];
   function send() { var d = sfDomain(v); if (!d) { setM('Type a site like example.com'); return; } if (sfWordBlocked(d.replace(/\./g, ' '), props.pid) || sfSiteBlockedNow(d, props.pid)) { setM('That one is not allowed right now.'); return; } var id = sfUid('sr'); syncSet('safety/siterequests/' + id, { id: id, personId: props.pid, domain: d, why: why, ts: Date.now(), status: 'pending' }); var nid = 'srn_' + id; syncSet('notifs/' + nid, { id: nid, type: 'safety', personId: props.pid, title: '🌐 ' + (props.name || props.pid) + ' asked for ' + d, message: why || 'Open Safety → Websites to answer.', timestamp: Date.now(), read: false, approved: null, requiresApproval: false }); setV(''); setWhy(''); setM('Sent! A parent will answer.'); setTimeout(function () { setM(''); }, 4000); }
   return h('div', { style: { background: 'rgba(0,0,0,.2)', borderRadius: 10, padding: 8, marginBottom: 8 } },
-    h('div', { style: { fontSize: 11, color: '#ddd', marginBottom: 4 } }, '🌐 Need a website for school? Ask a parent:'),
+    h('div', { style: { fontSize: 11, color: '#ddd', marginBottom: 4 } }, '🌐 Need a website for school? Tap one:'),
     h('div', { style: { display: 'flex', gap: 6 } }, h('input', { type: 'text', placeholder: 'example.com', value: v, onChange: function (e) { setV(e.target.value); }, style: Object.assign({}, SF_INP, { marginBottom: 0 }) }), sfBtn('#81C784', '#000', send, 'Ask', true)),
     h('input', { type: 'text', placeholder: 'What is it for?', value: why, onChange: function (e) { setWhy(e.target.value); }, style: Object.assign({}, SF_INP, { marginTop: 6, marginBottom: 0 }) }),
     m && h('div', { style: { fontSize: 11, color: '#9be5bd', marginTop: 4 } }, m));
@@ -31025,7 +31028,7 @@ function MyAccounts(props) {
     props.isAdmin && h('div', null,
       h('div', { style: Object.assign({}, SF_CARD, { borderColor: 'rgba(255,152,0,.5)' }) }, h('div', { style: { fontSize: 11, color: '#FFCC80', lineHeight: 1.6 } }, 'This app does NOT store or capture passwords — a web page can\u2019t see what is typed on other sites, and keeping passwords in a family-synced database would put every account at risk. These buttons open each site. Let a password manager do the log-in: Apple Passwords / iCloud Keychain, Google Password Manager, Bitwarden or 1Password (their family plans can share a vault, including emergency access for you). On Grandpa\u2019s phone, turn on AutoFill so the site fills itself in after he taps the button and Face ID/Touch ID.')),
       sfChips(fam, sel, setSel, false, false)),
-    list.length === 0 && h('div', { style: { color: '#999', fontSize: 13, padding: 10 } }, props.isAdmin ? 'No buttons yet for this person.' : 'Nothing here yet. Ask a parent to add your sites.'),
+    list.length === 0 && h('div', { style: { color: '#999', fontSize: 13, padding: 10 } }, props.isAdmin ? 'No buttons yet for this person.' : 'Nothing here yet.'),
     list.map(function (a) { return h('div', { key: a.id, style: { display: 'flex', gap: 8, marginBottom: 10 } },
       h('a', { href: a.url, target: '_blank', rel: 'noopener', style: { flex: 1, display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none', background: 'rgba(66,165,245,.15)', border: '2px solid rgba(66,165,245,.5)', borderRadius: 18, padding: big ? '22px 18px' : '14px 14px', color: '#fff' } }, h('span', { style: { fontSize: big ? 38 : 26 } }, a.emoji), h('span', null, h('div', { style: { fontSize: big ? 22 : 16, fontWeight: 900 } }, a.name), a.note && h('div', { style: { fontSize: big ? 14 : 11, color: '#aaa', marginTop: 2 } }, a.note))),
       props.isAdmin && h('button', { onClick: function () { syncSet('accounts/' + sel + '/' + a.id, null); }, style: { background: 'transparent', border: 'none', color: 'rgba(239,83,80,.6)', fontSize: 18, cursor: 'pointer' } }, '×')); }),
@@ -31056,7 +31059,7 @@ function TermsOverlay() {
   return h('div', { style: { position: 'fixed', inset: 0, zIndex: 99990, background: 'linear-gradient(160deg,#0f0c29,#1a1a2e)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 18px', overflowY: 'auto' } },
     h('div', { style: { fontSize: 40, marginTop: 10 } }, '📜'),
     h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', margin: '6px 0 12px' } }, 'Terms & Conditions'),
-    h('div', { style: { width: '100%', maxWidth: 420, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: 16, color: '#e8e8f0', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', marginBottom: 16 } }, text),
+    h('div', { style: { width: '100%', maxWidth: 420, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: 16, color: '#e8e8f0', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', marginBottom: 16 } }, String(text).split('\n').filter(function (l) { return !/administrator|parent|\bmom\b|\bdad\b/i.test(l); }).join('\n')),
     h('button', { onClick: agree, style: { width: '100%', maxWidth: 420, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 30, padding: 16, fontWeight: 900, fontSize: 18, cursor: 'pointer' } }, 'I Agree'),
     h('button', { onClick: leave, style: { marginTop: 14, background: 'transparent', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 12, cursor: 'pointer' } }, 'Go back'));
 }
@@ -31807,7 +31810,7 @@ function StartMyDay(props) {
         ready && big('rgba(38,166,154,.25)', '#fff', go('chores'), '🧹  Chores & order of operations — full list'),
         savedCard,
         typeof ClockWhereBlock === 'function' && h(ClockWhereBlock, { personId: pid, sessions: props.sessions }))))),
-    h('div', { style: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 10, lineHeight: 1.6 } }, 'Your parents can see when you clock in and finish each step.'));
+    h('div', { style: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 10, lineHeight: 1.6 } }, ''));
 }
 
 </script>
@@ -32431,7 +32434,7 @@ function DayClock(props) {
         h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 4 } }, 'The circle fills in as your day goes (' + hours + ' hours = full).'),
         depts.map(function (d) { return byDept[d.id] ? h('div', { key: d.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } }, h('div', { style: { width: 12, height: 12, borderRadius: 3, background: d.color } }), h('div', { style: { flex: 1 } }, d.emoji + ' ' + d.label), h('b', null, dcFmt(byDept[d.id]))) : null; }),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } }, h('div', { style: { width: 12, height: 12, borderRadius: 3, background: 'rgba(255,255,255,.28)' } }), h('div', { style: { flex: 1 } }, 'Not clocked into anything'), h('b', { style: { color: un > 1800 ? '#FF8A80' : '#FFD54F' } }, dcFmt(un))))),
-    !ended && !props.canReset && h('button', { onClick: pciOpen, style: { width: '100%', background: '#FF1493', color: '#fff', border: '2px solid #fff', borderRadius: 16, padding: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 10 } }, '👋 Check in with Mom & Dad'),
+    !ended && !props.canReset && h('button', { onClick: pciOpen, style: { width: '100%', background: '#FF1493', color: '#fff', border: '2px solid #fff', borderRadius: 16, padding: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 10 } }, '👋 Check in'),
     !ended && h(DcConfirm, { onConfirm: endDay, label: '🌙 End my day', sure: 'Tap again to end my day', style: { width: '100%', background: 'rgba(239,83,80,.25)', color: '#FF8A80', border: '1px solid #EF5350', borderRadius: 16, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 12 } }),
     props.canReset && h(DcConfirm, { onConfirm: startOver, label: '↺ Start today over (parent only)', sure: 'Tap again — this clears today', style: { display: 'block', marginTop: 8, background: 'transparent', color: '#FFB74D', border: '1px solid #FFB74D', borderRadius: 14, padding: '10px 14px', fontSize: 13, cursor: 'pointer' } }),
     props.inside && h('div', { style: { margin: '14px -14px 0' } }, props.inside),
@@ -32750,7 +32753,7 @@ function pciGuess(running) {
   if (a === 'fun') return 'friends'; if (a === 'free') return 'home'; if (a === 'driving') return 'out'; return 'work';
 }
 function ParentCheckIn(props) {
-  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = ['Mom & Dad', 'Mom', 'Dad'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; })), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent' || p.name !== dflt; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; }), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent' || p.name !== dflt; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
   var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : !isP;
@@ -32777,7 +32780,7 @@ function ParentCheckIn(props) {
     }, 2200);
     return function () { clearTimeout(tm); };
   }, []);
-  React.useEffect(function () { if (due && !open) { setSent(false); setOpen(true); setF({ status: pciGuess(running), ctx: '', aff: '', mood: null, help: false, who: dflt }); try { playSound('reminder'); fireBrowserNotif('Check in with Mom & Dad', 'Tap to tell them where you are'); } catch (e) {} } });
+  React.useEffect(function () { if (due && !open) { setSent(false); setOpen(true); setF({ status: pciGuess(running), ctx: '', aff: '', mood: null, help: false, who: dflt }); try { playSound('reminder'); fireBrowserNotif('Check in', 'Tap to tell us where you are'); } catch (e) {} } });
   // missed check-in: popup came up and was not answered within the grace time -> one deduction per check-in
   React.useEffect(function () {
     var dk = 'fm_pci_due_' + pid + '_' + dayK;
@@ -32816,12 +32819,12 @@ function ParentCheckIn(props) {
   var big = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 14, color: '#fff', padding: 12, fontSize: 16, fontFamily: 'inherit' };
   return h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', zIndex: 5000, overflowY: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 12px' } },
     h('div', { style: { width: '100%', maxWidth: 520, background: 'linear-gradient(160deg,#2b1055,#1a1a2e)', border: '3px solid #FF1493', borderRadius: 22, padding: 18, boxShadow: '0 0 40px #FF149388' } },
-      sent ? h('div', { style: { textAlign: 'center', padding: 30 } }, h('div', { style: { fontSize: 60 } }, '✅'), h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, 'Sent to ' + ((f.whoL && f.whoL.length) ? f.whoL.join(' & ') : dflt) + '!'))
+      sent ? h('div', { style: { textAlign: 'center', padding: 30 } }, h('div', { style: { fontSize: 60 } }, '✅'), h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, (isP ? 'Sent to ' + ((f.whoL && f.whoL.length) ? f.whoL.join(' & ') : dflt) + '!' : 'Sent!')))
       : h('div', null,
-        h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, (isP ? '📍 Share where I am & what I’m working on' : '👋 Check in with ' + dflt)),
+        h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, (isP ? '📍 Share where I am & what I’m working on' : '👋 Check in')),
         h('div', { style: { fontSize: 13, color: '#d8d8e8', margin: '2px 0 12px' } }, 'You are clocked into: ' + curLabel),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 2 } }, 'Who are you reporting to?'),
-        h('div', { style: { fontSize: 11, color: '#c8c8d8', marginBottom: 6 } }, 'Tap one or more people — or tap nobody and it goes to ' + dflt + '. ' + (isP ? '' : 'Mom is always able to see it.')),
+        h('div', { style: { fontSize: 11, color: '#c8c8d8', marginBottom: 6 } }, (isP ? 'Tap one or more people — or tap nobody and it goes to ' + dflt + '. ' : 'Tap anyone you want to tell, then fill it in and send.')),
         h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 } }, (isP ? pWho : kWho).map(function (w) { var on = (f.whoL || []).indexOf(w) >= 0; return h('button', { key: w, onClick: function () { var cur = f.whoL || [], n; if (w.indexOf('Nobody') === 0) n = on ? [] : [w]; else { n = cur.filter(function (x) { return x.indexOf('Nobody') !== 0; }); n = on ? n.filter(function (x) { return x !== w; }) : n.concat([w]); } setF(Object.assign({}, f, { whoL: n })); }, style: { flex: '1 1 30%', background: on ? '#FF1493' : 'rgba(255,255,255,.1)', color: '#fff', border: '2px solid ' + (on ? '#FF1493' : 'rgba(255,255,255,.25)'), borderRadius: 12, padding: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, w); })),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, '1. What are you doing? Where are you in your day?'),
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 } }, PCI_STATUS.map(function (x) { var on = f.status === x[0]; return h('button', { key: x[0], onClick: function () { setF(Object.assign({}, f, { status: x[0] })); }, style: { background: on ? '#FF1493' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, padding: '12px 6px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, x[1] + ' ' + x[2]); })),
@@ -32830,15 +32833,15 @@ function ParentCheckIn(props) {
         h('textarea', { rows: 2, value: f.aff, onChange: function (e) { setF(Object.assign({}, f, { aff: e.target.value })); }, style: Object.assign({}, big, { marginBottom: 12 }) }),
         h('div', { style: { fontSize: 15, fontWeight: 800, color: '#FFD54F', marginBottom: 6 } }, 'How are you feeling? (tap all that fit)'),
         h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 12 } }, PCI_MOODS.map(function (m) { var on = pciMoodList(f.mood).indexOf(m[1]) >= 0; return h('button', { key: m[1], onClick: function () { setF(Object.assign({}, f, { mood: pciMoodToggle(f.mood, m[1]) })); }, style: { padding: '6px 0', background: on ? '#FF1493' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#fff' : 'rgba(255,255,255,.2)'), borderRadius: 14, cursor: 'pointer', color: '#fff' } }, h('div', { style: { fontSize: 26 } }, m[0]), h('div', { style: { fontSize: 9, fontWeight: 800 } }, m[2])); })),
-        h('button', { onClick: function () { setF(Object.assign({}, f, { help: !f.help })); }, style: { width: '100%', background: f.help ? '#E53935' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (f.help ? '#fff' : 'rgba(255,255,255,.25)'), borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginBottom: 12 } }, f.help ? '🆘 I need help — Mom & Dad will be alerted loudly' : '🆘 I need help with something'),
+        h('button', { onClick: function () { setF(Object.assign({}, f, { help: !f.help })); }, style: { width: '100%', background: f.help ? '#E53935' : 'rgba(255,255,255,.08)', color: '#fff', border: '2px solid ' + (f.help ? '#fff' : 'rgba(255,255,255,.25)'), borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginBottom: 12 } }, f.help ? '🆘 I need help — an alert is sent right away' : '🆘 I need help with something'),
         isP && h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', color: '#fff', fontSize: 14, marginBottom: 12 } }, h('input', { type: 'checkbox', checked: f.share !== false, onChange: function (e) { setF(Object.assign({}, f, { share: e.target.checked })); }, style: { width: 22, height: 22 } }), 'Let the kids see this on their home screen'),
         h('button', { onClick: submit, disabled: !f.status, style: { width: '100%', background: f.status ? '#4CAF82' : '#555', color: f.status ? '#000' : '#aaa', border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 18, cursor: f.status ? 'pointer' : 'default' } }, f.status ? '📨 Send check-in' : 'Pick where you are first'),
         !isP && h('div', { style: { marginTop: 6 } },
-          h('button', { onClick: function () { setPcOpen(!pcOpen); }, style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: '2px dashed rgba(255,255,255,.35)', borderRadius: 14, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🚗 I’m with Mom or Dad — no check-ins for a while ' + (pcOpen ? '▾' : '▸')),
+          h('button', { onClick: function () { setPcOpen(!pcOpen); }, style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: '2px dashed rgba(255,255,255,.35)', borderRadius: 14, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, (isP ? '🚗 I’m with Mom or Dad — no check-ins for a while ' : '🚗 I’m with my family — no check-ins for a while ') + (pcOpen ? '▾' : '▸')),
           pcOpen && h('div', { style: { background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10, marginTop: 6 } },
-            h('div', { style: { fontSize: 12, color: '#d8d8e8', marginBottom: 6 } }, 'For how long? Mom and Dad are told right away.'),
+            h('div', { style: { fontSize: 12, color: '#d8d8e8', marginBottom: 6 } }, 'For how long?'),
             h('div', { style: { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' } }, [1, 2, 3, 4, 6].map(function (n) { return h('button', { key: n, onClick: function () { setPcHrs(n); }, style: { flex: 1, minWidth: 50, padding: 8, borderRadius: 10, border: '2px solid ' + (pcHrs === n ? '#fff' : 'rgba(255,255,255,.25)'), background: pcHrs === n ? '#FF1493' : 'rgba(255,255,255,.08)', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, n + 'h'); })),
-            ['I’m out with Mom', 'I’m out with Dad', 'Mom or Dad said I don’t have to check in'].map(function (w) { return h('button', { key: w, onClick: function () { pciPause(pid, name, w.replace('I’m ', '').replace('I’m', ''), pcHrs, props.addNotif); setOpen(false); setT(function (x) { return x + 1; }); }, style: { display: 'block', width: '100%', textAlign: 'left', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, w); }))),
+            ['I’m out with family', 'I don’t have to check in right now'].map(function (w) { return h('button', { key: w, onClick: function () { pciPause(pid, name, w.replace('I’m ', '').replace('I’m', ''), pcHrs, props.addNotif); setOpen(false); setT(function (x) { return x + 1; }); }, style: { display: 'block', width: '100%', textAlign: 'left', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, w); }))),
         h('button', { onClick: function () { close(true); }, style: { width: '100%', background: 'transparent', color: '#c8c8d8', border: 'none', padding: 12, fontSize: 13, cursor: 'pointer', marginTop: 4 } }, 'Remind me in 10 minutes'))));
 }
 function pciOpen() { try { window.dispatchEvent(new CustomEvent('fm-checkin-open')); } catch (e) {} }
@@ -32884,7 +32887,7 @@ function PciDayReview(props) {
 function pciIsParent() { try { var f = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.id === (window._currentPersonId || ''); })[0]; return !!(f && f.role === 'parent'); } catch (e) { return false; } }
 function PciButton(props) {
   var h = React.createElement;
-  return h('button', { onClick: pciOpen, style: { display: 'block', width: 'calc(100% - 28px)', margin: '8px 14px', background: 'linear-gradient(135deg,#FF1493,#8E24AA)', color: '#fff', border: 'none', borderRadius: 16, padding: '13px 16px', fontWeight: 900, fontSize: 15, cursor: 'pointer', textAlign: 'left' } }, (pciIsParent() ? '📍 Share where I am & what I’m working on' : '👋 Check in with Mom & Dad'), h('span', { style: { display: 'block', fontSize: 11, fontWeight: 600, opacity: .85 } }, pciIsParent() ? 'Choose who you are reporting to — and whether the kids can see it' : 'Tell us who you are with, what you are doing and how you feel'));
+  return h('button', { onClick: pciOpen, style: { display: 'block', width: 'calc(100% - 28px)', margin: '8px 14px', background: 'linear-gradient(135deg,#FF1493,#8E24AA)', color: '#fff', border: 'none', borderRadius: 16, padding: '13px 16px', fontWeight: 900, fontSize: 15, cursor: 'pointer', textAlign: 'left' } }, (pciIsParent() ? '📍 Share where I am & what I’m working on' : '👋 Check in'), h('span', { style: { display: 'block', fontSize: 11, fontWeight: 600, opacity: .85 } }, pciIsParent() ? 'Choose who you are reporting to — and whether the kids can see it' : 'Tell us who you are with, what you are doing and how you feel'));
 }
 
 // ── Admin board: where is everyone? latest check-in per person today ──
@@ -34449,7 +34452,7 @@ function PayContract(props) {
   var h = React.createElement, pid = props.pid, nm = props.name || '', mS = ktUse('pay_method/' + pid, null), m = mS[0] && mS[0].mode ? mS[0] : null;
   var fS = React.useState({ mode: '', name: '' }), f = fS[0], setF = fS[1], eS = React.useState(false), edit = eS[0], setEdit = eS[1], gS = ktUse('paychecks/' + pid, {}), pend = Object.values(gS[0] || {}).filter(function (c) { return c && c.status === 'pending'; });
   var sg = React.useState(''), msg = sg[0], setMsg = sg[1];
-  var opts = [['auto', '⚡ Automatic', 'My paycheck goes into my account by itself on payday.'], ['manual', '✋ Manual', 'My paycheck waits. I ask Mom or Dad to pay me, and they approve it.']];
+  var opts = [['auto', '⚡ Automatic', 'My paycheck goes into my account by itself on payday.'], ['manual', '✋ Manual', 'My paycheck waits. My pay waits until it is approved.']];
   function sign() {
     if (!f.mode) { setMsg('Pick Automatic or Manual first.'); return; } if (f.name.trim().length < 2) { setMsg('Type your name to sign.'); return; }
     try { syncSet('pay_method/' + pid, { mode: f.mode, signed: f.name.trim(), ts: Date.now(), by: pid, locked: false }); } catch (e) {} setEdit(false); setMsg('✅ Contract signed.');
@@ -34466,7 +34469,7 @@ function PayContract(props) {
       m.mode === 'manual' && pend.length > 0 && h('button', { onClick: ask, style: { background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, padding: '9px 14px', fontWeight: 900, cursor: 'pointer' } }, '🙋 Ask to be paid (' + pend.length + ')')));
   return h('div', { style: card },
     h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, '✍️ PAY CONTRACT — ' + (m ? 'CHANGE' : 'SIGN IT')),
-    h('div', { style: { fontSize: 13, color: '#fff', lineHeight: 1.6, margin: '6px 0 8px' } }, 'Choose how you want to get paid for the work you do. You can change it later' + ' — unless Mom or Dad choose it for you, then it is final.'),
+    h('div', { style: { fontSize: 13, color: '#fff', lineHeight: 1.6, margin: '6px 0 8px' } }, 'Choose how you want to get paid for the work you do. You can change it later' + ' — unless it is chosen for you, then it is final.'),
     opts.map(function (o) { var on = f.mode === o[0]; return h('button', { key: o[0], onClick: function () { setF(Object.assign({}, f, { mode: o[0] })); }, style: { display: 'block', width: '100%', textAlign: 'left', background: on ? 'rgba(76,175,130,.3)' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), borderRadius: 14, padding: 12, marginBottom: 8, color: '#fff', cursor: 'pointer' } }, h('div', { style: { fontSize: 15, fontWeight: 900 } }, o[1]), h('div', { style: { fontSize: 12, color: '#d8d8e8', marginTop: 2 } }, o[2])); }),
     h('div', { style: { fontSize: 12, color: '#d8d8e8', margin: '4px 0' } }, 'Type your name to sign:'),
     h('input', { value: f.name, onChange: function (e) { setF(Object.assign({}, f, { name: e.target.value })); }, placeholder: nm || 'Your name', style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 12, color: '#fff', padding: 12, fontSize: 16, marginBottom: 8 } }),
@@ -35938,7 +35941,7 @@ function KitchenChallenge(props) {
     admin ? h('div', { style: { marginTop: 6 } }, SM_DAYS.map(function (dn, di) { return h('div', { key: di, style: { fontSize: 11, color: '#cfc4e8' } }, dn.slice(0, 3) + ': ' + SM_MEALS.map(function (m) { return m[1] + ' ' + bench.byK[bench.days[di][m[0]]].t; }).join(' · ')); })) : h('div', { style: { fontSize: 11, color: '#9ad', marginTop: 4 } }, 'Which choices were different? Was yours cheaper or healthier anywhere?')) : null;
   return h('div', null,
     h('div', { style: { background: 'rgba(255,193,7,.12)', border: '1px solid rgba(255,193,7,.35)', borderRadius: 10, padding: 9, marginBottom: 8, fontSize: 11, color: '#FFE082', lineHeight: 1.5 } }, '🩺 Why this week matters: this menu is a kidney-stone-friendly trial week before the stone analysis (due before Nov 24, 2026). The advice is general. The right diet depends on the stone type, so keep the urologist’s results and 24-hour urine test in mind and adjust after them.'),
-    h('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.6)', lineHeight: 1.5, marginBottom: 8 } }, 'Plan next week’s menu for our family of 6, build the shopping list, shop with the debit card and balance the budget. It uses math (cost and percent), science (nutrition and kidney health) and money skills. A parent has already prepared a plan to compare with yours.'),
+    h('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.6)', lineHeight: 1.5, marginBottom: 8 } }, 'Plan next week’s menu for our family of 6, build the shopping list, shop with the debit card and balance the budget. It uses math (cost and percent), science (nutrition and kidney health) and money skills. A sample plan is ready to compare with yours.'),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } }, h('button', { onClick: function () { setWeek(ktAddDays(week, -7)); }, style: KT_GHOST }, '‹'), h('div', { style: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 800, color: '#fff' } }, 'Menu for the week of ' + new Date(week + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })), h('button', { onClick: function () { setWeek(ktAddDays(week, 7)); }, style: KT_GHOST }, '›')),
     admin ? h('div', { style: card }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, '👪 Parent settings'),
       h('label', { style: { fontSize: 12, color: '#ccc' } }, 'Challenge budget for the week $', h('input', { defaultValue: budget, key: 'bg' + budget, inputMode: 'numeric', onBlur: function (e) { put('cfg/budget', Math.max(20, +e.target.value || 300)); }, style: Object.assign({}, inp, { width: 80, marginLeft: 4 }) })),
@@ -36814,7 +36817,7 @@ function MedSchedule(props) {
       h('div', { style: { display: 'flex', gap: 6 } }, h('button', { onClick: function () { if (!form.name.trim() && form.type !== 'insulin') return; mdsAdd(pid, form); setForm(null); }, style: btn('#4CAF82', '#000') }, 'Add to my daily list'), h('button', { onClick: function () { setForm(null); }, style: btn('rgba(255,255,255,.15)') }, 'Cancel')))
       : h('button', { onClick: function () { var d = new Date(); setForm({ type: 'med', name: '', dose: '', time: ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) }); }, style: Object.assign({}, btn('#9C27B0'), { marginTop: 8 }) }, '➕ Add a medicine or insulin'),
     h(MedRemSettings, { pid: pid }),
-    h('div', { style: { fontSize: 9, color: 'rgba(255,255,255,.35)', marginTop: 6, lineHeight: 1.5 } }, 'This is a record of what was taken, not medical advice. Doses and times come from the doctor and a parent.'));
+    h('div', { style: { fontSize: 9, color: 'rgba(255,255,255,.35)', marginTop: 6, lineHeight: 1.5 } }, 'This is a record of what was taken, not medical advice. Doses and times come from the doctor.'));
 }
 
 // ── Reminder: when a scheduled dose is due, pop up + sound + phone notification. Ask-for-the-time or auto-log, per person. ──
@@ -37138,7 +37141,7 @@ function MemberManager(props) {
 </script>
 <script>
 // ═══ DEVICE SETUP — one-time setup for each device: sound, alerts, safety agreement. Tap "Finish" and the banner is gone. ═══
-var DS_AGREE_TEXT = 'I agree that my parents (the family administrators) set up and manage safety controls on the devices I use, which are owned by E&L Services & Sales (our family business), such as web filters, app and screen-time limits, and device settings. I understand they do this to keep me safe, and that I will talk with them if I have a question or a concern. I agree to this one time, and I know the rules are explained in the family Terms & Conditions.';
+var DS_AGREE_TEXT = 'I agree that my family sets up and manages safety controls on the devices I use, which are owned by E&L Services & Sales (our family business), such as web filters, app and screen-time limits, and device settings. I understand they do this to keep me safe, and that I will talk with my family if I have a question or a concern. I agree to this one time, and I know the rules are explained in the family Terms & Conditions.';
 var DS_AGREE_CARE = 'I agree that my caregivers (the family administrators) may help manage my devices, such as limiting apps, filtering websites, and keeping settings simple, to help keep me safe and make things easier for me. We talked this over together, and I understand I can ask them to explain or change it at any time. I agree to this one time, and it will not be asked again.';
 function dsText(pid) { try { var f = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.id === pid; })[0]; if (f && f.role === 'elder') return [DS_AGREE_CARE, 'care-v2']; } catch (e) {} return [DS_AGREE_TEXT, 'child-v2']; }
 function dsDone(pid) { try { return !!localStorage.getItem('fm_devsetup_' + pid); } catch (e) { return false; } }
@@ -37205,7 +37208,7 @@ function DeviceSetup(props) {
 <script>
 // Conduct & Device Agreement (sign once, saved for the admins) + admin list / print / review log
 var CD_VER = 'conduct-v1';
-var CD_TEXT = 'The devices and accounts I use are owned by E&L Services & Sales, and I agree to use them in line with Jehovah’s Witness Bible principles — keeping my words clean, kind and encouraging, with no sexual or lewd talk, nude pictures, pornography, bullying, or hateful speech. I understand the administrators (Mom and Dad) do not read my messages day to day, but if they have a real concern for my safety or well-being they may look over my messages and activity on these devices and accounts, and they will talk with me and show me what they found. I understand that every review is logged and I will be told when one happens, and by checking the box and typing my name I agree to this, and to the family Terms & Conditions, one time.';
+var CD_TEXT = 'The devices and accounts I use are owned by E&L Services & Sales, and I agree to use them in line with Jehovah’s Witness Bible principles — keeping my words clean, kind and encouraging, with no sexual or lewd talk, nude pictures, pornography, bullying, or hateful speech. I understand my family do not read my messages day to day, but if they have a real concern for my safety or well-being they may look over my messages and activity on these devices and accounts, and they will talk with me and show me what they found. I understand that every review is logged and I will be told when one happens, and by checking the box and typing my name I agree to this, and to the family Terms & Conditions, one time.';
 function cdEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function cdIsElder(pid) { try { var f = (typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.id === pid; })[0]; return !!(f && f.role === 'elder'); } catch (e) { return false; } }
 
@@ -37274,7 +37277,7 @@ function FcRow(props) {
   var btn = function (bg, fg) { return { flex: 1, textAlign: 'center', textDecoration: 'none', background: bg, color: fg, borderRadius: 12, padding: '11px 4px', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'block' }; };
   return h('div', { style: { background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 16, padding: 12, marginBottom: 8 } },
     h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 2 } }, (p.emoji || '') + ' ' + p.name),
-    ph ? h('div', { style: { fontSize: 12, color: '#b8b8c8', marginBottom: 8 } }, ph) : h('div', { style: { fontSize: 12, color: '#FFB74D' } }, 'No phone number saved yet — an admin can add it in Admin → Family Members.'),
+    ph ? h('div', { style: { fontSize: 12, color: '#b8b8c8', marginBottom: 8 } }, ph) : h('div', { style: { fontSize: 12, color: '#FFB74D' } }, 'No phone number saved yet.'),
     ph && h('div', { style: { display: 'flex', gap: 6 } },
       h('a', { href: 'tel:+' + d, style: btn('#4CAF82', '#000') }, '📞 Call'),
       h('a', { href: 'sms:+' + d, style: btn('#42A5F5', '#000') }, '💬 Text'),
@@ -37362,13 +37365,13 @@ var KT_PAGES = [
   ['👋', 'Welcome to our family app!', 'This is our family’s home on your device. It helps your day go smoothly, helps you learn, and helps you earn. This tour takes about two minutes. You can replay it any time.'],
   ['⏱', '1. Start your day', 'Open My Day Clock-In and tap the big green button to start your day. Then do your morning habits. Tap “I’m ready for the day” before the get-ready timer runs out. If you run late, a small amount can be taken from your account.'],
   ['📋', '2. Follow your schedule', 'After you are ready, “Follow my schedule” shows what is next: school blocks, chores, and breaks. In “Coming up”, tap Go and it takes you right to it.'],
-  ['💼', '3. Work & School', 'Work & School is where your lessons and your chores are. Do the work, then check it off. Some jobs you pick up yourself. Mom or Dad look at finished work and approve it.'],
+  ['💼', '3. Work & School', 'Work & School is where your lessons and your chores are. Do the work, then check it off. Some jobs you pick up yourself. Finished work gets checked and approved.'],
   ['💬', '4. Check-ins', 'A check-in pops up a few times a day. Tell us who you are with, what you are doing, and how you feel. It also asks for one good thing you can say about yourself. Answer honestly — that is how we know you are safe and doing well.'],
   ['💰', '5. Money & Habit Leaders', 'You earn money and points for finishing your day, your habits, and your jobs. Money shows your balance. Habit Leaders shows how you are growing. Missing a check-in or being late can take a small amount away.'],
   ['☰', '6. The Menu button', 'The ☰ Menu button at the top is your map. It takes you to every page. It also has Settings (sound and alerts), Family contacts (call or text your family), and your Notifications.'],
   ['🍎', '7. Kitchen & Health', 'In Kitchen you can plan meals, and take a photo of your food to see what is in it. In Health, medicine reminders ping you — tap “I took it” when you do.'],
-  ['🤝', '8. Our family rules', 'We use kind, clean words, and we do not send or look at anything unkind or inappropriate. These devices belong to our family business. Mom and Dad keep your passcode safe, and if they are ever worried they may look over your messages — and they will talk with you first. You can always ask them anything.'],
-  ['🌟', 'You are ready!', 'Start with Step 1 tomorrow morning. If you get stuck, ask Mom or Dad. To see this tour again, open ☰ Menu and tap “How this app works.”']
+  ['🤝', '8. Our family rules', 'We use kind, clean words, and we do not send or look at anything unkind or inappropriate. These devices belong to our family business. Keep your passcode safe and private.'],
+  ['🌟', 'You are ready!', 'Start with Step 1 tomorrow morning. If you get stuck, use 🆘 I need help in Check in. To see this tour again, open ☰ Menu and tap “How this app works.”']
 ];
 function ktDoneLocal(pid) { try { return !!localStorage.getItem('fm_tour_' + pid); } catch (e) { return false; } }
 function KidsTour(props) {
@@ -39621,7 +39624,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v138';
+var FM_BUILD = 'v139';
 (function () {
   function stamp() {
     try {
