@@ -38887,7 +38887,7 @@ function ssLessons(sid, day) {
   var st = ssKid(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
   if (!st) return out;
   SUBJ.forEach(function (sub) {
-    var L = null, en = null, topic = '', act = '', ans = '';
+    var L = null, en = null, topic = '', act = '', ans = '', scr = '';
     try { L = getLessonForDay(sub.id, day, st.grade); } catch (e) {}
     try { en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[day - 1] : null; } catch (e) {}
     if (sub.id === 'bible') {
@@ -38895,7 +38895,8 @@ function ssLessons(sid, day) {
     } else {
       topic = bcTopic(L); if (!topic) return; act = String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000); ans = (L && L.answerKey && L.answerKey.long) || '';
     }
-    out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, key: sid + '_d' + day + '_' + sub.id });
+    try { scr = String((L && L.script) || ''); } catch (e) {}
+    out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, scr: scr, key: sid + '_d' + day + '_' + sub.id });
   });
   // Computer Lab: its own checkoff right under Bible study
   var labRow = { id: 'lab', lab: true, label: '💻 Computer Lab', color: '#00ACC1', topic: 'Your next computer step + typing practice', act: '', key: sid + '_d' + day + '_lab' };
@@ -38914,7 +38915,7 @@ function ssCatchLesson(sid, through) {
       try { L = getLessonForDay(sub.id, d, st.grade); } catch (e) {}
       try { en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[d - 1] : null; } catch (e) {}
       if (sub.id === 'bible') { if (!en) continue; topic = String(en[3] || ''); idea = (en[6] ? 'Theme: ' + en[6] + '. ' : '') + (en[4] ? 'Read ' + en[4] + '.' : ''); }
-      else { topic = bcTopic(L); try { idea = ssClean(L && L.answerKey && L.answerKey.short, 190); } catch (e) {} }
+      else { topic = bcTopic(L); try { var kl = String((L && L.answerKey && L.answerKey.long) || '').split('\n')[0]; idea = /^Key idea:/i.test(kl) ? ssClean(kl.replace(/^Key idea:\s*/i, ''), 190) : ''; } catch (e) {} }
       if (!topic || seen[topic]) continue; seen[topic] = 1; items.push({ day: d, topic: topic, idea: idea });
     }
     if (items.length) groups.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', items: items });
@@ -38968,7 +38969,8 @@ function SchoolLessonRows(props) {
           h('div', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
         open && h('div', { style: { padding: '0 12px 12px' } },
           r.lab && h(LabToday, { sid: sid, admin: admin }),
-          r.act && h(LessonWork, { act: r.act, color: r.color, ans: r.ans, admin: admin }),
+          admin && h(TeacherGuide, { row: r, sid: sid, day: day }),
+          r.act && h(LessonWork, { act: r.act, color: r.color }),
           h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
             !done && !admin && !going && btn('#4CAF82', '#000', function () { ssStart(sid, sessions, onUpdate, r.label); }, run && run.label && run.label !== r.label ? '▶ Switch to this' : '▶ Clock in', true),
             !done && !admin && going && btn('#7E57C2', '#fff', function () { var m = ssFinish(sid, sessions, onUpdate, r.label); markDone(r, m, 'student'); say('✅ Nice work! ' + m + ' min'); }, '✅ I finished', true),
@@ -39138,6 +39140,55 @@ function LessonWork(props) {
       showAns && h('div', { style: { whiteSpace: 'pre-wrap', fontSize: 15, color: '#f2f2f8', lineHeight: 1.65, background: 'rgba(0,0,0,.3)', borderRadius: 12, padding: 12, marginTop: 6 } }, props.ans)));
 }
 
+// ── TEACHER'S GUIDE (admin only): what to say, how to say it, and the answer key — for every subject ──
+function ssTips(sid) {
+  var st = ssKid(sid) || {}, g = st.grade || 8, n = st.name || 'the student';
+  if (g <= 5) return [n + ' is young: give ONE direction at a time, then wait. Say it, show it, then let ' + n + ' do it.', 'Use a warm, slow voice. Praise effort out loud: “I love how carefully you worked on that.”', 'Accept short answers. If ' + n + ' is stuck, ask a smaller question or give two choices.', 'Keep it playful — stop while it is still fun, then come back later.'];
+  if (g <= 9) return ['Give the goal first, then let ' + n + ' choose how to start.', 'Ask “How did you figure that out?” — it shows thinking, not just the answer.', 'Praise the specific thing (“your steps were so neat”). Fix one thing at a time.', 'Let ' + n + ' explain it back to you in her own words before you move on.'];
+  return ['Treat ' + n + ' as a near-adult: state the goal and the deadline, then step back.', 'Ask for reasoning and evidence: “What makes you say that? What would change your answer?”', 'Have ' + n + ' check the work first, then compare with the key together.', 'Connect it to real life and to the future plans ' + n + ' has.'];
+}
+function TeacherGuide(props) {
+  var h = React.createElement, r = props.row, sid = props.sid, oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var tips = ssTips(sid), st = ssKid(sid) || {};
+  var hd = function (t, c) { return h('div', { style: { fontSize: 12, fontWeight: 900, color: c || '#FFD54F', letterSpacing: 1, margin: '12px 0 4px' } }, t); };
+  var body = { fontSize: 16, color: '#f2f2f8', lineHeight: 1.7, whiteSpace: 'pre-wrap' };
+  return h('div', { style: { marginBottom: 8 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', minHeight: 48, background: open ? '#7986CB' : 'rgba(121,134,203,.25)', border: '2px solid rgba(121,134,203,.7)', color: '#fff', borderRadius: 14, padding: '10px 14px', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (open ? '▲ ' : '▼ ') + '👩‍🏫 Teacher’s guide — what to say, how to say it, answers'),
+    open && h('div', { style: { background: 'rgba(121,134,203,.12)', border: '1px solid rgba(121,134,203,.5)', borderRadius: 14, padding: 14, marginTop: 6 } },
+      r.lab ? h(LabTeacherGuide, { sid: sid }) : h('div', null,
+        r.scr ? h('div', null, hd('🎙 WHAT TO SAY'), h('div', { style: body }, r.scr)) : h('div', { style: body }, 'No script is written for this lesson yet.'),
+        r.act && hd('✏️ WHAT ' + (st.name || 'THE STUDENT').toUpperCase() + ' DOES', '#81C784'), r.act && h('div', { style: body }, r.act),
+        r.ans && hd('🔑 ANSWER KEY / WHAT TO LOOK FOR', '#90CAF9'), r.ans && h('div', { style: body }, r.ans)),
+      hd('💬 HOW TO SAY IT — for ' + (st.name || ''), '#F48FB1'),
+      tips.map(function (t, i) { return h('div', { key: i, style: { display: 'flex', gap: 8, fontSize: 15, color: '#f2f2f8', lineHeight: 1.6, padding: '3px 0' } }, h('span', null, '•'), h('span', null, t)); })));
+}
+// Computer Lab: teacher manual, Bible Lands exploration team plan, and what to check for each child
+function LabTeacherGuide(props) {
+  var h = React.createElement, sid = props.sid, st = ssKid(sid) || {}, path = (typeof CL_PATH !== 'undefined' && CL_PATH[sid]) || [];
+  var dS = ktUse('school/complab/' + sid + '/done', {}), done = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/complab/' + sid + '/done', {}) : null) || {}, dS[0] || {});
+  var nxt = path.filter(function (x) { return !done[x[0]]; })[0], how = nxt && typeof CL_HOW !== 'undefined' ? CL_HOW[nxt[0]] : null;
+  var hd = function (t, c) { return h('div', { style: { fontSize: 12, fontWeight: 900, color: c || '#FFD54F', letterSpacing: 1, margin: '12px 0 4px' } }, t); };
+  var body = { fontSize: 16, color: '#f2f2f8', lineHeight: 1.7, whiteSpace: 'pre-wrap' };
+  var li = function (arr) { return arr.map(function (t, i) { return h('div', { key: i, style: { display: 'flex', gap: 8, fontSize: 16, color: '#f2f2f8', lineHeight: 1.65, padding: '3px 0' } }, h('span', null, '•'), h('span', null, t)); }); };
+  return h('div', null,
+    hd('🎙 WHAT TO SAY (open the lab time)'),
+    h('div', { style: body }, 'Say: “Computer lab is where we learn to use tools to serve Jehovah and our family. Today ' + (st.name || 'you') + ' will work on the next step of your own computer path. Remember the three safe-internet rules: ask first, never share private information, and tell me about anything confusing.”\n\nThen: “Show me which step you are on and tell me what you plan to do first.”'),
+    nxt && hd('✅ ' + (st.name || 'THIS CHILD').toUpperCase() + '’S NEXT STEP', '#81C784'), nxt && h('div', { style: body }, nxt[1]),
+    how && hd('🔍 WHAT TO CHECK BEFORE YOU SIGN IT OFF', '#90CAF9'), how && h('div', { style: body }, how.done + '\n\nAsk: “Walk me through what you did. What was the hardest part? What would you do differently?”'),
+    hd('🗺️ BIBLE LANDS EXPLORATION — TEAM PROJECT', '#80DEEA'),
+    h('div', { style: body }, 'The goal: together the four children build a walk-through tour of a Bible place (for example the tabernacle courtyard, Jerusalem, or the Promised Land) that teaches what the Bible says about it. Everyone has a real job, so the youngest matters just as much as the oldest.'),
+    hd('HOW TO SET IT UP (one time, about 30 minutes)'),
+    li(['Pick the place together (for example, the tabernacle). Look it up in Insight on the Scriptures and See the Good Land on wol.jw.org. Print or open the maps.', 'Write the place and the Bible verses on a big paper “project board” and tape it where all four can see it.', 'Make a shared folder on the ThinkPad called Bible-Lands. Put four sub-folders inside: Pictures, Facts, Game, Sounds.', 'Hand out the jobs below. Write each child’s name and job on the board.', 'Set a team time each week (about 20 minutes) for the “show and tell” where everybody shares their part.']),
+    hd('EVERYONE’S JOB'),
+    li(['Ryan (age 18) — Lead builder: builds the walk-through in Unreal Engine 5 using real measurements (cubits from Insight). Makes a place for each fact panel. Checks that all the parts fit together.', 'Kayla (16) — Researcher & writer: finds the facts and verses, writes the short fact panels, and builds the information web page. Gives Ryan the text to put in the tour.', 'Ashelyn (13) — Map & quiz maker: draws the map, makes the Scratch/Python quiz about the place, and keeps the project board up to date.', 'Mykah (10, the youngest) — Tour guide & official tester: picks the pictures, draws one picture of the place, reads each fact panel out loud so it is clear for a child, records the tour narration, and plays the game to find anything confusing. He also types the labels on the map.']),
+    hd('HOW TO SAY IT TO MYKAH'),
+    h('div', { style: body }, 'Say: “Mykah, you are our official tour guide and tester. The big kids are building the place, and you decide if it makes sense to a kid. Your job is to look, listen and tell us if anything is too hard. That is very important.”\n\nGive him one small job at a time. When he finishes, ask him to show the others. Praise the specific thing he did.'),
+    hd('HOW THE TEAM WORKS TOGETHER'),
+    li(['Start the team time with a prayer. Each person says in one sentence what they did and what they need from someone else.', 'Rule: ask a teammate before you ask a parent. Teach the younger ones — the best way to learn something is to explain it.', 'Keep everything in the shared folder and name files like Ryan-tabernacle-level.', 'Disagreements: listen first, then choose the way that best helps the project, not the loudest voice.', 'At the end each person presents their part to the family. Back up the whole folder to the USB drive.']),
+    hd('WHAT TO LOOK FOR (answer key)', '#90CAF9'),
+    li(['Every fact and measurement ties back to a Bible verse or Insight article.', 'The tour makes sense to a ten-year-old (Mykah approves it).', 'Each child can explain their own part and one thing a teammate did.', 'All the pictures and sounds are the family’s own or free to use. No private information is shared online.']));
+}
+
 </script>
 <script>
 // ═══ ATTENDANCE REPORT (new): reads each day's saved attendance + clock in/out times, big and readable ═══
@@ -39246,7 +39297,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v127';
+var FM_BUILD = 'v128';
 (function () {
   function stamp() {
     try {
