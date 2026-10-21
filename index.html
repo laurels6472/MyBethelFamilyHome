@@ -29245,8 +29245,10 @@ function ktLocal(path, fallback) {
 }
 function ktUse(path, fallback) {
   var s = React.useState(function () { return (typeof db !== 'undefined' && db) ? fallback : ktLocal(path, fallback); });
+  var pr = React.useRef(path);
   React.useEffect(function () {
     var u = null;
+    if (pr.current !== path) { pr.current = path; try { s[1](ktLocal(path, fallback)); } catch (e) {} }
     try { u = syncOn(path, function (d) { s[1](d == null ? fallback : d); }, true); } catch (e) {}
     var loc = function (ev) {
       if (!ev || typeof ev.detail !== 'string') return;
@@ -35198,7 +35200,8 @@ function fpUsd(n) { return '$' + (+n || 0).toFixed(2); }
 function fpDeep(o, parts, val) { var r = Object.assign({}, o || {}); if (parts.length === 1) { if (val === null) delete r[parts[0]]; else r[parts[0]] = val; } else r[parts[0]] = fpDeep(r[parts[0]], parts.slice(1), val); return r; }
 function fpDoc(path, def) {
   var s = React.useState(function () { var v = null; try { v = syncGet(path); } catch (e) {} return v == null ? def : v; });
-  React.useEffect(function () { var u = syncOn(path, function (v) { s[1](v == null ? def : v); }, true); return function () { if (u) u(); }; }, [path]);
+  var pr = React.useRef(path);
+  React.useEffect(function () { if (pr.current !== path) { pr.current = path; var l0 = null; try { l0 = syncGet(path); } catch (e) {} s[1](l0 == null ? def : l0); } var u = syncOn(path, function (v) { s[1](v == null ? def : v); }, true); return function () { if (u) u(); }; }, [path]);
   var put = function (sub, v) { s[1](function (o) { return fpDeep(o, sub.split('/'), v); }); try { syncSet(path + '/' + sub, v); } catch (e) {} };
   return [s[0], put];
 }
@@ -36282,6 +36285,24 @@ function ClassroomDaily(props) {
   }
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === k) rows.push({ s: ['c_' + id, '📝 ' + (c.subj || 'Assignment')], L: { title: c.title, body: c.body }, cid: id }); });
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === 'all') tgRows.push([c.title, c.body || '', '', 'c' + id, id]); });
+  React.useEffect(function () {
+    if (!admin) return;
+    var LS = 'fm_cr_reset_v2', fin = false, got = false, tm = null, u = null;
+    try { if (localStorage.getItem(LS)) return; } catch (e) {}
+    function run() {
+      if (fin) return; fin = true;
+      try {
+        for (var d = 1; d <= 180; d++) { if (d !== 11) syncSet('classroom/posted/' + d, null); }
+        var p11 = syncGet('classroom/posted/11');
+        if (p11 && typeof p11 === 'object') Object.keys(p11).forEach(function (kk) { if (kk === 'all' || !p11[kk] || typeof p11[kk] !== 'object') return; Object.keys(p11[kk]).forEach(function (sub) { if (sub !== 'bible') syncSet('classroom/posted/11/' + kk + '/' + sub, null); }); });
+        syncSet('classroom/reset_v2', Date.now());
+      } catch (e) {}
+      try { localStorage.setItem(LS, '1'); } catch (e) {}
+    }
+    try { u = syncOn('classroom/reset_v2', function (v) { if (v) { got = true; try { localStorage.setItem(LS, '1'); } catch (e) {} fin = true; } }, true); } catch (e) {}
+    tm = setTimeout(function () { if (!got) run(); }, 4000);
+    return function () { clearTimeout(tm); if (u) u(); };
+  }, []);
   function isDone(kk, id) { var pk = posted[kk] || {}; if (pk[id]) return true; if (id === 'bible') { if ((posted.all || {}).t0) return true; return CR_KIDS.some(function (x) { return (posted[x] || {}).bible; }); } return false; }
   function markSame(r) {
     var now = Date.now(); putP(k + '/' + r.s[0], now);
@@ -39630,7 +39651,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v141';
+var FM_BUILD = 'v142';
 (function () {
   function stamp() {
     try {
