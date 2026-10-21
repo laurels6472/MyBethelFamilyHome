@@ -39264,26 +39264,38 @@ function LabTeacherGuide(props) {
 }
 
 function SchoolDayPicker(props) {
-  var h = React.createElement, day = props.day, vd = props.viewDay, rs = props.restart, auto = props.autoDay, ref = React.useRef(null);
+  var h = React.createElement, day = props.day, vd = props.viewDay, rs = props.restart, auto = props.autoDay, ref = React.useRef(null), oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var cur = day || Math.max(1, rs.day - 1), pct = Math.round(cur / 180 * 100);
   React.useEffect(function () {
+    if (!open) return;
     try { var el = ref.current && ref.current.querySelector('[data-sel="1"]'); if (el && ref.current) ref.current.scrollLeft = el.offsetLeft - ref.current.clientWidth / 2 + el.clientWidth / 2; } catch (e) {}
-  }, [day]);
+  }, [open, day]);
   var pending = vd != null && auto == null;
-  var chips = []; for (var n = 1; n <= 180; n++) (function (n) {
+  var chips = [];
+  if (open) for (var n = 1; n <= 180; n++) (function (n) {
     var on = n === day, isToday = n === auto, lbl = ssDayLabel(n).split(', ');
-    chips.push(h('button', { key: n, 'data-sel': on ? '1' : '0', onClick: function () { props.setViewDay(n); }, style: { flex: '0 0 auto', minWidth: 74, padding: '8px 6px', borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : isToday ? '#4CAF82' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.22)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer', textAlign: 'center' } },
-      h('div', { style: { fontSize: 11, color: isToday ? '#81C784' : '#c8c8d8', fontWeight: 800 } }, isToday ? 'TODAY' : n < rs.day ? 'REVIEW' : (lbl[0] || '')),
-      h('div', { style: { fontSize: 17, fontWeight: 900 } }, 'Day ' + n), h('div', { style: { fontSize: 11, color: '#c8c8d8' } }, lbl[1] || '')));
+    chips.push(h('button', { key: n, 'data-sel': on ? '1' : '0', onClick: function () { props.setViewDay(n); }, style: { flex: '0 0 auto', minWidth: 76, padding: '9px 6px', borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : isToday ? '#4CAF82' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.24)' : isToday ? 'rgba(76,175,130,.15)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer', textAlign: 'center' } },
+      h('div', { style: { fontSize: 12, color: isToday ? '#81C784' : '#c8c8d8', fontWeight: 800 } }, isToday ? 'TODAY' : (lbl[0] || '')),
+      h('div', { style: { fontSize: 18, fontWeight: 900 } }, 'Day ' + n), h('div', { style: { fontSize: 11, color: '#c8c8d8' } }, lbl[1] || '')));
   })(n);
-  return h('div', { style: { marginBottom: 12 } },
-    h('div', { ref: ref, style: { display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, WebkitOverflowScrolling: 'touch', position: 'relative' } }, chips),
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-      vd != null && h('button', { onClick: function () { props.setViewDay(null); }, style: { background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '↩ Back to today'),
-      h('span', { style: { flex: 1, fontSize: 13, color: pending ? '#FFB74D' : '#c8c8d8', lineHeight: 1.4 } }, pending ? 'Preview only: the children will not see daily lessons until ' + rs.date + '.' : vd != null ? 'Looking at another day — slide the days sideways.' : 'Slide the days sideways to look at any day.'),
-      h('button', { onClick: function () { props.setSetOpen(!props.openSet); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '⚙ Start date')),
-    props.openSet && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8, color: '#e8e8f4', fontSize: 14 } },
-      'Daily lessons start on', h('input', { type: 'date', defaultValue: rs.date, key: 'rsd' + rs.date, onBlur: function (e) { if (e.target.value) { try { syncSet('school/restart/date', e.target.value); } catch (x) {} } }, style: { background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: 10, fontSize: 15 } }),
-      'at Day', h('input', { type: 'number', min: 1, max: 180, defaultValue: rs.day, key: 'rsn' + rs.day, onBlur: function (e) { var v = parseInt(e.target.value, 10); if (v > 0) { try { syncSet('school/restart/day', v); } catch (x) {} } }, style: { width: 70, background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: 10, fontSize: 15 } })));
+  return h('div', { style: { marginBottom: 12, background: 'linear-gradient(135deg,rgba(121,134,203,.22),rgba(0,172,193,.14))', border: '2px solid rgba(121,134,203,.55)', borderRadius: 18, overflow: 'hidden' } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '12px 14px' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+        h('div', { style: { fontSize: 28 } }, '🗓️'),
+        h('div', { style: { flex: 1 } },
+          h('div', { style: { fontSize: 17, fontWeight: 900 } }, '180 Days of School — day by day'),
+          h('div', { style: { fontSize: 13, color: '#C5CAE9', marginTop: 2 } }, (vd != null ? 'Looking at Day ' + cur : 'Day ' + cur) + ' · ' + ssDayLabel(cur) + (auto === cur ? ' · today' : ''))),
+        h('div', { style: { fontSize: 20, color: '#C5CAE9' } }, open ? '▲' : '▼')),
+      h('div', { style: { height: 6, background: 'rgba(255,255,255,.14)', borderRadius: 3, overflow: 'hidden', marginTop: 8 } }, h('div', { style: { height: '100%', width: pct + '%', background: 'linear-gradient(90deg,#7986CB,#00ACC1,#4CAF82)' } }))),
+    open && h('div', { style: { padding: '0 12px 12px' } },
+      h('div', { ref: ref, style: { display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, WebkitOverflowScrolling: 'touch', position: 'relative' } }, chips),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+        h('span', { style: { flex: 1, fontSize: 13, color: pending ? '#FFB74D' : '#c8c8d8', lineHeight: 1.4 } }, pending ? 'Preview only: the children will not see daily lessons until ' + rs.date + '.' : 'Slide sideways, then tap a day to open it.'),
+        h('button', { onClick: function () { props.setSetOpen(!props.openSet); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '⚙ Start date')),
+      props.openSet && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8, color: '#e8e8f4', fontSize: 14 } },
+        'Daily lessons start on', h('input', { type: 'date', defaultValue: rs.date, key: 'rsd' + rs.date, onBlur: function (e) { if (e.target.value) { try { syncSet('school/restart/date', e.target.value); } catch (x) {} } }, style: { background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: 10, fontSize: 15 } }),
+        'at Day', h('input', { type: 'number', min: 1, max: 180, defaultValue: rs.day, key: 'rsn' + rs.day, onBlur: function (e) { var v = parseInt(e.target.value, 10); if (v > 0) { try { syncSet('school/restart/day', v); } catch (x) {} } }, style: { width: 70, background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: 10, fontSize: 15 } }))),
+    vd != null && h('div', { style: { padding: '0 12px 12px' } }, h('button', { onClick: function () { props.setViewDay(null); }, style: { width: '100%', minHeight: 46, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '↩ Back to today')));
 }
 // ── MOM / TEACHER tab: day strip + every subject's script, how-to-say and answers, per child ──
 function TeacherHome(props) {
@@ -39418,7 +39430,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v130';
+var FM_BUILD = 'v131';
 (function () {
   function stamp() {
     try {
