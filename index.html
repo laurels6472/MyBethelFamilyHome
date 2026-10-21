@@ -7590,6 +7590,7 @@ function Dashboard({
     planEl: typeof SchedulePlan === 'function' ? /*#__PURE__*/React.createElement(SchedulePlan, { schedHook: schedHook, personId: effectiveId, name: effectivePerson && effectivePerson.name, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, hidePeriod: 'morning' }) : null
   }), tab === 'chores' && typeof OrderOfOps === 'function' && /*#__PURE__*/React.createElement(OrderOfOps, { personId: effectiveId, name: effectivePerson && effectivePerson.name, addNotif: addNotif }), tab === 'schedule' && effectiveRole === 'elder' && typeof GrandpaWelcome !== 'undefined' && /*#__PURE__*/React.createElement(GrandpaWelcome, null),
   false, tab === 'calendar' && typeof FamilyCalendar !== 'undefined' && /*#__PURE__*/React.createElement(FamilyCalendar, {personId:effectiveId, isAdmin:isAdmin||isOwner, family:fam}),
+  tab === 'calendar' && typeof SchedAddCard === 'function' && /*#__PURE__*/React.createElement(SchedAddCard, { personId: effectiveId, name: effectivePerson && effectivePerson.name, role: effectiveRole, addNotif: addNotif }),
   tab === 'free' && typeof FreeTimeCelebration !== 'undefined'
     ? /*#__PURE__*/React.createElement(FreeTimeCelebration, {personId:effectiveId,role:effectiveRole})
     : (tab === 'free' && /*#__PURE__*/React.createElement(FreeTimeView, null)), tab === 'work' && /*#__PURE__*/React.createElement(WorkPanel, {
@@ -38507,6 +38508,8 @@ function MySchedule(props) {
   var tkS = React.useState(0), setTk = tkS[1];
   React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(iv); }; }, []);
   var tourS = React.useState(function () { return !msTourGet(pid); }), tour = tourS[0], setTour = tourS[1];
+  var tdS = ktUse('schedtour/' + pid, null), tourSynced = !!tdS[0];
+  React.useEffect(function () { if (tourSynced) setTour(false); }, [tourSynced]);
   var addS = React.useState(false), addOpen = addS[0], setAdd = addS[1], fS = React.useState({ title: '', time: '', act: '', when: 'today' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var permS = ktUse('mysched_perm', {}), canEdit = props.role === 'parent' || !!(Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('mysched_perm', {}) : null) || {}, permS[0] || {})[pid]);
   var listS = React.useState(false), allOpen = listS[0], setAllOpen = listS[1];
@@ -38540,7 +38543,7 @@ function MySchedule(props) {
     if (!window.confirm('Take “' + b.title + '” off your schedule?')) return;
     try { if (b.daily) syncSet('mysched/' + pid + '/daily/' + b.id, null); else syncSet('mysched/' + pid + '/' + day + '/' + b.id, null); } catch (e) {}
   }
-  function closeTour() { try { localStorage.setItem('fm_schedtour_' + pid, '1'); } catch (e) {} setTour(false); }
+  function closeTour() { try { localStorage.setItem('fm_schedtour_' + pid, '1'); } catch (e) {} try { syncSet('schedtour/' + pid, true); } catch (e) {} setTour(false); }
   var card = { background: 'rgba(255,213,79,.08)', border: '2px solid #FFD54F', borderRadius: 18, padding: 14, marginBottom: 12 };
   var bigBtn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { width: '100%', background: bg, color: fg, border: 'none', borderRadius: 16, padding: 15, fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 8 } }, t); };
   var want = cur && cur.activity ? cur.activity : null, match = want && runIds.indexOf(want) !== -1;
@@ -38574,8 +38577,7 @@ function MySchedule(props) {
       h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff', margin: '2px 0' } }, (cur.emoji ? cur.emoji + ' ' : '') + cur.title),
       action(cur), lessonBtn(cur), heroNext)
       : h('div', null,
-        h('div', { style: { fontSize: 16, color: '#fff', fontWeight: 800 } }, blocks.length === 0 ? 'Nothing is on your schedule yet today.' : (next ? 'Nothing right now.' : 'Your schedule is finished for today. 🎉')),
-        blocks.length === 0 && h('div', { style: { fontSize: 13, color: '#c8c8d8', marginTop: 4 } }, 'Ask Mom or Dad, or add your own with the button below.'),
+        h('div', { style: { fontSize: 16, color: '#fff', fontWeight: 800 } }, blocks.length === 0 ? 'No schedule set for today.' : (next ? 'Nothing right now.' : 'Your schedule is finished for today. 🎉')),
         heroNext),
     props.role === 'parent' && h(SchedAddApprovals, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], compact: true }),
     props.role === 'parent' && typeof SchedPermCard === 'function' && h(SchedPermCard, { family: typeof FAMILY !== 'undefined' ? FAMILY : [] }),
@@ -38595,8 +38597,8 @@ function MySchedule(props) {
       }),
       h('div', { style: { display: 'flex', gap: 8, marginTop: 4 } },
         h('button', { onClick: function () { setAllOpen(!allOpen); }, style: { flex: 1, background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, allOpen ? '▲ Show less' : '▼ Show the whole day'))),
-    canEdit && h('button', { onClick: function () { setAdd(!addOpen); }, style: { width: '100%', background: 'rgba(0,188,212,.18)', color: '#fff', border: '1px solid rgba(0,188,212,.6)', borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 10 } }, addOpen ? '✕ Cancel' : '➕ Add to my schedule'),
-    canEdit && addOpen && h('div', { style: { marginTop: 10 } },
+    false && h('button', { onClick: function () { setAdd(!addOpen); }, style: { width: '100%', background: 'rgba(0,188,212,.18)', color: '#fff', border: '1px solid rgba(0,188,212,.6)', borderRadius: 14, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 10 } }, addOpen ? '✕ Cancel' : '➕ Add to my schedule'),
+    false && h('div', { style: { marginTop: 10 } },
       h('input', { value: f.title, onChange: function (e) { setF(Object.assign({}, f, { title: e.target.value })); }, placeholder: 'What is it? (example: Practice piano)', style: inp }),
       h('input', { type: 'time', value: f.time, onChange: function (e) { setF(Object.assign({}, f, { time: e.target.value })); }, style: inp }),
       h('select', { value: f.act, onChange: function (e) { setF(Object.assign({}, f, { act: e.target.value })); }, style: inp }, h('option', { value: '' }, 'No clock needed'), acts.filter(function (a) { return a.id !== 'meals'; }).map(function (a) { return h('option', { key: a.id, value: a.id }, 'Clock into ' + a.label); })),
@@ -38618,6 +38620,39 @@ function SchedAddApprovals(props) {
       h('div', { style: { flex: 1, fontSize: 14, color: '#fff' } }, h('b', null, nm(r.pid)), ' — ' + r.b.time + ' · ' + r.b.title, h('div', { style: { fontSize: 11, color: '#b8b8c8' } }, (r.k === 'daily' ? 'every day' : r.k) + (r.b.activity ? ' · clocks into ' + (typeof planActLabel === 'function' ? planActLabel(r.b.activity) : r.b.activity) : ''))),
       h('button', { onClick: function () { decide(r, true); }, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 16, padding: '9px 13px', fontWeight: 900, cursor: 'pointer' } }, '✓ Yes'),
       h('button', { onClick: function () { decide(r, false); }, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 16, padding: '9px 13px', fontWeight: 900, cursor: 'pointer' } }, '✕ No')); }));
+}
+
+// ── Add to my schedule: lives in the Calendar section (not in school / Start My Day) ──
+function SchedAddCard(props) {
+  var h = React.createElement, pid = props.personId, nm = props.name || '', isPar = props.role === 'parent';
+  var permS = ktUse('mysched_perm', {}), canEdit = isPar || !!(Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('mysched_perm', {}) : null) || {}, permS[0] || {})[pid]);
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1], fS = React.useState({ title: '', time: '', act: '', when: 'today' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var acts = typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : [];
+  if (!canEdit) return null;
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 5000); }
+  function add() {
+    var title = (f.title || '').trim(); if (!title) { say('Type what it is first.'); return; }
+    if (!f.time) { say('Pick a time.'); return; }
+    var q = f.time.split(':'), m = (+q[0]) * 60 + (+q[1]), id = 'own' + Date.now().toString(36);
+    var blk = { id: id, title: title, time: msFmt(m), activity: f.act || '', own: true, by: pid, ts: Date.now(), status: isPar ? 'approved' : 'pending', when: f.when };
+    var z = function (n) { return (n < 10 ? '0' : '') + n; }, t = new Date(); if (f.when === 'tomorrow') t.setDate(t.getDate() + 1);
+    var dayKey = t.getFullYear() + '-' + z(t.getMonth() + 1) + '-' + z(t.getDate());
+    var path = f.when === 'daily' ? 'mysched/' + pid + '/daily/' + id : 'mysched/' + pid + '/' + dayKey + '/' + id;
+    try { syncSet(path, blk); } catch (e) {}
+    try { if (props.addNotif && !isPar) props.addNotif('info', pid, '📅 ' + (nm || pid) + ' wants to add to their schedule — needs your OK', blk.time + ' — ' + title); } catch (e) {}
+    setF({ title: '', time: '', act: '', when: 'today' }); setOpen(false); say(isPar ? '✅ Added to the schedule.' : '⏳ Sent to Mom and Dad. It goes on your schedule when they say yes.');
+  }
+  var inp = { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 12, fontSize: 16, width: '100%', boxSizing: 'border-box', marginBottom: 8 };
+  return h('div', { style: { margin: '12px 14px', background: 'rgba(0,188,212,.1)', border: '2px solid rgba(0,188,212,.5)', borderRadius: 16, padding: 14 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '➕ ') + 'Add to my schedule'),
+    msg && h('div', { style: { background: 'rgba(76,175,130,.25)', border: '1px solid #4CAF82', borderRadius: 12, padding: 8, marginTop: 8, color: '#fff', fontSize: 14 } }, msg),
+    open && h('div', { style: { marginTop: 10 } },
+      h('input', { value: f.title, onChange: function (e) { setF(Object.assign({}, f, { title: e.target.value })); }, placeholder: 'What is it? (example: Practice piano)', style: inp }),
+      h('input', { type: 'time', value: f.time, onChange: function (e) { setF(Object.assign({}, f, { time: e.target.value })); }, style: inp }),
+      h('select', { value: f.act, onChange: function (e) { setF(Object.assign({}, f, { act: e.target.value })); }, style: inp }, h('option', { value: '' }, 'No clock needed'), acts.filter(function (a) { return a.id !== 'meals'; }).map(function (a) { return h('option', { key: a.id, value: a.id }, 'Clock into ' + a.label); })),
+      h('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } }, [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['daily', 'Every day']].map(function (x) { var on = f.when === x[0]; return h('button', { key: x[0], onClick: function () { setF(Object.assign({}, f, { when: x[0] })); }, style: { flex: 1, minHeight: 46, borderRadius: 12, border: '2px solid ' + (on ? '#00BCD4' : 'rgba(255,255,255,.2)'), background: on ? 'rgba(0,188,212,.3)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer' } }, x[1]); })),
+      h('button', { onClick: add, style: { width: '100%', minHeight: 52, background: '#00BCD4', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '✅ Put it on the schedule'),
+      !isPar && h('div', { style: { fontSize: 12, color: '#b8c8d0', marginTop: 6 } }, 'Mom and Dad say yes before it goes on your schedule.')));
 }
 
 </script>
@@ -38767,7 +38802,7 @@ function ClockNextStrip(props) {
   var card = { background: 'rgba(255,213,79,.1)', border: '2px solid #FFD54F', borderRadius: 14, padding: 12, marginBottom: 10 };
   var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { display: 'block', width: '100%', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 8 } }, t); };
   function nowRow() {
-    if (!cur) return h('div', { style: { color: '#e8e8f4', fontSize: 14 } }, timed.length ? 'Nothing is scheduled this minute.' : 'Nothing is on your schedule yet.');
+    if (!cur) return timed.length ? h('div', { style: { color: '#e8e8f4', fontSize: 14 } }, 'Nothing is scheduled this minute.') : null;
     var a = cur.activity, on = a && runIds.indexOf(a) !== -1;
     return h('div', null,
       h('div', { style: { fontSize: 11, fontWeight: 800, color: '#FFD54F', letterSpacing: 1 } }, 'CLOCK IN HERE · RIGHT NOW'),
@@ -38778,6 +38813,7 @@ function ClockNextStrip(props) {
         : !props.ready && a !== 'free' ? h('div', { style: { fontSize: 13, color: '#FFB74D', fontWeight: 800, marginTop: 4 } }, '🔒 Tap “I’m ready for the day” first, then clock in to ' + lbl(a))
         : btn('#4CAF82', '#000', function () { clockTo(a); }, '▶ Clock in to ' + lbl(a)));
   }
+  if (!timed.length) return null;
   return h('div', { style: card },
     nowRow(),
     next && h('div', { style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.18)' } },
@@ -38861,6 +38897,8 @@ function ssLessons(sid, day) {
     }
     out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, key: sid + '_d' + day + '_' + sub.id });
   });
+  // Computer Lab is its own checkoff, same as the other subjects
+  out.push({ id: 'lab', label: '💻 Computer Lab', color: '#00ACC1', topic: 'Computer lab time', act: 'Do your computer lab work (typing, coding, research, or the project on your list). Check it off when you finish.', key: sid + '_d' + day + '_lab' });
   return out;
 }
 // ONE combined catch-up lesson for Days 1..through: just the big idea of each topic, grouped by subject
