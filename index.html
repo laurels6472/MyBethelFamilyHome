@@ -36352,7 +36352,7 @@ function ClassroomDaily(props) {
   function isDone(kk, id) { return !!(posted[kk] || {})[id]; }
   function markSame(r, clear) { putP(k + '/' + r.s[0], clear ? null : Date.now()); }
   function undoAll(t, i) { putP('all/' + (t[3] || 't' + i), null); }
-  function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.'; window.open(crUrl(title, bodyTxt, 'assignment', crIsBible(t) ? dtLink : null), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
+  function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : 'For: Ryan, Kayla, Ashelyn and Mykah together.\n' + (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : ''); window.open(crUrl(title, bodyTxt, 'assignment', crIsBible(t) ? dtLink : null), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
   function one(r) { var title = crHead(day) + ' · ' + crName(k).toUpperCase() + ' · ' + r.s[1].replace(/^\S+\s/, '') + ': ' + r.L.title; window.open(crUrl(title, r.L.body || ('Complete today’s ' + r.s[1] + ' lesson.'), 'assignment'), '_blank'); markSame(r); }
   function allText() { return crHead(day) + '\nAssignments for ' + crName(k) + '\n\n' + rows.map(function (r) { return r.s[1] + ': ' + r.L.title + (r.L.body ? '\n   ' + r.L.body.replace(/\n/g, '\n   ') : ''); }).join('\n\n'); }
   function announce() { window.open(crUrl(crHead(day) + ' · ' + crName(k).toUpperCase(), allText(), 'announcement'), '_blank'); rows.forEach(function (r) { putP(k + '/' + r.s[0], Date.now()); }); }
@@ -39733,7 +39733,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v146';
+var FM_BUILD = 'v147';
 (function () {
   function stamp() {
     try {
