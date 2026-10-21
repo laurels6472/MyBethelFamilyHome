@@ -22649,7 +22649,7 @@ var DKA_STUDENT_TASKS = {
   ryan: '1) Read today\'s scriptures and write 5 sentences on what you learned (add one cross-reference). 2) Do one small piece of your research paper.',
   kayla: '1) Read today\'s scriptures and write one paragraph on what you learned. 2) Find one jw.org article that matches and write 2 sentences about it.',
   ashelyn: '1) Read today\'s scriptures and write 3 complete-sentence answers. 2) Learn 3 vocabulary words from today\'s lesson.',
-  mykah: '1) Listen to the lesson, then tell a grown-up one thing you learned and draw a picture of it. 2) Reading time: 15 minutes (phonics or your leveled reader).'
+  mykah: '1) Listen to the lesson, then type (or speak) one thing you learned and draw a picture of it. 2) Reading time: 15 minutes (phonics or your leveled reader).'
 };
 
 // ─── School Attendance Clock ──────────────────────────────────────────────────
@@ -36244,12 +36244,16 @@ function crLesson(subj, day, kid) {
   return { title: l.focus || l.unit || '', body: (l.activity || '') };
 }
 function crUrl(title, body, type) { return 'https://classroom.google.com/share?url=' + encodeURIComponent(CR_APP_URL) + '&title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body) + '&itemtype=' + (type || 'assignment'); }
-function crHead(day) { var dl = ''; try { dl = ' · ' + schoolDayLabel(day, false); } catch (e) {} return 'My Bethel School · Day ' + day + ' of 180 · ' + (180 - day) + ' days to go' + dl; }
+var CR_DT_DEFAULT = 'https://wol.jw.org/en/wol/h/r1/lp-e';
+function crIsBible(t) { return !!t && /bible discussion/i.test(String(t[0] || '')); }
+function crBibleBody(link) { return 'For: Ryan, Kayla, Ashelyn and Mykah together.\nGo over the day\u2019s text together.\n* Read: Daily text' + (link ? ' ' + link : '') + '\nEach person shares their comment on one thing it teaches about Jehovah and one way to apply it today.\nText your comments, in:\n* 1.) \u201cFamily Study Text Message Group\u201d\n* 2.) \u201cGoogle Classroom\u201d\nThen everyone writes the scripture in their journal book with a pencil. Each day improving your handwriting.'; }
+function crHead(day) { var dl = ''; try { dl = ' · ' + schoolDayLabel(day, false); } catch (e) {} return (day === 1 ? 'Welcome to DKA My Bethel School' : 'DKA My Bethel School') + ' · Day ' + day + ' of 180 · ' + (180 - day) + ' days to go' + dl; }
 function ClassroomDaily(props) {
   var h = React.createElement, S = crS(), admin = !!props.isAdmin, me = props.personId;
   var kids = admin ? CR_KIDS : CR_KIDS.filter(function (k) { return k === me; });
   var dS = React.useState(crDayNum()), day = dS[0], setDay = dS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], kS = React.useState(kids[0] || 'ryan'), kid = kS[0], setKid = kS[1];
   var nS = React.useState({ subj: '', title: '', body: '', who: 'all' }), nf = nS[0], setNf = nS[1];
+  var DT = fpDoc('classroom/dailytext/' + day, {}), dtLink = (DT[0] && DT[0].link) || CR_DT_DEFAULT, putDT = DT[1];
   var P = fpDoc('classroom/posted/' + day, {}), posted = P[0], putP = P[1], CU = fpDoc('classroom/custom/' + day, {}), cust = CU[0], putC = CU[1];
   var tg = fmUse('together', TOGETHER_DEF).map(fmArr), tgRows = tg.length ? [tg[0]].concat(tg.length > 1 ? [tg[1 + (day - 1) % (tg.length - 1)]] : []) : [];
   var ml = { g4: fmUse('money_g4', MN_LESSONS.g4), g8: fmUse('money_g8', MN_LESSONS.g8), g12: fmUse('money_g12', MN_LESSONS.g12) };
@@ -36259,7 +36263,7 @@ function ClassroomDaily(props) {
     var L = crLesson(s[0], day, k); return L ? { s: s, L: L } : null; }).filter(Boolean);
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === k) rows.push({ s: ['c_' + id, '📝 ' + (c.subj || 'Assignment')], L: { title: c.title, body: c.body }, cid: id }); });
   Object.keys(cust || {}).forEach(function (id) { var c = cust[id]; if (c && c.who === 'all') tgRows.push([c.title, c.body || '', '', 'c' + id, id]); });
-  function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; window.open(crUrl(title, (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.', 'assignment'), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
+  function oneAll(t, i) { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · ' + t[0]; var bodyTxt = crIsBible(t) ? crBibleBody(dtLink) : (t[1] || '') + (t[2] ? '\nRead: ' + t[2] : '') + '\nFor: Ryan, Kayla, Ashelyn and Mykah together.'; window.open(crUrl(title, bodyTxt, 'assignment'), '_blank'); putP('all/' + (t[3] || 't' + i), Date.now()); }
   function one(r) { var title = crHead(day) + ' · ' + crName(k).toUpperCase() + ' · ' + r.s[1].replace(/^\S+\s/, '') + ': ' + r.L.title; window.open(crUrl(title, r.L.body || ('Complete today’s ' + r.s[1] + ' lesson.'), 'assignment'), '_blank'); putP(k + '/' + r.s[0], Date.now()); }
   function allText() { return crHead(day) + '\nAssignments for ' + crName(k) + '\n\n' + rows.map(function (r) { return r.s[1] + ': ' + r.L.title + (r.L.body ? '\n   ' + r.L.body.replace(/\n/g, '\n   ') : ''); }).join('\n\n'); }
   function announce() { window.open(crUrl(crHead(day) + ' · ' + crName(k).toUpperCase(), allText(), 'announcement'), '_blank'); rows.forEach(function (r) { putP(k + '/' + r.s[0], Date.now()); }); }
@@ -36274,6 +36278,10 @@ function ClassroomDaily(props) {
         h('button', { onClick: function () { setDay(Math.max(1, day - 1)); }, style: S.btn('rgba(255,255,255,.1)') }, '‹'), h('span', { style: { fontSize: 12, color: '#fff', fontWeight: 800 } }, 'Day ' + day), h('button', { onClick: function () { setDay(Math.min(180, day + 1)); }, style: S.btn('rgba(255,255,255,.1)') }, '›')),
       h('div', { style: { margin: '2px 0 8px', padding: 8, borderRadius: 10, background: 'rgba(255,213,79,.1)', border: '1px solid rgba(255,213,79,.35)' } },
         h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, '👨‍👩‍👧‍👦 All together — one assignment for the whole class'),
+        admin ? h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', margin: '2px 0 6px', flexWrap: 'wrap' } }, h('span', { style: { fontSize: 11, color: '#FFD54F', fontWeight: 800 } }, '\ud83d\udd17 Daily text link (Day ' + day + ')'),
+          h('input', { value: dtLink, onChange: function (e) { putDT('link', e.target.value); }, placeholder: 'https://wol.jw.org/en/wol/h/r1/lp-e', style: Object.assign({}, S.inp, { flex: 1, minWidth: 160 }) }),
+          h('button', { onClick: function () { try { var d = schoolDayDate(day); putDT('link', CR_DT_DEFAULT + '/' + d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate()); } catch (e) {} }, style: S.btn('rgba(255,255,255,.15)') }, '\ud83d\udcc5 Use this day\u2019s date'),
+          h('button', { onClick: function () { putDT('link', CR_DT_DEFAULT); }, style: S.btn('rgba(255,255,255,.1)') }, 'Reset')) : null,
         tgRows.map(function (t, i) { var dn = (posted.all || {})[t[3] || 't' + i]; return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 'none' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, t[0]), t[1] ? ' — ' + t[1].slice(0, 90) + (t[1].length > 90 ? '…' : '') : ''), h('button', { onClick: function () { oneAll(t, i); }, style: S.btn(dn ? '#4CAF82' : '#F9A825') }, dn ? '✓ Added' : '➕ All kids'), admin && t[4] ? h('span', { onClick: function () { putC(t[4], null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
         tg.length ? null : h('div', { style: { fontSize: 11, color: '#9ad' } }, 'No group lessons yet. Admin → Content Manager → All-together group lessons.')),
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#90CAF9', marginBottom: 2 } }, '🙋 Just ' + crName(k)),
@@ -36445,7 +36453,7 @@ function crChallengeText(P, wk, nm) {
 
 // ── Administrator's Content Manager: add, edit, hide or delete the lists the app is built on ──
 var TOGETHER_DEF = [
-  ['Family Bible discussion', 'Go over the day’s text together. Each person shares one thing it teaches about Jehovah and one way to apply it today. Then everyone writes the scripture in their journal book with a pencil.', 'Daily text'],
+  ['Family Bible discussion', 'Go over the day’s text together. Each person shares their comment on one thing it teaches about Jehovah and one way to apply it today. Text your comments in the Family Study Text Message Group and Google Classroom. Then everyone writes the scripture in their journal book with a pencil. Each day improving your handwriting.', 'Daily text'],
   ['Read-aloud and retell', 'One person reads aloud for 10 minutes. Take turns retelling what happened in your own words. Older students ask the younger ones a question.', ''],
   ['Current events circle', 'Pick one kind, age-appropriate news story. Talk about who, what, where, why. How does the Bible help us think about it?', 'Proverbs 14:15'],
   ['Science demonstration together', 'Watch or do one simple demonstration. Everyone predicts, observes, and then explains what happened.', 'Psalm 104:24'],
@@ -37468,6 +37476,26 @@ function CatchUpPlanner(props) {
 // ═══ BIG CATCH-UP TURN-IN — ONE short quiz + ONE small project replaces all the old homework from the first day of school up to a chosen day.
 // Nothing is deleted: when a parent approves it, the missed lessons are marked "caught up" (only the ones not already done). ═══
 var BC_SUBS = ['bible', 'lang', 'math', 'science', 'history'];
+// 🎤 speak-to-type (works where the browser supports speech; the keyboard microphone works everywhere)
+function MicButton(props) {
+  var h = React.createElement, st = React.useState(false), on = st[0], setOn = st[1], rec = React.useRef(null);
+  var SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (!SR) return h('span', { style: { fontSize: 12, color: '#9aa' } }, 'Tip: tap the 🎤 on your keyboard to speak.');
+  function toggle() {
+    if (on && rec.current) { try { rec.current.stop(); } catch (e) {} return; }
+    try {
+      var r = new SR(); r.lang = 'en-US'; r.interimResults = false; r.continuous = false;
+      r.onresult = function (e) { var t = ''; for (var i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript; if (t && props.onText) props.onText(t.trim()); };
+      r.onend = function () { setOn(false); }; r.onerror = function () { setOn(false); };
+      rec.current = r; r.start(); setOn(true);
+    } catch (e) { setOn(false); }
+  }
+  return h('button', { onClick: toggle, type: 'button', style: { background: on ? '#EF5350' : '#039BE5', color: '#fff', border: 'none', borderRadius: 14, padding: '10px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, on ? '⏹ Listening… tap to stop' : '🎤 Speak it');
+}
+function bcKidize(t, grade) {
+  if (grade > 5) return t;
+  return String(t || '').replace(/tell (a )?(grown-up|adult|parent|Mom or Dad)( one thing)?/gi, function (m, a, b, c) { return 'type (or speak) ' + (c ? 'one thing' : 'it'); }).replace(/then talk about/gi, 'then type or speak');
+}
 function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} return { date: (c && c.date) || '2026-10-26', day: (c && +c.day) || 12 }; }
 function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(ssRestartCfg().day - 1, (typeof cuTodayDay === 'function' ? cuTodayDay() : 11) || 11); return { on: true, through: (c && +c.through) || t }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
@@ -37515,7 +37543,7 @@ function bcQuestions(sid, through) {
   }
   return out;
 }
-function bcAsk(grade) { return grade <= 5 ? 'Tell a grown-up your answer out loud, then type one short sentence.' : grade <= 9 ? 'Answer in 1–3 sentences in your own words.' : 'Answer in 2–4 sentences in your own words and include a detail from the lesson.'; }
+function bcAsk(grade) { return grade <= 5 ? 'Type your answer, or tap the 🎤 button and say it. One to three short sentences is perfect.' : grade <= 9 ? 'Answer in 1–3 sentences in your own words.' : 'Answer in 2–4 sentences in your own words and include a detail from the lesson.'; }
 function bcApprove(sid, through) {
   var prog = {}; try { prog = syncGet('school/progress') || {}; } catch (e) {}
   var n = 0; (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).forEach(function (s) { for (var d = 1; d <= through; d++) { if (!cuDone(prog[sid + '_d' + d + '_' + s.id])) { cuMark(sid, d, s.id); n++; } } });
@@ -37572,6 +37600,7 @@ function BigCatchCard(props) {
           return h('div', { key: q.id, style: { marginBottom: 6 } },
             h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 4, lineHeight: 1.5 } }, (i + 1) + '. ' + q.text),
             h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked && local) save(status || 'draft', true); }, placeholder: 'Type your answer here', style: ta }),
+            !admin && !locked && s.grade <= 5 && h('div', { style: { margin: '4px 0 6px' } }, h(MicButton, { onText: function (t) { setA(q.id, ((ans[q.id] || '') + ' ' + t).trim()); } })),
             admin && q.key && h('div', { style: { fontSize: 11, color: '#9be3bd', marginBottom: 6 } }, '🔑 ' + q.key.slice(0, 240)));
         }));
     }),
@@ -39000,9 +39029,9 @@ function ssLessons(sid, day) {
     try { L = getLessonForDay(sub.id, day, st.grade); } catch (e) {}
     try { en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[day - 1] : null; } catch (e) {}
     if (sub.id === 'bible') {
-      if (!en) return; topic = String(en[3] || 'Bible lesson'); act = en[4] ? 'Read ' + en[4] + ' with Mom or Dad, then talk about what it teaches us about Jehovah.' : 'Listen to the Bible lesson and talk about it.';
+      if (!en) return; topic = String(en[3] || 'Bible lesson'); act = en[4] ? (st.grade <= 5 ? 'Read ' + en[4] + ' (or have it read to you). Then type or speak one thing it teaches us about Jehovah.' : 'Read ' + en[4] + ' with Mom or Dad, then talk about what it teaches us about Jehovah.') : (st.grade <= 5 ? 'Listen to the Bible lesson. Then type or speak what you learned.' : 'Listen to the Bible lesson and talk about it.');
     } else {
-      topic = bcTopic(L); if (!topic) return; act = String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000); ans = (L && L.answerKey && L.answerKey.long) || '';
+      topic = bcTopic(L); if (!topic) return; act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
     }
     try { scr = String((L && L.script) || ''); } catch (e) {}
     out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, scr: scr, key: sid + '_d' + day + '_' + sub.id });
@@ -39078,6 +39107,7 @@ function SchoolLessonRows(props) {
           h('div', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
         open && h('div', { style: { padding: '0 12px 12px' } },
           r.lab && h(LabToday, { sid: sid, admin: admin }),
+          !admin && !r.lab && (ssKid(sid) || {}).grade <= 5 && h(KidAnswerBox, { sid: sid, day: day, row: r }),
           admin && h(TeacherGuide, { row: r, sid: sid, day: day }),
           r.act && h(LessonWork, { act: r.act, color: r.color }),
           h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
@@ -39274,7 +39304,7 @@ function ssTips(sid) {
   return ['Treat ' + n + ' as a near-adult: state the goal and the deadline, then step back.', 'Ask for reasoning and evidence: “What makes you say that? What would change your answer?”', 'Have ' + n + ' check the work first, then compare with the key together.', 'Connect it to real life and to the future plans ' + n + ' has.'];
 }
 function TeacherGuide(props) {
-  var h = React.createElement, r = props.row, sid = props.sid, oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var h = React.createElement, r = props.row, sid = props.sid, oS = React.useState(false), open = oS[0], setOpen = oS[1], cpS = React.useState(false), copied = cpS[0], setCopied = cpS[1];
   var tips = ssTips(sid), st = ssKid(sid) || {};
   var hd = function (t, c) { return h('div', { style: { fontSize: 12, fontWeight: 900, color: c || '#FFD54F', letterSpacing: 1, margin: '12px 0 4px' } }, t); };
   var body = { fontSize: 16, color: '#f2f2f8', lineHeight: 1.7, whiteSpace: 'pre-wrap' };
@@ -39282,9 +39312,11 @@ function TeacherGuide(props) {
     h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', minHeight: 48, background: open ? '#7986CB' : 'rgba(121,134,203,.25)', border: '2px solid rgba(121,134,203,.7)', color: '#fff', borderRadius: 14, padding: '10px 14px', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (open ? '▲ ' : '▼ ') + '👩‍🏫 Teacher’s guide — what to say, how to say it, answers'),
     open && h('div', { style: { background: 'rgba(121,134,203,.12)', border: '1px solid rgba(121,134,203,.5)', borderRadius: 14, padding: 14, marginTop: 6 } },
       r.lab ? h(LabTeacherGuide, { sid: sid }) : h('div', null,
-        r.scr ? h('div', null, hd('🎙 WHAT TO SAY'), h('div', { style: body }, r.scr)) : h('div', { style: body }, 'No script is written for this lesson yet.'),
+        r.scr ? h('div', null, hd('🎙 WHAT TO SAY'), h('div', { style: body }, r.scr)) : h('div', null, hd('🎙 WHAT TO SAY'), h('div', { style: body }, ssSendOff(sid, r, props.day))),
         r.act && hd('✏️ WHAT ' + (st.name || 'THE STUDENT').toUpperCase() + ' DOES', '#81C784'), r.act && h('div', { style: body }, r.act),
         r.ans && hd('🔑 ANSWER KEY / WHAT TO LOOK FOR', '#90CAF9'), r.ans && h('div', { style: body }, r.ans)),
+      hd('📣 SEND-OFF MESSAGE — say it or copy it to Google Classroom', '#FFCC80'), h('div', { style: body }, ssSendOff(sid, r, props.day)),
+      h('button', { onClick: function () { try { navigator.clipboard.writeText(ssSendOff(sid, r, props.day)); } catch (e) {} setCopied(true); setTimeout(function () { setCopied(false); }, 2500); }, style: { marginTop: 6, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, copied ? '✅ Copied' : '📋 Copy message'),
       hd('💬 HOW TO SAY IT — for ' + (st.name || ''), '#F48FB1'),
       tips.map(function (t, i) { return h('div', { key: i, style: { display: 'flex', gap: 8, fontSize: 15, color: '#f2f2f8', lineHeight: 1.6, padding: '3px 0' } }, h('span', null, '•'), h('span', null, t)); })));
 }
@@ -39372,6 +39404,39 @@ function TeacherHome(props) {
       h('button', { onClick: function () { setQ(!qOpen); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 16, cursor: 'pointer', padding: 0 } }, (qOpen ? '▲ ' : '▼ ') + '📝 Review quiz questions & answer keys — Day ' + tday),
       qOpen && qs.map(function (q) { return h('div', { key: q.id, style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.12)' } }, h('div', { style: { fontSize: 15, color: '#fff', lineHeight: 1.6 } }, q.text), q.key && h('div', { style: { fontSize: 14, color: '#9be3bd', lineHeight: 1.6, marginTop: 4 } }, '🔑 ' + q.key)); })),
     props.onAdv && h('button', { onClick: function () { props.onAdv('manual'); }, style: { width: '100%', minHeight: 54, background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.2)', borderRadius: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '📖 Open the full Teacher Manual'));
+}
+
+// ── Younger students: type it or speak it, then share it with Mom (Discovering Kids Academy message) or Google Classroom ──
+function KidAnswerBox(props) {
+  var h = React.createElement, sid = props.sid, r = props.row, path = 'school/answers/' + props.day + '/' + sid + '_' + r.id;
+  var aS = ktUse(path, null), saved = aS[0], tS = React.useState(null), txt = tS[0], setTxt = tS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var val = txt != null ? txt : (saved && saved.text) || '';
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 4000); }
+  function save() { try { syncSet(path, { text: val, ts: Date.now(), label: r.label }); say('✅ Saved'); } catch (e) {} }
+  function send() {
+    if (!val.trim()) { say('Type or say something first.'); return; }
+    save();
+    try { if (typeof window._sendFamilyMessage === 'function') { window._sendFamilyMessage('📚 ' + ((ssKid(sid) || {}).name || sid) + ' — ' + r.label + ' (Day ' + props.day + '): ' + val.trim()); say('📨 Sent to Mom in the Discovering Kids Academy messages'); } else say('Saved. Show Mom your answer.'); } catch (e) { say('Saved.'); }
+  }
+  function toClass() { try { navigator.clipboard.writeText('Day ' + props.day + ' — ' + r.label + ' — ' + ((ssKid(sid) || {}).name || '') + '\n' + val); } catch (e) {} try { window.open('https://classroom.google.com', '_blank', 'noopener'); } catch (e) {} say('📋 Copied — paste it in Google Classroom'); }
+  var b = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 14, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, t); };
+  return h('div', { style: { background: 'rgba(255,213,79,.08)', border: '2px solid rgba(255,213,79,.5)', borderRadius: 14, padding: 10, marginBottom: 8 } },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, '✍️ TYPE OR SAY WHAT YOU LEARNED'),
+    h('textarea', { rows: 3, value: val, onChange: function (e) { setTxt(e.target.value); }, onBlur: function () { if (txt != null) save(); }, placeholder: 'Type here, or tap the microphone…', style: { width: '100%', boxSizing: 'border-box', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, color: '#fff', padding: 12, fontSize: 18, lineHeight: 1.5 } }),
+    h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' } }, h(MicButton, { onText: function (t) { setTxt((val + ' ' + t).trim()); } }), b('#4CAF82', '#000', send, '📨 Send to Mom'), b('#1A73E8', '#fff', toClass, '🎓 Google Classroom')),
+    msg && h('div', { style: { color: '#9be3bd', fontWeight: 800, fontSize: 14, marginTop: 6 } }, msg));
+}
+// ── ready-to-send teacher message (adult tone for teens; simple for younger) — used when a lesson has no script, and always as a send-off ──
+function ssSendOff(sid, r, day) {
+  var st = ssKid(sid) || {}, n = st.name || 'there', young = (st.grade || 8) <= 5, topic = ssClean(r.topic, 140), act = String(r.act || '');
+  var items = act.split('\n').filter(function (x) { return /^\s*\d{1,2}[.)]/.test(x); }).length;
+  var what = items > 1 ? 'You have ' + items + ' problems to work through' : ssClean(act.replace(/\n+/g, ' '), 260) || 'Read through the lesson and think about what it teaches';
+  if (r.lab) return young ? 'Hi ' + n + '! It is computer lab time. Open your computer path and do your next step. Take it slowly, one thing at a time. If you get stuck, ask your teammates first, then ask me. I cannot wait to see what you make!'
+    : 'Good morning, ' + n + '. Computer lab today: open your computer path and work on your next step. The instructions are listed under the step. Work independently and ask a teammate before you ask me. When you finish, check the step off and show me what you built.';
+  what = what.replace(/[.!\s]+$/, '');
+  var typed = /type or speak|type \(or speak\)/i.test(what);
+  if (young) return 'Hi ' + n + '! Today in ' + r.label.replace(/^\S+\s/, '') + ' we are learning about “' + topic + '.” ' + what + '. Do it one small step at a time.' + (typed ? '' : ' Then type or say what you learned.') + ' If you get stuck, come find me and we will do it together. I am proud of you!';
+  return 'Good morning, ' + n + '. Today’s ' + r.label.replace(/^\S+\s/, '') + ' lesson is “' + topic + '.” ' + what + '. Work through it on your own and show your steps or your reasoning. If something does not make sense, reread the lesson first, then try once more, and then message me and I will help. When you are done, turn it in (Google Classroom) and I will go over it with you.';
 }
 
 </script>
@@ -39482,7 +39547,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v132';
+var FM_BUILD = 'v134';
 (function () {
   function stamp() {
     try {
