@@ -39158,6 +39158,48 @@ function AttendanceReport(props) {
 
 </script>
 <script>
+// ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
+var FM_BUILD = 'v126';
+(function () {
+  function stamp() {
+    try {
+      if (document.getElementById('fm-build-stamp')) return;
+      var d = document.createElement('div'); d.id = 'fm-build-stamp';
+      d.style.cssText = 'position:fixed;left:6px;bottom:4px;z-index:50;font:11px sans-serif;color:rgba(255,255,255,.45);pointer-events:none';
+      d.textContent = FM_BUILD; document.body.appendChild(d);
+    } catch (e) {}
+  }
+  function banner(nv) {
+    try {
+      if (document.getElementById('fm-upd')) return;
+      var b = document.createElement('button'); b.id = 'fm-upd';
+      b.style.cssText = 'position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#FFD54F;color:#000;border:none;border-radius:16px;padding:16px;font:900 16px sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.5)';
+      b.textContent = '🔄 New version ' + nv + ' is ready — tap here to update';
+      b.onclick = function () {
+        b.textContent = 'Updating…'; var p = [];
+        try { if (navigator.serviceWorker) p.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (x) { return x.update ? x.update() : 0; })); })); } catch (e) {}
+        try { if (window.caches) p.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+        Promise.all(p).then(go, go);
+        function go() { location.replace(location.pathname + '?r=' + Date.now()); }
+      };
+      document.body.appendChild(b);
+    } catch (e) {}
+  }
+  function check() {
+    try {
+      if (location.protocol.indexOf('http') !== 0) return;
+      fetch(location.pathname + '?chk=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+        var m = /var FM_BUILD = '(v\d+)'/.exec(t); if (!m) return;
+        if (parseInt(m[1].slice(1), 10) > parseInt(FM_BUILD.slice(1), 10)) banner(m[1]);
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  window.addEventListener('load', function () { stamp(); setTimeout(check, 4000); setInterval(check, 300000); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+})();
+
+</script>
+<script>
 // ═══ APP ROOT ─────────────────────────────────────────────────────────────────
 (function() {
   const rootEl = document.getElementById('root');
