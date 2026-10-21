@@ -6504,6 +6504,9 @@ function HealthTracker({ personId, family, isAdmin, sessions, onUpdate }) {
   const [form, setForm] = React.useState({});
   const [photoData, setPhotoData] = React.useState(null);
   const fileRef = React.useRef(null);
+  const [resetN, setResetN] = React.useState(0);
+  const [flash, setFlash] = React.useState('');
+  const flashIt = (t) => { setFlash(t); setTimeout(() => setFlash(''), 3500); };
   const [filter, setFilter] = React.useState('all');
 
   // ── Exercise timer / clock in-out ──────────────────────────────────────────
@@ -6567,6 +6570,7 @@ function HealthTracker({ personId, family, isAdmin, sessions, onUpdate }) {
 
   function logEntry() {
     const meta = getHealthTypeMeta(type);
+    if (!photoData && !Object.keys(form).some(k => { const v = form[k]; if (v == null) return false; if (Array.isArray(v)) return v.length > 0; if (typeof v === 'object') return Object.keys(v).length > 0; return String(v).trim() !== ''; })) { flashIt('⚠️ Nothing to log yet — add the food, carbs, a note or a photo first.'); return; }
     const id = 'hl_' + Date.now();
     const entry = {
       id, type, ts: Date.now(),
@@ -6580,7 +6584,9 @@ function HealthTracker({ personId, family, isAdmin, sessions, onUpdate }) {
     syncSet('health_log/' + targetId + '/' + id, entry);
     setForm({});
     setPhotoData(null);
+    setResetN(n => n + 1);
     if (fileRef.current) fileRef.current.value = '';
+    flashIt('✅ Logged! The form is cleared and ready for the next one.');
     playSound && playSound('claim');
   }
 
@@ -6647,7 +6653,7 @@ function HealthTracker({ personId, family, isAdmin, sessions, onUpdate }) {
         }, t.l))
       ),
       /*#__PURE__*/React.createElement('div', { style:{ background: meta.color+'0c', border:'1px solid '+meta.color+'33', borderRadius:12, padding:12 } },
-        (type==='meal'||type==='snack') && typeof NutritionMealBuilder==='function' && /*#__PURE__*/React.createElement(NutritionMealBuilder,{key:targetId+type, targetId, entries, isAdmin, showInsulin:true, onApply:(t)=>setForm(f=>({...f,carbs:t.carbs,protein:t.protein,fat:t.fat,cal:t.cal,fiber:t.fiber,note:(f.note?f.note+' · ':'')+t.foods.join(', ')})), onLogInsulin:logInsulinFromMeal}),
+        (type==='meal'||type==='snack') && typeof NutritionMealBuilder==='function' && /*#__PURE__*/React.createElement(NutritionMealBuilder,{key:targetId+type+resetN, targetId, entries, isAdmin, showInsulin:true, onApply:(t)=>setForm(f=>({...f,carbs:t.carbs,protein:t.protein,fat:t.fat,cal:t.cal,fiber:t.fiber,note:(f.note?f.note+' · ':'')+t.foods.join(', ')})), onLogInsulin:logInsulinFromMeal}),
         meta.fields.includes('carbs') && /*#__PURE__*/React.createElement('div',{style:{display:'flex',gap:8,marginBottom:8}},
           /*#__PURE__*/React.createElement('input',{type:'number', inputMode:'numeric', placeholder:'Carbs (g)', value:form.carbs||'', onChange:e=>setForm({...form,carbs:e.target.value}), style:iStyle})
         ),
@@ -6675,6 +6681,7 @@ function HealthTracker({ personId, family, isAdmin, sessions, onUpdate }) {
                 /*#__PURE__*/React.createElement('button',{onClick:()=>{setPhotoData(null); if(fileRef.current) fileRef.current.value='';}, style:{position:'absolute',top:-6,right:-6,width:20,height:20,borderRadius:'50%',background:'rgba(239,83,80,.9)',color:'#fff',border:'none',fontSize:11,cursor:'pointer'}},'×')
               )
         ),
+        flash && /*#__PURE__*/React.createElement('div',{style:{background:/⚠/.test(flash)?'rgba(255,152,0,.2)':'rgba(76,175,130,.2)',color:/⚠/.test(flash)?'#FFB74D':'#9be5bd',borderRadius:8,padding:'8px 10px',fontSize:12,fontWeight:800,marginBottom:6}}, flash),
         /*#__PURE__*/React.createElement('button',{onClick:logEntry, style:{width:'100%',background:meta.color,color:'#000',border:'none',borderRadius:20,padding:11,fontWeight:900,fontSize:12,cursor:'pointer'}}, '✅ Log ' + meta.l.replace(/[^\w ]/g,'').trim())
       ),
       type==='insulin' && /*#__PURE__*/React.createElement('div', {style:{fontSize:8,color:'rgba(255,255,255,.3)',marginTop:6,lineHeight:1.6}}, 'This logs what was given. To see the dose math, log a meal and use the Insulin Helper (a parent turns it on in Health settings).')
@@ -7548,7 +7555,7 @@ function Dashboard({
     onClick: () => setTab(t.id),
     style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, lineHeight: 1.15, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', wordBreak: 'break-word',
       background: on ? effectivePerson.color : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#cfd3e0', border: `1px solid ${on ? effectivePerson.color : 'rgba(255,255,255,.12)'}` }
-  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof LateWatch === 'function') ? /*#__PURE__*/React.createElement(LateWatch, { personId: personId, name: (person && person.name) || personId, sessions: sessions, schedHook: schedHook, addNotif: addNotif }) : null, (!viewingAs && typeof PresenceBeat === 'function') ? /*#__PURE__*/React.createElement(PresenceBeat, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof AdminTaskList === 'function') ? /*#__PURE__*/React.createElement(AdminTaskList, { schedHook: schedHook, family: fam }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function') ? React.createElement(ClockControl, { family: fam, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof LiveWhoIn === 'function') ? /*#__PURE__*/React.createElement(LiveWhoIn, { sessions: sessions, family: fam }) : null, (tab === homeNow && typeof AffirmationBoard === 'function') ? /*#__PURE__*/React.createElement(AffirmationBoard, { family: fam }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && !(isAdmin || isOwner) && effectiveRole !== 'elder' && typeof PciParentsNow === 'function') ? React.createElement(PciParentsNow, { key: 'pcinow' }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { family: fam, personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); })), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof LateWatch === 'function') ? /*#__PURE__*/React.createElement(LateWatch, { personId: personId, name: (person && person.name) || personId, sessions: sessions, schedHook: schedHook, addNotif: addNotif }) : null, (!viewingAs && typeof PresenceBeat === 'function') ? /*#__PURE__*/React.createElement(PresenceBeat, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === 'admin' && !viewingAs && (isAdmin || isOwner) && typeof AdminTaskList === 'function') ? /*#__PURE__*/React.createElement(AdminTaskList, { schedHook: schedHook, family: fam }) : null, (tab === 'admin' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function') ? React.createElement(ClockControl, { family: fam, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof LiveWhoIn === 'function') ? /*#__PURE__*/React.createElement(LiveWhoIn, { sessions: sessions, family: fam }) : null, (tab === homeNow && typeof AffirmationBoard === 'function') ? /*#__PURE__*/React.createElement(AffirmationBoard, { family: fam }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && !(isAdmin || isOwner) && effectiveRole !== 'elder' && typeof PciParentsNow === 'function') ? React.createElement(PciParentsNow, { key: 'pcinow' }) : null, (tab === homeNow && effectiveRole !== 'elder' && typeof ComingUp === 'function') ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { family: fam, personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
     family: fam,
     sessions: sessions,
     currentPersonId: personId,
@@ -7575,7 +7582,7 @@ function Dashboard({
     addNotif: addNotif,
     topEl: typeof AttendanceCard === 'function' ? /*#__PURE__*/React.createElement(AttendanceCard, { personId: effectiveId, name: effectivePerson && effectivePerson.name, isAdmin: !viewingAs && (isAdmin || isOwner), sessions: sessions, onUpdate: onUpdate }) : null,
     safetyEl: typeof SafetyCard !== 'undefined' ? /*#__PURE__*/React.createElement(SafetyCard, { personId: effectiveId, name: effectivePerson && effectivePerson.name }) : null,
-    dayEl: typeof DayClock === 'function' ? /*#__PURE__*/React.createElement(DayClock, { personId: effectiveId, sessions: sessions, onUpdate: onUpdate, canReset: !viewingAs && !!(isAdmin || isOwner), inside: null }) : null,
+    dayEl: typeof DayClock === 'function' ? /*#__PURE__*/React.createElement(DayClock, { personId: effectiveId, sessions: sessions, onUpdate: onUpdate, canReset: false, inside: null }) : null,
     rightNow: typeof PlanRightNow === 'function' ? /*#__PURE__*/React.createElement(PlanRightNow, { schedHook: schedHook, personId: effectiveId, sessions: sessions, onUpdate: onUpdate }) : null,
     clockEl: null,
     habitsEl: typeof HabitsPanel === 'function' ? /*#__PURE__*/React.createElement(HabitsPanel, { personId: effectiveId, name: effectivePerson && effectivePerson.name, only: 'morning' }) : null,
@@ -8003,6 +8010,7 @@ function App() {
     window._deductFn = function (pid, amt, reason) { if (typeof dqRoute === 'function') return dqRoute(pid, amt, reason); return deduct(pid, amt, reason); };
     window._walletCredit = function (pid, amt, reason, key) { window._payrollBypass = true; try { return credit(pid, amt, reason, key, true); } finally { window._payrollBypass = false; } };
     window._creditFn = function (pid, amount, reason, key, force) {
+      if (force && typeof fpEarnRoute === 'function' && fpEarnRoute(pid, amount, reason, key)) return;
       if (force) return credit(pid, amount, reason, key, true);
       const cash = ((settings && settings.payMode) || 'pay') === 'pay';
       const rc = parseFloat(settings && settings.routineCash);
@@ -29910,7 +29918,7 @@ function NutritionMealBuilder(props) {
   var doseVal = doseEdit !== '' ? doseEdit : (on ? String(ntR(suggest, 2)) : '');
   var needsParent = !props.isAdmin;
 
-  function applyTotals() { props.onApply({ carbs: String(ntR(tot.carbs)), protein: String(ntR(tot.protein)), fat: String(ntR(tot.fat)), cal: String(ntR(tot.cal, 0)), fiber: String(ntR(tot.fiber)), foods: items.map(function (it) { return it.n + '× ' + it.name + ' (' + it.serving + ')'; }) }); say('✅ Numbers added to the log entry below.'); }
+  function applyTotals() { props.onApply({ carbs: String(ntR(tot.carbs)), protein: String(ntR(tot.protein)), fat: String(ntR(tot.fat)), cal: String(ntR(tot.cal, 0)), fiber: String(ntR(tot.fiber)), foods: items.map(function (it) { return it.n + '× ' + it.name + ' (' + it.serving + ')'; }) }); say('✅ Numbers added to the log entry below.');  setQ(''); setOnline([]); say('✅ Added to the log form below — tap Log to save it.'); }
   function logDose() {
     var u = parseFloat(doseVal); if (!(u > 0)) { say('Enter the units.'); return; }
     if (needsParent && !confirmed) { say('A parent needs to check the dose first.'); return; }
@@ -31948,7 +31956,7 @@ function ScheduleToCalendar(props) {
 function rtHash(s) { var h = 5381; s = String(s); for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); }
 function rtDay() { return typeof planDayKey === 'function' ? planDayKey() : new Date().toISOString().split('T')[0]; }
 var RT_PERIODS = [['morning', '☀️ Morning'], ['afternoon', '🌤 Afternoon'], ['evening', '🌙 Evening']];
-var RT_AFTERNOON = ['Put your school things away', 'Clean up after your snack or lunch — dish to the sink', 'Tidy the space you used — desk, table, floor', 'Move your body — go outside or stretch', 'Check your schedule for what is next'];
+var RT_AFTERNOON = ['Put your school things away | 3', 'Clean up after your snack or lunch — dish to the sink | 3', 'Tidy the space you used — desk, table, floor | 3', 'Move your body — go outside or stretch | 3', 'Check your schedule for what is next | 3'];
 // Water is no longer part of the 15-minute routines. It has its own schedule through the day (see WaterTimes below).
 function rtWithWater(list, period) {
   return list.slice();
@@ -31959,9 +31967,15 @@ function rtWithWaterOLD(list, period) {
   return out;
 }
 function rtNowPeriod() { var h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
+// Morning has only 15 minutes. Breakfast and the Daily Text are NOT habits (they are family time on the schedule).
+var RT_MORN_MINS = [[/wake/i, 1], [/bathroom|restroom|toilet/i, 2], [/make (your |the )?bed|bed\b/i, 1], [/teeth/i, 2], [/face|skincare/i, 1], [/deodorant/i, 1], [/dress|clothes|outfit/i, 4], [/hair/i, 3]];
+function rtNotMorningHabit(x) { return !/breakfast|daily text|personal bible reading|spiritual (prep|review|preparation)/i.test(String(x)); }
+function rtMornFit(list) {
+  return list.map(function (x) { var t = String(x); if (/\|\s*\d/.test(t)) return t; var m = 1; RT_MORN_MINS.some(function (r) { if (r[0].test(t)) { m = r[1]; return true; } return false; }); return t + ' | ' + m; });
+}
 function rtDefaults(name, period) {
   var nm = (typeof MORNING_ITEMS !== 'undefined' && MORNING_ITEMS[name]) ? name : 'Ryan';
-  if (period === 'morning') return rtWithWater(((typeof MORNING_ITEMS !== 'undefined' ? MORNING_ITEMS[nm] : []) || []).filter(function (x) { return !/personal bible reading|spiritual (prep|review|preparation)/i.test(String(x)); }), 'morning');
+  if (period === 'morning') return rtWithWater(rtMornFit(((typeof MORNING_ITEMS !== 'undefined' ? MORNING_ITEMS[nm] : []) || []).filter(rtNotMorningHabit)), 'morning');
   if (period === 'afternoon') return rtWithWater(RT_AFTERNOON, 'afternoon');
   var b = typeof BEDTIME_ITEMS !== 'undefined' ? BEDTIME_ITEMS : {};
   return rtWithWater(['Devices put away at 8 PM'].concat(b[name] || b.Ryan || []), 'evening');
@@ -31969,7 +31983,7 @@ function rtDefaults(name, period) {
 function rtList(v) { return Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === 'object' ? Object.values(v).filter(Boolean) : null); }
 function rtHabits(name, pid, period, own, all) {
   var L = rtList(own && own[period]) || rtList(all && all[period]) || rtDefaults(name, period);
-  return L.filter(function (x) { return !/glass of water/i.test(String(x)); });
+  return L.filter(function (x) { return !/glass of water/i.test(String(x)) && (period !== 'morning' || rtNotMorningHabit(x)); });
 }
 var RT_CARD = { background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 14, marginBottom: 12 };
 
@@ -33299,6 +33313,7 @@ function TakeAttendance(props) {
   var h = React.createElement, kids = fmSchoolKids(props.family);
   var dS = React.useState(tcIso(new Date())), date = dS[0], setDate = dS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], fS = React.useState({}), f = fS[0], setF = fS[1];
   var aS = ktUse('attendance/' + date, {}), att = aS[0] || {};
+  var biS = React.useState(''), bIn = biS[0], setBIn = biS[1], boS = React.useState(''), bOut = boS[0], setBOut = boS[1], slS = React.useState({}), skip = slS[0], setSkip = slS[1];
   var parts = date.split('-'), plain = (+parts[0]) + '-' + (+parts[1]) + '-' + (+parts[2]);
   var OFF = { absent: 1, excused: 1, holiday: 1 };
   function nowHm() { var d = new Date(); return tcPad(d.getHours()) + ':' + tcPad(d.getMinutes()); }
@@ -33317,12 +33332,14 @@ function TakeAttendance(props) {
     setF(function (o) { var n = {}; Object.keys(o).forEach(function (k) { if (k.indexOf(p.id + '_') !== 0 || k === p.id + '_note') n[k] = o[k]; }); return n; });
     if (!quiet) setMsg('✅ ' + p.name + ' — ' + st + (rec.start ? ' in ' + rec.start : '') + (rec.end ? ', out ' + rec.end : ''));
   }
-  function setStatus(p, st) { var sv = att[p.id] || {}; write(p, st, sv.start || val(p.id, 'start', '') || nowHm(), sv.end || '', false); }
+  function setStatus(p, st) { var sv = att[p.id] || {}; write(p, st, OFF[st] ? '' : (sv.start || val(p.id, 'start', '') || bIn || nowHm()), sv.end || '', false); }
   function saveTimes(p) { var sv = att[p.id]; if (!sv) { setMsg('Pick a status first.'); return; } write(p, sv.status, val(p.id, 'start', sv.start || nowHm()), val(p.id, 'end', ''), false); }
   function clockOut(p) { var sv = att[p.id]; if (!sv || OFF[sv.status]) { setMsg('Mark ' + p.name + ' present or late first.'); return; } write(p, sv.status, sv.start || nowHm(), val(p.id, 'end', '') || nowHm(), false); }
   function clearOut(p) { var sv = att[p.id]; if (sv) write(p, sv.status, sv.start, '', false); }
-  function everyone(st) { var t = nowHm(); kids.forEach(function (p) { var sv = att[p.id] || {}; write(p, st, sv.start || t, sv.end || '', true); }); setMsg('✅ Everyone marked ' + st + (OFF[st] ? '' : ' — clock them out later')); }
-  function allOut() { var t = nowHm(), n = 0; kids.forEach(function (p) { var sv = att[p.id]; if (sv && !OFF[sv.status] && !sv.end) { write(p, sv.status, sv.start || t, t, true); n++; } }); setMsg(n ? '✅ Clocked out ' + n + ' at ' + t : 'Nobody is clocked in.'); }
+  function pick() { return kids.filter(function (p) { return !skip[p.id]; }); }
+  function everyone(st) { var t = bIn || nowHm(), who = pick(); if (!who.length) { setMsg('Tick at least one student.'); return; } who.forEach(function (p) { var sv = att[p.id] || {}; write(p, st, OFF[st] ? '' : t, sv.end || '', true); }); setMsg('✅ ' + who.length + ' marked ' + st + (OFF[st] ? '' : ' — in at ' + t + ' (clock them out when school ends)')); }
+  function allOut() { var t = bOut || nowHm(), n = 0; pick().forEach(function (p) { var sv = att[p.id]; if (sv && !OFF[sv.status]) { write(p, sv.status, sv.start || t, t, true); n++; } }); setMsg(n ? '✅ Clocked out ' + n + ' at ' + t : 'Nobody selected is marked present yet.'); }
+  function present(p, st) { var t = bIn || nowHm(); write(p, st, t, '', false); }
   var inp = { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 10, color: '#fff', padding: 8, fontSize: 15 };
   var STAT = [['present', '✅ Present', '#4CAF82'], ['late', '⏰ Late', '#FFB74D'], ['absent', '❌ Absent', '#EF5350'], ['excused', '📝 Excused', '#90CAF9'], ['holiday', '🏖 Holiday / Vacation (excused)', '#BA68C8']];
   var pill = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 16, padding: '10px 13px', fontWeight: 900, fontSize: 13, cursor: 'pointer' } }, t); };
@@ -33331,9 +33348,22 @@ function TakeAttendance(props) {
     h('div', { style: { fontSize: 12, color: '#c8c8d8', margin: '2px 0 10px', lineHeight: 1.5 } }, 'Tap a status and it saves right away — no Save button. Present/Late clocks them in now and keeps them clocked in. When school ends tap Clock out (or Clock everyone out). Holiday/Vacation, Absent and Excused have no times.'),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 } },
       h('input', { type: 'date', value: date, onChange: function (e) { setDate(e.target.value); setF({}); setMsg(''); }, style: inp }),
-      pill('#4CAF82', '#000', function () { everyone('present'); }, '✅ Everyone present'),
-      pill('#BA68C8', '#000', function () { everyone('holiday'); }, '🏖 Everyone: Holiday'),
-      pill('#90CAF9', '#000', allOut, '🚪 Clock everyone out')),
+      h('div', { style: { fontSize: 12, color: '#9ad' } }, 'Pick the time first, then tap a button below.')),
+    h('div', { style: { background: 'rgba(0,0,0,.2)', borderRadius: 14, padding: 10, marginBottom: 10 } },
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, 'Everyone at once'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, kids.map(function (p) { var on = !skip[p.id]; return h('button', { key: p.id, onClick: function () { setSkip(function (o) { var n = Object.assign({}, o); if (on) n[p.id] = true; else delete n[p.id]; return n; }); }, style: { padding: '8px 11px', borderRadius: 16, border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), background: on ? 'rgba(76,175,130,.2)' : 'transparent', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, (on ? '☑ ' : '☐ ') + p.name); })),
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6, color: '#c8c8d8', fontSize: 13 } }, 'In time', h('input', { type: 'time', value: bIn, onChange: function (e) { setBIn(e.target.value); }, style: inp }), pill('rgba(255,255,255,.14)', '#fff', function () { setBIn(nowHm()); }, 'Now'),
+        ['08:00', '08:30', '09:00', '09:30'].map(function (t) { return h('button', { key: t, onClick: function () { setBIn(t); }, style: { background: bIn === t ? '#FFD54F' : 'rgba(255,255,255,.1)', color: bIn === t ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '8px 10px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, t.replace(/^0/, '')); })),
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, color: '#c8c8d8', fontSize: 13 } }, 'Out time', h('input', { type: 'time', value: bOut, onChange: function (e) { setBOut(e.target.value); }, style: inp }), pill('rgba(255,255,255,.14)', '#fff', function () { setBOut(nowHm()); }, 'Now'),
+        ['12:00', '13:00', '14:00', '15:00'].map(function (t) { return h('button', { key: t, onClick: function () { setBOut(t); }, style: { background: bOut === t ? '#FFD54F' : 'rgba(255,255,255,.1)', color: bOut === t ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '8px 10px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, t); })),
+      h('div', { style: { fontSize: 11, color: '#9aa', marginBottom: 6 } }, 'Leave a time empty to use the current time.'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+        pill('#4CAF82', '#000', function () { everyone('present'); }, '✅ Present at ' + (bIn || 'now')),
+        pill('#FFB74D', '#000', function () { everyone('late'); }, '⏰ Late at ' + (bIn || 'now')),
+        pill('#90CAF9', '#000', allOut, '🚪 Clock out at ' + (bOut || 'now')),
+        pill('#EF5350', '#fff', function () { everyone('absent'); }, '❌ Absent'),
+        pill('#CE93D8', '#000', function () { everyone('excused'); }, '📝 Excused'),
+        pill('#BA68C8', '#000', function () { everyone('holiday'); }, '🏖 Holiday'))),
     msg && h('div', { style: { background: '#4CAF82', color: '#000', borderRadius: 10, padding: 8, fontWeight: 800, marginBottom: 8, fontSize: 13 } }, msg),
     kids.map(function (p) {
       var saved = att[p.id], st = saved ? saved.status : '', isIn = saved && !OFF[st];
@@ -33342,7 +33372,10 @@ function TakeAttendance(props) {
         h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, STAT.map(function (s) { var on = st === s[0]; return h('button', { key: s[0], onClick: function () { setStatus(p, s[0]); }, style: { padding: '9px 12px', borderRadius: 16, border: '2px solid ' + (on ? s[2] : 'rgba(255,255,255,.2)'), background: on ? s[2] + '33' : 'transparent', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, s[1]); })),
         isIn && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', color: '#c8c8d8', fontSize: 13, marginBottom: 6 } },
           'In', h('input', { type: 'time', value: val(p.id, 'start', saved.start || ''), onChange: function (e) { setV(p.id, 'start', e.target.value); }, style: inp }),
+          pill('rgba(255,255,255,.14)', '#fff', function () { setV(p.id, 'start', nowHm()); }, 'Now'),
           'Out', h('input', { type: 'time', value: val(p.id, 'end', saved.end || ''), onChange: function (e) { setV(p.id, 'end', e.target.value); }, style: inp }),
+          pill('rgba(255,255,255,.14)', '#fff', function () { setV(p.id, 'end', nowHm()); }, 'Now'),
+          bOut && pill('rgba(255,255,255,.14)', '#fff', function () { setV(p.id, 'end', bOut); }, bOut),
           pill('#FFD54F', '#000', function () { saveTimes(p); }, 'Save times'),
           !saved.end && pill('#90CAF9', '#000', function () { clockOut(p); }, '🚪 Clock out'),
           saved.end && pill('rgba(255,255,255,.15)', '#fff', function () { clearOut(p); }, '↩ Clocked out by mistake')),
@@ -33697,14 +33730,16 @@ function mdAward(pid, key, pts, rawOverride, reason, ptsPerB) {
   var path = 'awards/' + rtDay() + '/' + pid + '/' + key, have = null; try { have = syncGet(path); } catch (e) {}
   if (have) return false;
   var raw = rawOverride != null ? rawOverride : mdRaw(pts, ptsPerB);
-  try { syncSet(path, { pts: pts, raw: raw, ts: Date.now(), reason: reason }); } catch (e) {}
-  if (raw > 0 && typeof window._creditFn === 'function') { try { window._creditFn(pid, raw, reason, key, true); } catch (e) {} }
+  var asPts = typeof fpEarnOn === 'function' && fpEarnOn();
+  try { syncSet(path, { pts: pts, raw: raw, ts: Date.now(), reason: reason, mode: asPts ? 'pts' : 'cash' }); } catch (e) {}
+  if (raw > 0 && typeof window._creditFn === 'function') { try { window._creditFn(pid, raw, reason, rtDay() + '_' + key, true); } catch (e) {} }
   return true;
 }
 function mdRevoke(pid, key, reason) {
   var path = 'awards/' + rtDay() + '/' + pid + '/' + key, have = null; try { have = syncGet(path); } catch (e) {}
   if (!have) return;
   try { syncSet(path, null); } catch (e) {}
+  if (have.mode === 'pts') { try { syncSet('finplan/p/' + pid + '/pts/earned/' + String(rtDay() + '_' + key).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 80), null); } catch (e) {} return; }
   if (have.raw > 0 && typeof window._deductFn === 'function') { try { window._deductFn(pid, have.raw, '↩ ' + reason); } catch (e) {} }
 }
 
@@ -34195,10 +34230,10 @@ function DKAModule(props) {
   var admin = !!(props.isTeacher || props.isAdmin);
   if (cfg.enabled !== false) {
     return h('div', null,
-      admin && h('div', { style: { margin: '8px 14px 0', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', background: 'rgba(255,255,255,.05)', borderRadius: 12, padding: 8 } },
+      h(DKAModuleFull, props),
+      admin && h('div', { style: { margin: '24px 14px 14px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', background: 'rgba(255,255,255,.05)', borderRadius: 12, padding: 8 } },
         h('span', { style: { flex: 1, fontSize: 12, color: '#c8c8d8' } }, '📚 Curriculum loaded: Discovering Kids Academy 180-day'),
-        h('button', { onClick: function () { if (!conf) { setConf(true); setTimeout(function () { setConf(false); }, 4000); return; } setConf(false); try { syncSet('school/curriculum_cfg', { enabled: false }); } catch (e) {} }, style: { background: conf ? '#EF5350' : 'rgba(239,83,80,.25)', color: conf ? '#fff' : '#FF8A80', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, conf ? 'Tap again — hide it' : '↺ Reset school to blank')),
-      h(DKAModuleFull, props));
+        h('button', { onClick: function () { if (!conf) { setConf(true); setTimeout(function () { setConf(false); }, 4000); return; } setConf(false); try { syncSet('school/curriculum_cfg', { enabled: false }); } catch (e) {} }, style: { background: conf ? '#EF5350' : 'rgba(239,83,80,.25)', color: conf ? '#fff' : '#FF8A80', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, conf ? 'Tap again — hide it' : '↺ Reset school to blank')));
   }
   return h(SchoolBlank, props);
 }
@@ -35348,7 +35383,8 @@ function FpAdmin(props) {
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '4px 0' } }, FP_BUCKETS.map(function (x) { return h('label', { key: x[0], style: { fontSize: 11, color: '#ccc' } }, x[1].replace(/^\S+\s/, ''), h('input', { defaultValue: sps[x[0]], key: x[0] + sps[x[0]], inputMode: 'numeric', onBlur: function (e) { put('split/' + x[0], Math.max(0, Math.min(100, +e.target.value || 0))); }, style: Object.assign({}, fpIn, { width: 52, marginLeft: 4 }) })); })),
     h('div', { style: { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 } },
       h('label', { style: { fontSize: 11, color: '#ccc' } }, 'Real $ cap per month', h('input', { defaultValue: cfg.cap, key: 'cap' + cfg.cap, inputMode: 'decimal', onBlur: function (e) { put('cap', fpR2(e.target.value)); }, style: Object.assign({}, fpIn, { width: 62, marginLeft: 4 }) })),
-      h('label', { style: { fontSize: 11, color: '#ccc' } }, 'Pay per SOP job (B$)', h('input', { defaultValue: cfg.sopPay, key: 'sp' + cfg.sopPay, inputMode: 'decimal', onBlur: function (e) { put('sopPay', fpR2(e.target.value)); }, style: Object.assign({}, fpIn, { width: 62, marginLeft: 4 }) }))));
+      h('label', { style: { fontSize: 11, color: '#ccc' } }, 'Pay per SOP job (B$)', h('input', { defaultValue: cfg.sopPay, key: 'sp' + cfg.sopPay, inputMode: 'decimal', onBlur: function (e) { put('sopPay', fpR2(e.target.value)); }, style: Object.assign({}, fpIn, { width: 62, marginLeft: 4 }) }))),
+    h(EarnPtsToggle, null));
 }
 function MoneySkills(props) {
   var h = React.createElement, fam = props.family || [], admin = !!props.isAdmin;
@@ -35370,6 +35406,24 @@ function MoneySkills(props) {
     Hs('fun', '⭐ Bonus points & fun time (' + pts + ')', h(FpFun, { key: pid, pid: pid, p: p, put: put, name: name }), pendingMine || null),
     Hs('bank', '🏛 Real bank, savings & monthly review', h(FpBank, { key: pid, pid: pid, p: p, put: put, cfg: cfg, name: name, isAdmin: admin })),
     Hs('learn', '🎓 This week’s money lesson', h(FpLesson, { key: pid, pid: pid, p: p, put: put })));
+}
+
+// ── EARNINGS → POINTS: only the monthly real-$ cap (default $5) is cash; everything else earned is points ──
+function fpEarnOn() { var c = null; try { c = syncGet('finplan/cfg'); } catch (e) {} return !(c && c.earnPts === false); }
+function fpEarnRoute(pid, amount, reason, key) {
+  if (!(amount > 0) || !fpEarnOn()) return false;
+  if (/^(refund|convert|unpay|bill|store|allowance|paycheck|deposit)/i.test(String(key || '')) || /↩|refund|paycheck|allowance|deposit|transfer/i.test(String(reason || ''))) return false;
+  var sc = null; try { sc = syncGet('store/cfg'); } catch (e) {}
+  var ppb = sc && +sc.ptsPerB > 0 ? +sc.ptsPerB : 20, n = Math.max(1, Math.round((window._payMode || 'pay') === 'points' ? amount : amount * ppb));
+  var safe = String(key || reason || 'x').replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 80);
+  try { syncSet('finplan/p/' + pid + '/pts/earned/' + safe, { n: n, why: String(reason || 'Earned'), ts: Date.now() }); } catch (e) {}
+  return true;
+}
+function EarnPtsToggle() {
+  var h = React.createElement, c = ktUse('finplan/cfg', null)[0] || {}, on = c.earnPts !== false;
+  return h('label', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, color: '#ddd', margin: '8px 0', lineHeight: 1.5 } },
+    h('input', { type: 'checkbox', checked: on, onChange: function (e) { try { syncSet('finplan/cfg/earnPts', e.target.checked); } catch (x) {} }, style: { marginTop: 3 } }),
+    h('span', null, 'Habits, chores, clock time and teamwork earn ', h('b', null, 'points'), ' (only the monthly cash cap above is real money). Points turn into real cash or My Bethel cash when a parent approves.'));
 }
 
 </script>
@@ -38634,6 +38688,7 @@ function HabitsStack(props) {
   var h = React.createElement, pid = props.personId, name = props.name || '';
   var dn = ktUse('habitsdone/' + rtDay() + '/' + pid, {})[0] || {}, sk = ktUse('skips/' + rtDay() + '/' + pid, {})[0] || {}, own = ktUse('habits/' + pid, null)[0], all = ktUse('habits/__all', null)[0];
   var oS = React.useState({}), openMap = oS[0], setOpenMap = oS[1], cur = rtNowPeriod();
+  function mins(p) { return rtHabits(name, pid, p, own, all).reduce(function (a, l) { return a + (rtParse(l).mins || 0); }, 0); }
   function stat(p) { var list = rtHabits(name, pid, p, own, all), n = 0; list.forEach(function (label) { var id = p + '_' + rtHash(label); if (dn[id] || sk['h_' + id]) n++; }); return { total: list.length, n: n }; }
   var stats = {}; RT_PERIODS.forEach(function (p) { stats[p[0]] = stat(p[0]); });
   var firstOpen = null; RT_PERIODS.forEach(function (p) { if (!firstOpen && stats[p[0]].total && stats[p[0]].n < stats[p[0]].total && p[0] >= '') firstOpen = p[0]; });
@@ -38645,7 +38700,7 @@ function HabitsStack(props) {
       if (!s.total) return null;
       return h('div', { key: p[0], style: { marginBottom: 8, border: '1px solid ' + (done ? 'rgba(76,175,130,.6)' : 'rgba(255,255,255,.15)'), borderRadius: 14, background: done ? 'rgba(76,175,130,.1)' : 'rgba(255,255,255,.04)', overflow: 'hidden' } },
         h('button', { onClick: function () { var n = Object.assign({}, openMap); n[p[0]] = !open; setOpenMap(n); }, style: { width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#fff', padding: '12px', fontSize: 15, fontWeight: 900, cursor: 'pointer', textAlign: 'left' } },
-          h('span', { style: { flex: 1 } }, p[1] + (p[0] === cur ? '  · now' : '')), h('span', { style: { fontSize: 13, color: done ? '#81C784' : '#c8c8d8' } }, done ? '✅ done' : s.n + ' of ' + s.total), h('span', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
+          h('span', { style: { flex: 1 } }, p[1] + (p[0] === cur ? '  · now' : ''), h('span', { style: { fontSize: 12, color: '#c8c8d8', fontWeight: 600 } }, '  ' + mins(p[0]) + ' min')), h('span', { style: { fontSize: 13, color: done ? '#81C784' : '#c8c8d8' } }, done ? '✅ done' : s.n + ' of ' + s.total), h('span', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
         open && h('div', { style: { padding: '0 8px 8px' } }, h(HabitsPanel, { personId: pid, name: name, only: p[0] })));
     }));
 }
