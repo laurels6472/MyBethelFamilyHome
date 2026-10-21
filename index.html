@@ -37463,7 +37463,8 @@ function CatchUpPlanner(props) {
 // ═══ BIG CATCH-UP TURN-IN — ONE short quiz + ONE small project replaces all the old homework from the first day of school up to a chosen day.
 // Nothing is deleted: when a parent approves it, the missed lessons are marked "caught up" (only the ones not already done). ═══
 var BC_SUBS = ['bible', 'lang', 'math', 'science', 'history'];
-function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(10, (typeof cuTodayDay === 'function' ? cuTodayDay() : 10) || 10); return { on: true, through: (c && +c.through) || t }; }
+function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} return { date: (c && c.date) || '2026-10-26', day: (c && +c.day) || 12 }; }
+function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(ssRestartCfg().day - 1, (typeof cuTodayDay === 'function' ? cuTodayDay() : 11) || 11); return { on: true, through: (c && +c.through) || t }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
 function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
 function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
@@ -37478,6 +37479,10 @@ function bcWrite(path, val, onErr) {
 function bcQuestions(sid, through) {
   var st = bcStudent(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
   for (var d = 1; d <= through; d++) {
+    if (typeof bcTailored === 'function' && bcTailored(d)) {
+      bcTailored(d).forEach(function (q, qi) { out.push({ id: 'd' + d + '_' + q.sub, day: d, sub: q.sub, label: q.label, text: (st.grade <= 5 ? q.y + ' Tell one or two things you remember.' : q.o + ' Be detailed: include at least two things you remember from that day’s lesson.'), key: q.key || '' }); });
+      continue;
+    }
     var picks = [BC_ROT[(d - 1) % 6], BC_ROT[(d + 2) % 6]];
     picks.forEach(function (sub) {
       var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, L = null, text = '', key = '', en = null;
@@ -37551,7 +37556,7 @@ function BigCatchCard(props) {
   var btn = function (bg, fg, fn, t, grow) { return h('button', { onClick: fn, style: { flex: grow ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
   return h('div', { style: card },
     h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Lessons Quiz' + (admin ? ' — ' + s.name : '')),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day 1 to Day ' + through + ' (2 questions for each day). The lessons are still yours to keep. Each question comes from what we studied that day. ' + bcAsk(s.grade)),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day 1 to Day ' + through + ' (2 questions for each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, answered + ' of ' + qs.length + ' answered'),
     h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 } }, h('div', { style: { height: '100%', width: (qs.length ? answered / qs.length * 100 : 0) + '%', background: '#4CAF82' } })),
     status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
@@ -37599,6 +37604,58 @@ function BulkAssign(props) {
   var h = React.createElement, kids = (typeof SCHOOL_STUDENTS !== 'undefined' ? SCHOOL_STUDENTS : []);
   return h('div', { id: 'fm-quizreview' }, kids.map(function (s) { return typeof BigCatchCard === 'function' ? h(BigCatchCard, { key: s.id, student: s, isAdmin: true }) : null; }));
 }
+
+</script>
+<script>
+// ═══ REVIEW QUIZ (Oct 6 – Oct 21 = school Days 1–11): two hand-written questions per day, tailored to that day's lessons ═══
+// y = wording for younger students (grade 5 and under), o = wording for older students, key = what a good answer includes (teacher only)
+var BC_TAIL = {
+  1: [
+    { sub: 'bible', label: 'Bible', y: 'Ecclesiastes 3:1 says there is “an appointed time for everything.” What do you think that means? Why is it a good thing to remember on the first days of our school year?', o: 'Eccl 3:1 says, “There is an appointed time for everything.” Explain what this means and why it is a good reminder as we begin our school year. Include how Psalm 127:1 shows we need Jehovah’s help in what we build.', key: 'Everything has its right time; Jehovah’s timing is best. We begin school at the time Jehovah has allowed and ask for his help (Ps 127:1 — unless Jehovah builds the house, the builders work in vain).' },
+    { sub: 'science', label: 'Science', y: 'Science: What is a cell? Why do you think cells show that Jehovah is wise?', o: 'Science — Cell structure: explain what a cell is, name at least two parts of a cell and what each one does, and explain why the cell is called the basic unit of life.', key: 'Cell = smallest living unit; parts such as nucleus (directions), membrane (controls what enters), mitochondria (energy). All living things are made of cells. Shows incredible design.' }
+  ],
+  2: [
+    { sub: 'bible', label: 'Bible', y: 'Job 28:23-24 says Jehovah “knows the way to wisdom.” What does it mean that Jehovah knows? How can that help us when we do our schoolwork?', o: 'Job 28:23-24 teaches that God understands the way to wisdom. Explain what “Jehovah knows” means and how trusting that Jehovah knows what is best helps you when learning something hard.', key: 'Jehovah knows everything, sees everything and is the source of true wisdom. We can ask for his help and trust his guidance.' },
+    { sub: 'science', label: 'Science', y: 'Science: People can see clues that something was made. What are clues, or “evidence,” and how do clues help us believe something is true?', o: 'Science — “What is science? Faith and evidence.” Explain how faith and evidence work together. Give one example of evidence that supports believing in a Creator.', key: 'Science studies evidence; faith in a Creator is reasonable, based on evidence (Heb 11:1, Rom 1:20), not blind belief. Example: design, order, information in creation.' }
+  ],
+  3: [
+    { sub: 'bible', label: 'Bible', y: 'Psalm 83:18 tells us Jehovah’s name. Why does it matter that God has a personal name? How does knowing his name make you feel about him?', o: 'Psalm 83:18 and Exodus 3:14-15 teach that God has a personal name. Explain why it matters that Jehovah has a name, what “I Will Become What I Will Become” tells us about him, and how knowing his name changes your relationship with him.', key: 'God is a person with a name, not a title only; he wants us to know and use it. Ex 3:14 shows he becomes whatever is needed to fulfil his purpose. Knowing the name helps us draw close to him.' },
+    { sub: 'science', label: 'Science', y: 'Science: What are the steps scientists use to test an idea? Tell about a test you could do in the kitchen.', o: 'Science — The scientific method: list the steps in order, then describe a simple experiment you could do (for example, which melts ice fastest) using each step.', key: 'Ask a question, research, hypothesis, experiment, observe/record data, conclusion, share results. Example uses a fair test with one thing changed.' }
+  ],
+  4: [
+    { sub: 'bible', label: 'Bible', y: 'Our family worship has the Daily Text, a song, and prayer. Name what each one does for us, and tell why we should not rush through them.', o: 'This day was about worship rhythm. Describe the parts of our daily worship (Daily Text, song, prayer), what each does for you spiritually, and why Jehovah’s servants take time instead of rushing.', key: 'Daily Text — gives a scripture to think about today; song — praises Jehovah, helps us remember; prayer — talking to Jehovah personally. Worship builds friendship with him; rushing makes it a routine.' },
+    { sub: 'science', label: 'Science', y: 'Science: Some people say living things made themselves, and some say Jehovah created them. Give one reason a person can believe things were made on purpose.', o: 'Science — Origins: give two reasons that support believing in creation rather than evolution, and explain how one of them shows evidence of design.', key: 'Examples: complex information in DNA, fully formed complex organs, fossil record gaps, fine-tuned conditions. Design implies a designer.' }
+  ],
+  5: [
+    { sub: 'bible', label: 'Bible', y: 'It was the end of our first week. What was the best part of the week? What was hard? What is one thing you learned from the Daily Text this week?', o: 'Reflect on week 1. What went well, what was hardest, and what is one thing from the Daily Text this week that you plan to apply? Explain how you will apply it.', key: 'Honest reflection plus one specific application of a Daily Text thought.' },
+    { sub: 'science', label: 'Science', y: 'Science: DNA is like a tiny instruction book inside every cell. What do you think it means that there is a “code” inside you? Who made the code?', o: 'Science — DNA: explain why information, like the code in DNA, points to a designer. Compare it to something people make (a book, a computer program).', key: 'DNA stores coded information (four letters). Information always comes from an intelligent source in our experience; a book or program has an author, so DNA points to an Author.' }
+  ],
+  6: [
+    { sub: 'bible', label: 'Bible', y: 'Genesis 2:8-17 tells about the Garden of Eden. What was in the garden? Jehovah gave Adam one rule about a tree. Why was it a loving rule?', o: 'Describe the Garden of Eden (Gen 2:8-17) and explain why Jehovah’s one restriction was a loving warning, not a harsh rule. Use Isaiah 45:18 to explain what Jehovah’s purpose was for the earth.', key: 'Rivers, gold, trees and food; Adam to work and care for it. The restriction protected life (“you will surely die”) and tested loving obedience and trust. Is 45:18 — the earth was formed to be lived on; Ps 37:29 — the righteous will live forever on it.' },
+    { sub: 'history', label: 'History', y: 'History: Who was Moses? How did Jehovah save his people when they left Egypt (the Exodus)?', o: 'History — Egypt and the Exodus: explain what happened in the Exodus and what it shows about Jehovah’s power and his promises. Give one detail about Egypt or the plagues.', key: 'Israelites were slaves; ten plagues; Passover; Red Sea parted; Jehovah fulfilled his promise to Abraham and showed he is stronger than the gods of Egypt.' }
+  ],
+  7: [
+    { sub: 'bible', label: 'Bible', y: 'Angels are Jehovah’s spirit family. Who are angels, and what does Hebrews 1:14 say they do?', o: 'Explain who the angels are (Job 1:6; Heb 1:7, 14; Dan 7:10). How many are there, what are they like, and what does Jehovah use them to do for people?', key: 'Spirit creatures created before humans, real persons with free will, numbering in the hundreds of millions. Heb 1:14 — they are sent out to minister to those who will inherit salvation.' },
+    { sub: 'science', label: 'Science', y: 'Science: A cell has lots of tiny parts that all have to work together. Why do you think that shows careful planning?', o: 'Science — “The cell and irreducible complexity”: explain in your own words what irreducible complexity means and use the cell to give an example.', key: 'A system with many parts all needed together for it to work; if one part is missing the system fails, so it could not have developed one tiny step at a time. Cell parts work together to survive.' }
+  ],
+  8: [
+    { sub: 'bible', label: 'Bible', y: 'Satan was once a good angel. What wrong thing did he want that began his rebellion? What can we do to take Jehovah’s side?', o: 'Using Ezekiel 28:12-17, Isaiah 14:13-14 and John 8:44, explain how a perfect angel became Satan. What was the root cause, and how can we take Jehovah’s side?', key: 'Pride and wanting worship that belongs to Jehovah; he did not stand in the truth, became a liar. We take Jehovah’s side by staying loyal, truthful and humble.' },
+    { sub: 'science', label: 'Science', y: 'Science: Pick an animal. Tell how its body or the way it lives is made just right for where it lives.', o: 'Science — Animal design: choose one animal and explain a specific adaptation, how it helps the animal survive, and what it teaches about its Designer.', key: 'Specific example (camel, bat echolocation, bird wing...) with how the design helps survival and shows wisdom.' }
+  ],
+  9: [
+    { sub: 'bible', label: 'Bible', y: 'Genesis 3: A serpent spoke to Eve. What did he say that was not true? What should we do when someone tells us something false about Jehovah?', o: 'Satan used three tactics on Eve: doubt, denial and distortion (Gen 3:1-5). Explain each tactic, and give a modern example of how Satan might use one today. Connect to Genesis 3:6 and 1 John 2:16.', key: 'Doubt — “Did God really say…?”; denial — “You will certainly not die”; distortion — God is holding back something good. Today: peer pressure, lies on social media. 1 John 2:16: craving of flesh, eyes, showy life.' },
+    { sub: 'science', label: 'Science', y: 'Science: Psalm 139:14 says we are “fearfully and wonderfully made.” Pick one part of your body and tell how it is made so well.', o: 'Science — The human body: choose a body system or organ (eye, heart, brain, immune system) and explain how its design works and why it makes you appreciate the Designer (Ps 139:14).', key: 'A specific explanation of how the part works and reflection on the Designer; connects to Ps 139:14.' }
+  ],
+  10: [
+    { sub: 'bible', label: 'Bible', y: 'After Adam and Eve sinned, Jehovah gave a promise of hope in Genesis 3:15. What was the promise?', o: 'Explain the promise in Genesis 3:15: who is the “seed,” who is the serpent, and what hope does it give? Use Galatians 3:16 and Revelation 12:17 in your answer.', key: 'First prophecy: Jehovah promised a Seed who would crush the serpent’s head. Gal 3:16 — the seed is Christ; Rev 12:17 — the war continues against the rest of her offspring (anointed). Gives hope that Jehovah will undo the harm of Satan.' },
+    { sub: 'science', label: 'Science', y: 'Science: Our universe has rules that are “just right” for life, like gravity. Why do you think a universe like this points to a Maker?', o: 'Science — Physics: explain what “fine-tuned constants” means. Give one example and explain why scientists find it hard to believe it happened by chance.', key: 'Constants (gravity, strength of nuclear force, etc.) must be within very narrow ranges for stars and life to exist; precision points to design.' }
+  ],
+  11: [
+    { sub: 'bible', label: 'Bible', y: 'When Adam and Eve disobeyed, Jehovah told them what would happen. Were those consequences punishment from anger or the results of sin? What loving thing did Jehovah do in Genesis 3:21?', o: 'Explain the consequences in Genesis 3:8-24. Were they revenge or the natural outcome of sin? What did Jehovah’s actions in Gen 3:21 and Rom 8:20-22 show about his love and hope?', key: 'Consequences were outcomes of sin, not revenge. Jehovah made them clothes of skins (foreshadowing the ransom) and gave hope; creation was subjected to futility but will be set free (Rom 8:20-22).' },
+    { sub: 'math', label: 'Math', y: 'Math: Solve 3 + 4 × 2 and show your steps. Why is the answer not 14?', o: 'Math — Order of operations: solve 3 + 6² × 5 − (9 + 3) showing every step, and explain the order you used and why.', key: 'Younger: 4 × 2 = 8 first, then 3 + 8 = 11 (multiply before add). Older: parentheses 12; exponent 36; multiply 180; 3 + 180 − 12 = 171. Order: parentheses, exponents, multiplication/division, addition/subtraction.' }
+  ]
+};
+function bcTailored(d) { return BC_TAIL[d] || null; }
 
 </script>
 <script>
@@ -38995,8 +39052,8 @@ function SchoolCatchCard(props) {
     h('div', { onClick: function () { setOpen(open === n ? '' : n); }, style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' } }, h('div', { style: { fontSize: 22 } }, done ? '✅' : n === 'read' ? '1️⃣' : '2️⃣'), h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff' } }, title), h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, sub2)), h('div', { style: { color: '#c8c8d8' } }, open === n ? '▲' : '▼')), on && content); };
   var qs = bcQuestions(sid, through), ans = sub.answers || {}, answered = qs.filter(function (x) { return (ans[x.id] || '').trim().length > 2; }).length;
   return h('div', { style: card },
-    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, '🎒 Catch-up: Days 1–' + through),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.5, marginTop: 2 } }, 'We missed some school. Instead of doing every old lesson, do these two things and you are caught up.'),
+    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, '📝 Review quiz — Oct 6 to Oct 21 (Days 1–' + through + ')'),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.5, marginTop: 2 } }, 'We missed school, so there are no old assignments. Read the review, then answer 2 questions for each school day. Tell what you learned about Jehovah and his creation.'),
     step('read', 'Read the catch-up lesson', readDone ? 'Done' : 'One page with the big ideas', readDone, open === 'read', h('div', { style: { marginTop: 8 } },
       typeof ListenBar === 'function' && h(ListenBar, { text: ssCatchText(groups), title: 'Catch-up lesson' }),
       groups.map(function (g) { return h('div', { key: g.id, style: { marginTop: 8, paddingLeft: 10, borderLeft: '4px solid ' + g.color } }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff' } }, g.label), g.items.map(function (i) { return h('div', { key: i.day, style: { fontSize: 13, color: '#e8e8f4', lineHeight: 1.5, margin: '3px 0' } }, h('b', null, 'Day ' + i.day + ': ' + ssClean(i.topic, 80)), i.idea ? ' — ' + i.idea : ''); })); }),
@@ -39028,35 +39085,47 @@ function SchoolClassroomRow(props) {
     mS[0] && h('div', { style: { color: '#9be3bd', fontSize: 13, marginTop: 6 } }, mS[0]));
 }
 
+function ssLessonDay(rs) {
+  var t = new Date(); t.setHours(12, 0, 0, 0); var st = new Date(rs.date + 'T12:00:00'); if (isNaN(st.getTime()) || t < st) return null;
+  var n = 0, d = new Date(st), g = 0; while (d <= t && g++ < 400) { var w = d.getDay(); if (w !== 0 && w !== 6) n++; d.setDate(d.getDate() + 1); }
+  return Math.min(180, (+rs.day || 1) + Math.max(1, n) - 1);
+}
+function ssDayLabel(n) { try { return typeof schoolDayDate === 'function' ? schoolDayDate(n).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : ''; } catch (e) { return ''; } }
 function SchoolSimple(props) {
-  var h = React.createElement, kids = ssKids(), admin = !!props.isAdmin, day = cuTodayDay();
+  var h = React.createElement, kids = ssKids(), admin = !!props.isAdmin;
+  var rsS = ktUse('school/restart', null), rsv = rsS[0] || {}, restart = { date: rsv.date || '2026-10-26', day: +rsv.day || 12 };
+  var vdS = React.useState(null), viewDay = vdS[0], setViewDay = vdS[1];
+  var autoDay = ssLessonDay(restart), day = admin && viewDay != null ? viewDay : autoDay, qDay = day || 0;
+  var stS = React.useState(false), setOpenSet = stS[0], setSetOpen = stS[1];
   var selS = React.useState(function () { return (kids.filter(function (k) { return k.id === props.personId; })[0] || kids[0] || {}).id; }), sel = selS[0], setSel = selS[1];
   var sid = admin ? sel : props.personId, st = ssKid(sid);
   var pS = ktUse('school/progress', {}), prog = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/progress', {}) : null) || {}, pS[0] || {});
-  var tiS = ktUse('school/turnin/' + day, {}), ti = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/turnin/' + day, {}) : null) || {}, tiS[0] || {});
+  var tiS = ktUse('school/turnin/' + qDay, {}), ti = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/turnin/' + qDay, {}) : null) || {}, tiS[0] || {});
   var allSubS = ktUse('school/bigcatch_sub', {}), allSub = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/bigcatch_sub', {}) : null) || {}, allSubS[0] || {});
   var cfg = bcUse();
   if (!st) return h('div', { style: { padding: 24, textAlign: 'center', color: '#c8c8d8', fontSize: 16 } }, '📚 School is for the students. Parents: sign in as a parent to see everyone.');
   var info = typeof getSchoolDayInfo === 'function' ? getSchoolDayInfo() : {};
-  var lessons = ssLessons(sid, day), nDone = lessons.filter(function (r) { return cuDone(prog[r.key]); }).length;
+  var lessons = day ? ssLessons(sid, day) : [], nDone = lessons.filter(function (r) { return cuDone(prog[r.key]); }).length;
   function chip(k) {
-    var ls = ssLessons(k.id, day), dn = ls.filter(function (r) { return cuDone(prog[r.key]); }).length, qs = allSub[k.id] || {}, on = k.id === sid;
+    var ls = day ? ssLessons(k.id, day) : [], dn = ls.filter(function (r) { return cuDone(prog[r.key]); }).length, qs = allSub[k.id] || {}, on = k.id === sid;
     var flag = qs.status === 'submitted' ? '📝' : ti[k.id] ? '📤' : '';
     return h('button', { key: k.id, onClick: function () { setSel(k.id); }, style: { flex: 1, minWidth: 74, padding: '10px 6px', borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.15)'), background: on ? 'rgba(255,213,79,.15)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer' } },
-      h('div', { style: { fontSize: 20 } }, k.emoji || '🎓'), h('div', { style: { fontSize: 13, fontWeight: 900 } }, k.name), h('div', { style: { fontSize: 11, color: dn === ls.length && ls.length ? '#81C784' : '#c8c8d8' } }, dn + '/' + ls.length + ' ' + flag));
+      h('div', { style: { fontSize: 20 } }, k.emoji || '🎓'), h('div', { style: { fontSize: 13, fontWeight: 900 } }, k.name), h('div', { style: { fontSize: 11, color: dn === ls.length && ls.length ? '#81C784' : '#c8c8d8' } }, (day ? dn + '/' + ls.length : 'quiz') + ' ' + flag));
   }
   return h('div', { style: { padding: '12px 14px 28px' } },
     admin && h('div', { style: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' } }, kids.map(chip)),
     h('div', { style: { marginBottom: 12 } },
       h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '📚 ' + (admin ? st.name + '’s school' : 'My school today')),
-      h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'Day ' + day + ' · ' + new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) + (lessons.length ? ' · ' + nDone + ' of ' + lessons.length + ' lessons done' : '')),
+      day ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'Day ' + day + ' · ' + (admin && viewDay != null ? ssDayLabel(day) : new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })) + (lessons.length ? ' · ' + nDone + ' of ' + lessons.length + ' lessons done' : ''))
+        : h('div', { style: { fontSize: 14, color: '#FFD54F', fontWeight: 700, lineHeight: 1.5 } }, 'Review quiz first. Regular lessons begin Monday, ' + new Date(restart.date + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric' }) + '.'),
       lessons.length > 0 && h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginTop: 6 } }, h('div', { style: { height: '100%', width: (nDone / lessons.length * 100) + '%', background: '#4CAF82', transition: 'width .4s' } }))),
-    admin && h(TeacherLessonCard, { day: day, onAdv: props.onAdv }),
+    admin && h(SchoolDayPicker, { day: day, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen }),
+    admin && day && h(TeacherLessonCard, { day: day, onAdv: props.onAdv }),
     h(SchoolCatchCard, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
-    h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, 'TODAY’S LESSONS'),
-    h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
-    h('div', { style: { height: 8 } }),
-    h(SchoolClassroomRow, { sid: sid, day: day, admin: admin }),
+    day && h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, viewDay != null && admin ? 'LESSONS FOR DAY ' + day : 'TODAY’S LESSONS'),
+    day && h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
+    day && h('div', { style: { height: 8 } }),
+    day && h(SchoolClassroomRow, { sid: sid, day: day, admin: admin }),
     admin && props.onAdv && h(TeacherDeck, { onAdv: props.onAdv }));
 }
 
@@ -39189,6 +39258,27 @@ function LabTeacherGuide(props) {
     li(['Every fact and measurement ties back to a Bible verse or Insight article.', 'The tour makes sense to a ten-year-old (Mykah approves it).', 'Each child can explain their own part and one thing a teammate did.', 'All the pictures and sounds are the family’s own or free to use. No private information is shared online.']));
 }
 
+// ── Admin: pick any school day; set when daily lessons start ──
+function SchoolDayPicker(props) {
+  var h = React.createElement, day = props.day, vd = props.viewDay, rs = props.restart;
+  var go = function (n) { n = Math.max(1, Math.min(180, n)); props.setViewDay(n); };
+  var nb = function (fn, t) { return h('button', { onClick: fn, style: { background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', borderRadius: 12, width: 48, minHeight: 48, fontSize: 22, fontWeight: 900, cursor: 'pointer' } }, t); };
+  var opts = []; for (var n = 1; n <= 180; n++) opts.push(h('option', { key: n, value: n }, 'Day ' + n + ' — ' + ssDayLabel(n)));
+  var pending = vd != null && props.autoDay == null;
+  return h('div', { style: { background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 10, marginBottom: 12 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+      nb(function () { go((day || props.autoDay || rs.day) - 1); }, '‹'),
+      h('select', { value: day || '', onChange: function (e) { if (e.target.value) go(+e.target.value); }, style: { flex: 1, minHeight: 48, background: 'rgba(0,0,0,.3)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, fontSize: 16, fontWeight: 800, padding: '0 10px' } }, h('option', { value: '' }, day ? 'Choose a day' : 'Choose a day to look at'), opts),
+      nb(function () { go((day || props.autoDay || rs.day - 1) + 1); }, '›')),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' } },
+      vd != null && h('button', { onClick: function () { props.setViewDay(null); }, style: { background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '↩ Back to today'),
+      h('span', { style: { flex: 1, fontSize: 13, color: pending ? '#FFB74D' : '#c8c8d8', lineHeight: 1.4 } }, pending ? 'Preview only: the children will not see daily lessons until ' + rs.date + '.' : vd != null ? 'Looking at another day.' : 'Showing today.'),
+      h('button', { onClick: function () { props.setSetOpen(!props.openSet); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '⚙ Start date')),
+    props.openSet && h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8, color: '#e8e8f4', fontSize: 14 } },
+      'Daily lessons start on', h('input', { type: 'date', defaultValue: rs.date, key: 'rsd' + rs.date, onBlur: function (e) { if (e.target.value) { try { syncSet('school/restart/date', e.target.value); } catch (x) {} } }, style: { background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: 10, fontSize: 15 } }),
+      'at Day', h('input', { type: 'number', min: 1, max: 180, defaultValue: rs.day, key: 'rsn' + rs.day, onBlur: function (e) { var v = parseInt(e.target.value, 10); if (v > 0) { try { syncSet('school/restart/day', v); } catch (x) {} } }, style: { width: 70, background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: 10, fontSize: 15 } })));
+}
+
 </script>
 <script>
 // ═══ ATTENDANCE REPORT (new): reads each day's saved attendance + clock in/out times, big and readable ═══
@@ -39297,7 +39387,7 @@ function LabHow(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v128';
+var FM_BUILD = 'v129';
 (function () {
   function stamp() {
     try {
