@@ -7481,10 +7481,10 @@ function Dashboard({
     disabled: !canGoBack,
     title: "Back",
     style: {
-      width: 30, height: 30, borderRadius: '50%',
-      background: 'rgba(255,255,255,.07)',
+      width: 46, height: 46, borderRadius: '50%',
+      background: 'rgba(255,255,255,.16)',
       color: canGoBack ? '#fff' : 'rgba(255,255,255,.2)',
-      border: 'none', fontSize: 14, flexShrink: 0,
+      border: 'none', fontSize: 30, fontWeight: 900, lineHeight: 1, flexShrink: 0,
       cursor: canGoBack ? 'pointer' : 'default'
     }
   }, "\u2039"), /*#__PURE__*/React.createElement("button", {
@@ -7492,10 +7492,10 @@ function Dashboard({
     disabled: !canGoForward,
     title: "Forward",
     style: {
-      width: 30, height: 30, borderRadius: '50%',
-      background: 'rgba(255,255,255,.07)',
+      width: 46, height: 46, borderRadius: '50%',
+      background: 'rgba(255,255,255,.16)',
       color: canGoForward ? '#fff' : 'rgba(255,255,255,.2)',
-      border: 'none', fontSize: 14, flexShrink: 0,
+      border: 'none', fontSize: 30, fontWeight: 900, lineHeight: 1, flexShrink: 0,
       cursor: canGoForward ? 'pointer' : 'default'
     }
   }, "\u203A"), /*#__PURE__*/React.createElement("button", { onClick: () => setShowNav(true), title: "Menu", style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 14, padding: '0 10px', height: 30, fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0 } }, "\u2630 Menu"), /*#__PURE__*/React.createElement(isAdmin ? "button" : "div", {
@@ -32797,7 +32797,7 @@ function pciGuess(running) {
   if (a === 'fun') return 'friends'; if (a === 'free') return 'home'; if (a === 'driving') return 'out'; return 'work';
 }
 function ParentCheckIn(props) {
-  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; }), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent' || p.name !== dflt; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
+  var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = ['Mom & Dad', 'Mom', 'Dad'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; })), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent' || p.name !== dflt; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
   var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : !isP;
@@ -39538,10 +39538,10 @@ function SchoolDayPicker(props) {
 }
 // ── MOM / TEACHER tab: day strip + every subject's script, how-to-say and answers, per child ──
 function TeacherHome(props) {
-  var h = React.createElement, kids = ssKids(), tkS = React.useState((kids[0] || {}).id), tk = tkS[0], setTk = tkS[1], qoS = React.useState(false), qOpen = qoS[0], setQ = qoS[1];
+  var h = React.createElement, kids = ssKids(), tkS = React.useState('all'), tk = tkS[0], setTk = tkS[1], qoS = React.useState(false), qOpen = qoS[0], setQ = qoS[1];
   var tday = props.day || Math.max(1, props.restart.day - 1), cfg = bcUse();
-  var rows = ssLessons(tk, tday), en = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[tday - 1]) || null;
-  var qs = (function () { try { return bcQuestions(tk, Math.min(cfg.through, tday)).filter(function (q) { return q.day === tday; }); } catch (e) { return []; } })();
+  var PGd = fpDoc('classroom/posted/' + tday, {}), postedK = PGd[0] || {}, putPK = PGd[1], tkid = tk === 'all' ? (kids[0] || {}).id : tk, rows = tk === 'all' ? [] : ssLessons(tk, tday), groups = tk === 'all' ? ssGroupLessons(kids, tday) : [], en = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[tday - 1]) || null;
+  var qs = (function () { try { return bcQuestions(tkid, Math.min(cfg.through, tday)).filter(function (q) { return q.day === tday; }); } catch (e) { return []; } })();
   return h('div', null,
     h(ClassScriptPost, { key: 'cs' + tday, day: tday }),
     typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + tday, isAdmin: true, personId: 'laurel', startDay: tday, startOpen: true }),
@@ -39551,13 +39551,14 @@ function TeacherHome(props) {
       !props.day && h('div', { style: { fontSize: 13, color: '#FFB74D', marginTop: 4 } }, 'Daily lessons have not started yet, so this shows the last review day. Slide the days below to pick another.')),
     h(SchoolDayPicker, { day: props.day, autoDay: props.autoDay, viewDay: props.viewDay, setViewDay: props.setViewDay, restart: props.restart, openSet: props.openSet, setSetOpen: props.setSetOpen }),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, 'FOR WHICH CHILD?'),
-    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, kids.map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, [{ id: 'all', name: 'All kids', emoji: '👨‍👩‍👧‍👦' }].concat(kids).map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
+    groups.map(function (g) { return h(TeacherGroupCard, { key: g.key + tday, g: g, day: tday, posted: postedK, putP: putPK }); }),
     rows.map(function (r) {
       return h('div', { key: r.id + tk + tday, style: { marginBottom: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 12 } },
         h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, r.label), h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 8px' } }, ssClean(r.topic, 120)),
         h(TeacherGuide, { row: r, sid: tk, day: tday }));
     }),
-    qs.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '2px solid #FFB74D', borderRadius: 16, padding: 12 } },
+    tk !== 'all' && qs.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '2px solid #FFB74D', borderRadius: 16, padding: 12 } },
       h('button', { onClick: function () { setQ(!qOpen); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 16, cursor: 'pointer', padding: 0 } }, (qOpen ? '▲ ' : '▼ ') + '📝 Review quiz questions & answer keys — Day ' + tday),
       qOpen && qs.map(function (q) { return h('div', { key: q.id, style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.12)' } }, h('div', { style: { fontSize: 15, color: '#fff', lineHeight: 1.6 } }, q.text), q.key && h('div', { style: { fontSize: 14, color: '#9be3bd', lineHeight: 1.6, marginTop: 4 } }, '🔑 ' + q.key)); })),
     props.onAdv && h('button', { onClick: function () { props.onAdv('manual'); }, style: { width: '100%', minHeight: 54, background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.2)', borderRadius: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '📖 Open the full Teacher Manual'));
@@ -39664,6 +39665,34 @@ function ClassScriptPost(props) {
       h('div', { style: { fontSize: 11, color: over ? '#FFB74D' : '#9aa', margin: '4px 0 8px' } }, val.length + ' characters' + (over ? ' — the ➕ post carries about ' + LIM + '; use 📋 Copy to paste the whole thing into Classroom.' : '')),
       h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, b(done ? '#4CAF82' : '#1A73E8', function () { if (done) putP('instr', null); else post(); }, done ? '✓ Posted · tap to undo' : '➕ Add to Google Classroom'), b('rgba(255,255,255,.15)', copy, '📋 Copy'), saved != null && b('rgba(255,255,255,.1)', function () { setTxt(null); try { syncSet('classroom/instr/' + day, null); } catch (e) {} }, '↺ Reset to the lesson script')),
       msg && h('div', { style: { fontSize: 12, color: '#81C784', marginTop: 6 } }, msg)));
+}
+
+// group the day's lessons: kids who have the same lesson get ONE teacher card
+function ssGroupLessons(kids, day) {
+  var map = {}, order = [];
+  kids.forEach(function (k) { ssLessons(k.id, day).forEach(function (r) { var key = r.id + '|' + r.topic + '|' + r.act + '|' + r.scr; if (!map[key]) { map[key] = { key: key, id: r.id, row: r, kids: [] }; order.push(key); } map[key].kids.push(k); }); });
+  var ids = []; order.forEach(function (key) { if (ids.indexOf(map[key].id) < 0) ids.push(map[key].id); });
+  var out = []; ids.forEach(function (id) { order.forEach(function (key) { if (map[key].id === id) out.push(map[key]); }); });
+  return out;
+}
+function TeacherGroupCard(props) {
+  var h = React.createElement, g = props.g, r = g.row, day = props.day, names = g.kids.map(function (k) { return k.name; }), first = g.kids[0];
+  var done = g.kids.every(function (k) { return !!(props.posted[k.id] || {})[g.id]; });
+  function body() {
+    var t = ssClassroomBody(first.id, r, day), nm = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0];
+    return t.split(first.name).join(nm);
+  }
+  function post() {
+    var title = crHead(day) + ' · ' + names.join(', ').toUpperCase() + ' · ' + r.label.replace(/^\S+\s/, '') + ': ' + ssClean(r.topic, 100);
+    window.open(crUrl(title, body(), 'assignment'), '_blank'); g.kids.forEach(function (k) { props.putP(k.id + '/' + g.id, Date.now()); });
+  }
+  function undo() { g.kids.forEach(function (k) { props.putP(k.id + '/' + g.id, null); }); }
+  return h('div', { style: { marginBottom: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 12 } },
+    h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, r.label),
+    h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', margin: '2px 0' } }, '👥 ' + (names.length === ssKids().length ? 'All kids' : names.join(' · '))),
+    h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 8px' } }, ssClean(r.topic, 120)),
+    h(TeacherGuide, { row: r, sid: first.id, day: day }),
+    h('button', { onClick: function () { if (done) undo(); else post(); }, style: { width: '100%', minHeight: 46, background: done ? '#4CAF82' : '#1A73E8', color: done ? '#000' : '#fff', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 4 } }, done ? '✓ Added to Classroom for ' + names.join(', ') + ' · tap to undo' : '➕ Add to Google Classroom for ' + names.join(', ')));
 }
 
 </script>
@@ -39810,8 +39839,25 @@ function ClockTimeSettings() {
 
 </script>
 <script>
+// ═══ NOTHING TINY: any text smaller than 12px is lifted to 12px so it can be read ═══
+(function () {
+  var MIN = 12, t = null;
+  function fix() {
+    t = null;
+    try {
+      var els = document.querySelectorAll('[style*="font-size"]');
+      for (var i = 0; i < els.length; i++) { var e = els[i], fs = parseFloat(e.style.fontSize); if (fs > 0 && fs < MIN && /px/.test(e.style.fontSize)) e.style.fontSize = MIN + 'px'; }
+    } catch (x) {}
+  }
+  function later() { if (t) return; t = setTimeout(fix, 350); }
+  function start() { try { new MutationObserver(later).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] }); } catch (e) {} fix(); }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v150';
+var FM_BUILD = 'v152';
 (function () {
   function stamp() {
     try {
