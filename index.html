@@ -31752,8 +31752,16 @@ function StartMyDay(props) {
   var allDays = Object.keys(htAll).sort().slice(-7);
   var submitted = !!sd.dayEnd;
   var startOpen = stOpen != null ? stOpen : !clocked;
-  function readyGo() { playOnce('success');
-    try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: Date.now() })); } catch (e) {}
+  function readyGo(opts) { playOnce('success');
+    var forgot = !!(opts && opts.forgot === true), rNow = Date.now(), planned = limMin * 60, elapsed = sd.dayStart ? Math.round((rNow - sd.dayStart) / 1000) : 0, dkR = typeof rtDay === 'function' ? rtDay() : todayKey();
+    try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, forgot ? { readyAt: rNow, forgotTimers: true } : { readyAt: rNow })); } catch (e) {}
+    // finishing early: the minutes left over go into the saved/banked time. Forgot the timers: nothing earned, nothing taken.
+    try {
+      var haveM = ((htAll[dkR] || {}).morning) || null;
+      if (forgot) { syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: planned, ts: rNow, forgot: true });
+        mornList.forEach(function (lb) { var hid = 'morning_' + rtHash(lb); if (!(mdS[0] || {})[hid] && !(mSk[0] || {})['h_' + hid]) syncSet('skips/' + dkR + '/' + pid + '/h_' + hid, { ts: rNow, label: lb }); }); }
+      else if (!haveM && sd.dayStart && elapsed > 0 && elapsed < planned) syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: elapsed, ts: rNow });
+    } catch (e) {}
     // getting ready is over: clock out of My Time. Work and Household Work unlock — the child clocks into each one by hand.
     try { var api = window._clockApi; if (api && api.onUpdate && typeof clockOutActivity === 'function') clockOutActivity(pid, api.sessions || {}, api.onUpdate, 'free'); } catch (e) {}
   }
@@ -31831,9 +31839,10 @@ function StartMyDay(props) {
         (function () {
           var mornFoot = h('div', null,
         !ready && mornDone && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 10, color: '#fff', fontWeight: 900, fontSize: 16, textAlign: 'center' } }, '✅ Every morning step is checked off!'),
-            !ready && big('#4CAF82', '#000', readyGo, "✅ I'm ready for the day — unlock Work & Household Work"),
+            !ready && big('#4CAF82', '#000', function () { readyGo(); }, "✅ I'm ready for the day — unlock Work & Household Work"),
+            !ready && !lateNow && h('button', { onClick: function () { var q = 'I forgot to use my timers, but I was ready and at the table before ' + limMin + ' minutes. No points earned or taken. Is that true?'; var okc = typeof window._safeConfirm === 'function' ? window._safeConfirm(q) : window.confirm(q); if (okc) readyGo({ forgot: true }); }, style: { display: 'block', width: '100%', background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.3)', borderRadius: 14, padding: 12, fontWeight: 800, fontSize: 14, marginTop: 8, cursor: 'pointer' } }, '⏱ I forgot to use my timers — I was ready in under ' + limMin + ' min'),
             ready && h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } },
-              h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
+              h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (sd.forgotTimers ? ' · timers not used — nothing earned or taken' : mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
               !submitted && h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null })); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Not ready')));
           var eveFoot = (!submitted && typeof clocked !== 'undefined' && clocked) ? evenSubmit : null;
           return typeof HabitsStack === 'function' ? h(HabitsStack, { personId: pid, name: nm, ready: ready, morningFoot: mornFoot, eveningFoot: eveFoot }) : h('div', null, props.habitsAllEl, mornFoot);
@@ -39733,7 +39742,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v147';
+var FM_BUILD = 'v148';
 (function () {
   function stamp() {
     try {
