@@ -39543,6 +39543,7 @@ function TeacherHome(props) {
   var rows = ssLessons(tk, tday), en = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[tday - 1]) || null;
   var qs = (function () { try { return bcQuestions(tk, Math.min(cfg.through, tday)).filter(function (q) { return q.day === tday; }); } catch (e) { return []; } })();
   return h('div', null,
+    h(ClassScriptPost, { key: 'cs' + tday, day: tday }),
     typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + tday, isAdmin: true, personId: 'laurel', startDay: tday, startOpen: true }),
     h('div', { style: { background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', borderRadius: 16, padding: 14, marginBottom: 12 } },
       h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '👩‍🏫 Mom / Teacher'),
@@ -39597,7 +39598,7 @@ function ssSendOff(sid, r, day) {
 
 // What Google Classroom gets for one lesson: the SAME wording the student sees in Today's Lessons, plus the send-off (what to say). Never the answer key or teacher script.
 function ssClassroomBody(sid, r, day) {
-  var parts = [ssSendOff(sid, r, day)];
+  var parts = ['📖 First read today’s Class Instructions together (posted in Classroom), then do your lesson.', ssSendOff(sid, r, day)];
   if (r.act) parts.push('WHAT TO DO:\n' + r.act);
   if (r.wnote) parts.push('\u270d\ufe0f ' + r.wnote);
   return parts.join('\n\n');
@@ -39627,6 +39628,42 @@ function SchoolAllStudents(props) {
             h('span', { style: { flex: 1, fontSize: 13, color: '#d8d8e8', lineHeight: 1.35 } }, ssClean(r.topic, 70)));
         })));
     }));
+}
+
+// ── TEACHER: the day's class instructions (teacher script) — preview, edit, copy, or post to Google Classroom ──
+function ssClassScriptText(day) {
+  var kids = ssKids(), en = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[day - 1]) || null, out = [];
+  out.push('For: Ryan, Kayla, Ashelyn and Mykah together.');
+  out.push('READ THIS TOGETHER: take turns reading it out loud to each other before you start your lessons. Then do your own lessons.');
+  if (en) { var sc = String(en[7] || '').trim(); out.push('📖 DAY ' + day + ' — ' + en[3] + (en[4] ? ' (' + en[4] + ')' : '') + (sc ? '\n' + sc : '')); }
+  var SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
+  SUBJ.forEach(function (sub) {
+    if (sub.id === 'bible') return;
+    var seen = {}, order = [];
+    kids.forEach(function (k) { var L = null; try { L = getLessonForDay(sub.id, day, k.grade); } catch (e) {} var t = String((L && L.script) || '').trim(); if (!t) return; if (!seen[t]) { seen[t] = []; order.push(t); } seen[t].push(k.name); });
+    order.forEach(function (t) { out.push(sub.l + (order.length > 1 ? ' (' + seen[t].join(', ') + ')' : '') + '\n' + t); });
+  });
+  return out.join('\n\n');
+}
+function ClassScriptPost(props) {
+  var h = React.createElement, day = props.day, base = ssClassScriptText(day);
+  var iS = ktUse('classroom/instr/' + day, null), saved = iS[0] && iS[0].text, tS = React.useState(null), txt = tS[0], setTxt = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], cS = React.useState(''), msg = cS[0], setMsg = cS[1];
+  var P = fpDoc('classroom/posted/' + day + '/all', {}), posted = P[0], putP = P[1], done = !!posted.instr;
+  var val = txt != null ? txt : (saved != null ? saved : base), LIM = 1800, over = val.length > LIM;
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3500); }
+  function saveEdit(v) { setTxt(v); try { syncSet('classroom/instr/' + day, { text: v }); } catch (e) {} }
+  function post() { var title = crHead(day) + ' · 👨‍👩‍👧‍👦 Whole class (Ryan, Kayla, Ashelyn, Mykah) · Class instructions — read together'; window.open(crUrl(title, over ? val.slice(0, LIM - 1) + '…' : val, 'assignment'), '_blank'); putP('instr', Date.now()); }
+  function copy() { try { navigator.clipboard.writeText(val); say('📋 Copied — paste it into Classroom'); } catch (e) { say('Copy not available'); } }
+  var b = function (bg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, t); };
+  return h('div', { style: { background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', borderRadius: 16, padding: 14, marginBottom: 12 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 } },
+      h('div', { style: { fontSize: 16, fontWeight: 900 } }, (open ? '▲ ' : '▼ ') + '📖 Class instructions for Classroom — Day ' + day + (done ? '  ✓ posted' : '')),
+      h('div', { style: { fontSize: 12, color: '#C5CAE9', marginTop: 2 } }, 'The teacher script the kids read to each other. Post it first, then the lessons. Answer keys are never included.')),
+    open && h('div', { style: { marginTop: 10 } },
+      h('textarea', { value: val, rows: 14, onChange: function (e) { saveEdit(e.target.value); }, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(0,0,0,.3)', color: '#f2f2f8', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, padding: 12, fontSize: 14, lineHeight: 1.6, fontFamily: 'inherit' } }),
+      h('div', { style: { fontSize: 11, color: over ? '#FFB74D' : '#9aa', margin: '4px 0 8px' } }, val.length + ' characters' + (over ? ' — the ➕ post carries about ' + LIM + '; use 📋 Copy to paste the whole thing into Classroom.' : '')),
+      h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, b(done ? '#4CAF82' : '#1A73E8', function () { if (done) putP('instr', null); else post(); }, done ? '✓ Posted · tap to undo' : '➕ Add to Google Classroom'), b('rgba(255,255,255,.15)', copy, '📋 Copy'), saved != null && b('rgba(255,255,255,.1)', function () { setTxt(null); try { syncSet('classroom/instr/' + day, null); } catch (e) {} }, '↺ Reset to the lesson script')),
+      msg && h('div', { style: { fontSize: 12, color: '#81C784', marginTop: 6 } }, msg)));
 }
 
 </script>
@@ -39774,7 +39811,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v149';
+var FM_BUILD = 'v150';
 (function () {
   function stamp() {
     try {
