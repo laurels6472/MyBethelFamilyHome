@@ -39329,7 +39329,7 @@ function SchoolSimple(props) {
   var autoDay = ssLessonDay(restart), day = admin && viewDay != null ? viewDay : autoDay, qDay = day || 0;
   var stS = React.useState(false), setOpenSet = stS[0], setSetOpen = stS[1];
   var selS = React.useState(function () { return (kids.filter(function (k) { return k.id === props.personId; })[0] || kids[0] || {}).id; }), sel = selS[0], setSel = selS[1];
-  var teacherMode = admin && sel === 'teacher', sid = admin ? (teacherMode ? (kids[0] || {}).id : sel) : props.personId, st = ssKid(sid);
+  var teacherMode = admin && sel === 'teacher', allMode = admin && sel === 'all', single = !teacherMode && !allMode, sid = admin ? ((teacherMode || allMode) ? (kids[0] || {}).id : sel) : props.personId, st = ssKid(sid);
   var pS = ktUse('school/progress', {}), prog = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/progress', {}) : null) || {}, pS[0] || {});
   var tiS = ktUse('school/turnin/' + qDay, {}), ti = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/turnin/' + qDay, {}) : null) || {}, tiS[0] || {});
   var allSubS = ktUse('school/bigcatch_sub', {}), allSub = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/bigcatch_sub', {}) : null) || {}, allSubS[0] || {});
@@ -39337,32 +39337,38 @@ function SchoolSimple(props) {
   if (!st) return h('div', { style: { padding: 24, textAlign: 'center', color: '#c8c8d8', fontSize: 16 } }, '📚 School is for the students. Parents: sign in as a parent to see everyone.');
   var info = typeof getSchoolDayInfo === 'function' ? getSchoolDayInfo() : {};
   var lessons = day ? ssLessons(sid, day) : [], nDone = lessons.filter(function (r) { return cuDone(prog[r.key]); }).length;
+  function allChip() {
+    var tot = 0, dn = 0; if (day) kids.forEach(function (k) { var ls = ssLessons(k.id, day); tot += ls.length; dn += ls.filter(function (r) { return cuDone(prog[r.key]); }).length; });
+    return h('button', { key: 'all', onClick: function () { setSel('all'); }, style: { flex: 1, minWidth: 74, padding: '10px 6px', borderRadius: 14, border: '2px solid ' + (allMode ? '#FFD54F' : 'rgba(255,255,255,.15)'), background: allMode ? 'rgba(255,213,79,.15)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer' } },
+      h('div', { style: { fontSize: 20 } }, '👨‍👩‍👧‍👦'), h('div', { style: { fontSize: 13, fontWeight: 900 } }, 'All students'), h('div', { style: { fontSize: 11, color: tot && dn === tot ? '#81C784' : '#c8c8d8' } }, day ? dn + '/' + tot : 'quiz'));
+  }
   function teacherChip() {
     return h('button', { key: 'teacher', onClick: function () { setSel('teacher'); }, style: { flex: 1, minWidth: 74, padding: '10px 6px', borderRadius: 14, border: '2px solid ' + (teacherMode ? '#C5CAE9' : 'rgba(255,255,255,.15)'), background: teacherMode ? 'rgba(121,134,203,.35)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer' } },
       h('div', { style: { fontSize: 20 } }, '👩‍🏫'), h('div', { style: { fontSize: 13, fontWeight: 900 } }, 'Mom / Teacher'), h('div', { style: { fontSize: 11, color: '#C5CAE9' } }, 'guide'));
   }
   function chip(k) {
-    var ls = day ? ssLessons(k.id, day) : [], dn = ls.filter(function (r) { return cuDone(prog[r.key]); }).length, qs = allSub[k.id] || {}, on = k.id === sid && !teacherMode;
+    var ls = day ? ssLessons(k.id, day) : [], dn = ls.filter(function (r) { return cuDone(prog[r.key]); }).length, qs = allSub[k.id] || {}, on = k.id === sid && single;
     var flag = qs.status === 'submitted' ? '📝' : ti[k.id] ? '📤' : '';
     return h('button', { key: k.id, onClick: function () { setSel(k.id); }, style: { flex: 1, minWidth: 74, padding: '10px 6px', borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.15)'), background: on ? 'rgba(255,213,79,.15)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer' } },
       h('div', { style: { fontSize: 20 } }, k.emoji || '🎓'), h('div', { style: { fontSize: 13, fontWeight: 900 } }, k.name), h('div', { style: { fontSize: 11, color: dn === ls.length && ls.length ? '#81C784' : '#c8c8d8' } }, (day ? dn + '/' + ls.length : 'quiz') + ' ' + flag));
   }
   return h('div', { style: { padding: '12px 14px 28px' } },
-    admin && h('div', { style: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' } }, [teacherChip()].concat(kids.map(chip))),
+    admin && h('div', { style: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' } }, [allChip(), teacherChip()].concat(kids.map(chip))),
+    allMode && h(SchoolAllStudents, { day: day, kids: kids, prog: prog, ti: ti, allSub: allSub, viewDay: viewDay, autoDay: autoDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen, onPick: function (id) { setSel(id); } }),
     teacherMode && h(TeacherHome, { day: day, restart: restart, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, openSet: setOpenSet, setSetOpen: setSetOpen, onAdv: props.onAdv }),
-    !teacherMode && h('div', { style: { marginBottom: 12 } },
+    single && h('div', { style: { marginBottom: 12 } },
       h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '📚 ' + (admin ? st.name + '’s school' : 'My school today')),
       day ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'Day ' + day + ' · ' + (admin && viewDay != null ? ssDayLabel(day) : new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })) + (lessons.length ? ' · ' + nDone + ' of ' + lessons.length + ' lessons done' : ''))
         : h('div', { style: { fontSize: 14, color: '#FFD54F', fontWeight: 700, lineHeight: 1.5 } }, 'Review quiz first. Regular lessons begin Monday, ' + new Date(restart.date + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric' }) + '.'),
       lessons.length > 0 && h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginTop: 6 } }, h('div', { style: { height: '100%', width: (nDone / lessons.length * 100) + '%', background: '#4CAF82', transition: 'width .4s' } }))),
-    admin && !teacherMode && h(SchoolDayPicker, { day: day, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen }),
-    admin && !teacherMode && day && h(TeacherLessonCard, { day: day, onAdv: props.onAdv }),
-    !teacherMode && h(SchoolCatchCard, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
-    !teacherMode && day && h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, viewDay != null && admin ? 'LESSONS FOR DAY ' + day : 'TODAY’S LESSONS'),
-    !teacherMode && day && h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
-    !teacherMode && day && h('div', { style: { height: 8 } }),
-    !teacherMode && day && h(SchoolClassroomRow, { sid: sid, day: day, admin: admin }),
-    admin && !teacherMode && props.onAdv && h(TeacherDeck, { onAdv: props.onAdv }));
+    admin && single && h(SchoolDayPicker, { day: day, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen }),
+    admin && single && day && h(TeacherLessonCard, { day: day, onAdv: props.onAdv }),
+    single && h(SchoolCatchCard, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
+    single && day && h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, viewDay != null && admin ? 'LESSONS FOR DAY ' + day : 'TODAY’S LESSONS'),
+    single && day && h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
+    single && day && h('div', { style: { height: 8 } }),
+    single && day && h(SchoolClassroomRow, { sid: sid, day: day, admin: admin }),
+    admin && single && props.onAdv && h(TeacherDeck, { onAdv: props.onAdv }));
 }
 
 // ── TEACHER: today's lesson card (between the school header and the lessons) + big toolbox tiles ──
@@ -39597,6 +39603,32 @@ function ssClassroomBody(sid, r, day) {
   return parts.join('\n\n');
 }
 
+// ── ALL STUDENTS at a glance: every student's lessons for the day in one screen ──
+function SchoolAllStudents(props) {
+  var h = React.createElement, day = props.day, kids = props.kids || [];
+  return h('div', null,
+    h('div', { style: { marginBottom: 10 } },
+      h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '👨‍👩‍👧‍👦 All students'),
+      h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, day ? 'Day ' + day + ' · ' + ssDayLabel(day) + ' · tap a student to open their lessons' : 'Review quiz first. Tap a student to see their quiz.')),
+    h(SchoolDayPicker, { day: day, autoDay: props.autoDay, viewDay: props.viewDay, setViewDay: props.setViewDay, restart: props.restart, openSet: props.openSet, setSetOpen: props.setSetOpen }),
+    kids.map(function (k) {
+      var ls = day ? ssLessons(k.id, day) : [], dn = ls.filter(function (r) { return cuDone(props.prog[r.key]); }).length, qs = props.allSub[k.id] || {}, turned = !!props.ti[k.id];
+      return h('div', { key: k.id, style: { background: 'rgba(255,255,255,.05)', border: '2px solid ' + (ls.length && dn === ls.length ? 'rgba(76,175,130,.6)' : 'rgba(255,255,255,.14)'), borderRadius: 16, padding: 12, marginBottom: 10 } },
+        h('button', { onClick: function () { props.onPick(k.id); }, style: { width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', color: '#fff', padding: 0, cursor: 'pointer', textAlign: 'left' } },
+          h('span', { style: { fontSize: 26 } }, k.emoji || '🎓'),
+          h('span', { style: { flex: 1, fontSize: 18, fontWeight: 900 } }, k.name, h('span', { style: { fontSize: 12, fontWeight: 600, color: '#c8c8d8', marginLeft: 8 } }, 'Grade ' + k.grade)),
+          h('span', { style: { fontSize: 13, fontWeight: 800, color: ls.length && dn === ls.length ? '#81C784' : '#FFD54F' } }, day ? dn + ' of ' + ls.length + (turned ? ' · 📤 turned in' : '') : (qs.status === 'submitted' ? '📝 quiz sent' : 'quiz')),
+          h('span', { style: { color: '#c8c8d8' } }, '›')),
+        ls.length > 0 && h('div', { style: { marginTop: 8 } }, ls.map(function (r) {
+          var d = cuDone(props.prog[r.key]);
+          return h('div', { key: r.key, onClick: function () { props.onPick(k.id); }, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: '1px solid rgba(255,255,255,.08)', cursor: 'pointer' } },
+            h('span', { style: { width: 22, height: 22, borderRadius: '50%', border: '2px solid ' + (d ? '#4CAF82' : 'rgba(255,255,255,.4)'), background: d ? '#4CAF82' : 'transparent', color: '#000', fontWeight: 900, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, d ? '✓' : ''),
+            h('span', { style: { fontSize: 14, fontWeight: 800, color: r.color || '#fff', minWidth: 118 } }, r.label),
+            h('span', { style: { flex: 1, fontSize: 13, color: '#d8d8e8', lineHeight: 1.35 } }, ssClean(r.topic, 70)));
+        })));
+    }));
+}
+
 </script>
 <script>
 // ═══ ATTENDANCE REPORT (new): reads each day's saved attendance + clock in/out times, big and readable ═══
@@ -39742,7 +39774,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v148';
+var FM_BUILD = 'v149';
 (function () {
   function stamp() {
     try {
