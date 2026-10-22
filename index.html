@@ -33671,6 +33671,7 @@ function TeachingPlan(props) {
             h('div', { style: { fontSize: 12, color: b.c, fontWeight: 800, minWidth: 78 } }, b.t),
             h('div', { style: { flex: 1, fontSize: 15, fontWeight: 800, color: '#fff' } }, b.l),
             h('button', { onClick: function () { var o = Object.assign({}, open); o[i] = !o[i]; setOpen(o); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 12, padding: '8px 11px', fontSize: 13, cursor: 'pointer' } }, isOpen ? '▾' : (isT ? 'What to say' : 'Details'))),
+          typeof BlockLinkRow === 'function' && h(BlockLinkRow, { idx: i, label: b.l, isT: isT, pid: pid, kids: kids }),
           isOpen && h('div', { style: { fontSize: 14, color: '#e8e8f0', lineHeight: 1.6, margin: '8px 0 4px', background: 'rgba(0,0,0,.22)', borderRadius: 10, padding: 10 } }, isT ? cue(b) : (b.s || '')),
           h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 } },
             v && bigBtn(b.c, '#000', function () { props.setView(v); }, 'Go to ' + (v === 'worship' ? 'Worship' : v === 'teacher' ? 'the script' : v === 'levels' ? (isT ? 'Assignments' : 'My Work') : 'Music') + ' ›', { padding: '9px 12px', fontSize: 13 }),
@@ -36308,6 +36309,7 @@ function crLesson(subj, day, kid) {
 }
 function crUrl(title, body, type, link) { return 'https://classroom.google.com/share?url=' + encodeURIComponent(link || CR_APP_URL) + '&title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body) + '&itemtype=' + (type || 'assignment'); }
 var CR_DT_DEFAULT = 'https://wol.jw.org/en/wol/h/r1/lp-e';
+function crDtFor(day) { try { var d = schoolDayDate(day); if (d && !isNaN(d.getTime())) return CR_DT_DEFAULT + '/' + d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); } catch (e) {} return CR_DT_DEFAULT; }
 function crIsBible(t) { return !!t && /bible discussion/i.test(String(t[0] || '')); }
 function crBibleBody(link) { return 'For: Ryan, Kayla, Ashelyn and Mykah together.\nGo over the day\u2019s text together.\n* Read: Daily text' + (link ? ' ' + link : '') + '\nEach person shares their comment on one thing it teaches about Jehovah and one way to apply it today.\nText your comments, in:\n* 1.) \u201cFamily Study Text Message Group\u201d\n* 2.) \u201cGoogle Classroom\u201d\nThen everyone writes the scripture in their journal book with a pencil. Each day improving your handwriting.'; }
 function crHead(day) { var dl = ''; try { dl = ' · ' + schoolDayLabel(day, false); } catch (e) {} return (day === 1 ? 'Welcome to DKA My Bethel School' : 'DKA My Bethel School') + ' · Day ' + day + ' of 180 · ' + (180 - day) + ' days to go' + dl; }
@@ -36316,7 +36318,7 @@ function ClassroomDaily(props) {
   var kids = admin ? CR_KIDS : CR_KIDS.filter(function (k) { return k === me; });
   var dS = React.useState(props.startDay || crDayNum()), day = dS[0], setDay = dS[1], oS = React.useState(!!props.startOpen), open = oS[0], setOpen = oS[1], kS = React.useState(kids[0] || 'ryan'), kid = kS[0], setKid = kS[1];
   var nS = React.useState({ subj: '', title: '', body: '', who: 'all' }), nf = nS[0], setNf = nS[1];
-  var DT = fpDoc('classroom/dailytext/' + day, {}), dtLink = (DT[0] && DT[0].link) || CR_DT_DEFAULT, putDT = DT[1];
+  var DT = fpDoc('classroom/dailytext/' + day, {}), dtLink = (DT[0] && DT[0].link) || crDtFor(day), putDT = DT[1];
   var P = fpDoc('classroom/posted/' + day, {}), posted = P[0], putP = P[1], CU = fpDoc('classroom/custom/' + day, {}), cust = CU[0], putC = CU[1];
   var tg = fmUse('together', TOGETHER_DEF).map(fmArr), tgRows = tg.length ? [tg[0]].concat(tg.length > 1 ? [tg[1 + (day - 1) % (tg.length - 1)]] : []) : [];
   var ml = { g4: fmUse('money_g4', MN_LESSONS.g4), g8: fmUse('money_g8', MN_LESSONS.g8), g12: fmUse('money_g12', MN_LESSONS.g12) };
@@ -36385,7 +36387,7 @@ function ClassroomDaily(props) {
         admin ? h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', margin: '2px 0 6px', flexWrap: 'wrap' } }, h('span', { style: { fontSize: 11, color: '#FFD54F', fontWeight: 800 } }, '\ud83d\udd17 Daily text link (Day ' + day + ')'),
           h('input', { value: dtLink, onChange: function (e) { putDT('link', e.target.value); }, placeholder: 'https://wol.jw.org/en/wol/h/r1/lp-e', style: Object.assign({}, S.inp, { flex: 1, minWidth: 160 }) }),
           h('button', { onClick: function () { try { var d = schoolDayDate(day); putDT('link', CR_DT_DEFAULT + '/' + d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate()); } catch (e) {} }, style: S.btn('rgba(255,255,255,.15)') }, '\ud83d\udcc5 Use this day\u2019s date'),
-          h('button', { onClick: function () { putDT('link', CR_DT_DEFAULT); }, style: S.btn('rgba(255,255,255,.1)') }, 'Reset')) : null,
+          h('button', { onClick: function () { putDT('link', null); }, style: S.btn('rgba(255,255,255,.1)') }, 'Reset')) : null,
         tgRows.map(function (t, i) { var dn = (posted.all || {})[t[3] || 't' + i]; return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 'none' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, t[0]), t[1] ? ' — ' + t[1].slice(0, 90) + (t[1].length > 90 ? '…' : '') : '', crIsBible(t) ? h('span', null, ' ', h('a', { href: dtLink, target: '_blank', rel: 'noopener', style: { color: '#90CAF9', fontWeight: 800 } }, '🔗 wol.jw.org daily text')) : null), h('button', { onClick: function () { if (dn) undoAll(t, i); else oneAll(t, i); }, style: S.btn(dn ? '#4CAF82' : '#F9A825') }, dn ? '✓ Added · tap to undo' : '➕ All kids'), admin && t[4] ? h('span', { onClick: function () { putC(t[4], null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
         tg.length ? null : h('div', { style: { fontSize: 11, color: '#9ad' } }, 'No group lessons yet. Admin → Content Manager → All-together group lessons.')),
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#90CAF9', marginBottom: 2 } }, '🙋 Just ' + crName(k)),
@@ -38770,7 +38772,7 @@ function MySchedule(props) {
   React.useEffect(function () { if (tourSynced) setTour(false); }, [tourSynced]);
   var addS = React.useState(false), addOpen = addS[0], setAdd = addS[1], fS = React.useState({ title: '', time: '', act: '', when: 'today' }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var permS = ktUse('mysched_perm', {}), canEdit = props.role === 'parent' || !!(Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('mysched_perm', {}) : null) || {}, permS[0] || {})[pid]);
-  var listS = React.useState(false), allOpen = listS[0], setAllOpen = listS[1];
+  var listS = React.useState(false), allOpen = listS[0], setAllOpen = listS[1], bxS = React.useState(null), bOpen = bxS[0], setBOpen = bxS[1];
   var rootOwn = (typeof ktLocal === 'function' ? ktLocal('mysched/' + pid, null) : null) || {}, pendOwn = [];
   Object.keys(rootOwn).forEach(function (k) { var o = rootOwn[k]; if (!o || typeof o !== 'object') return; if (k !== 'daily' && k < day) return; Object.keys(o).forEach(function (id) { var b = o[id]; if (b && b.title && (b.status === 'pending' || b.status === 'denied')) pendOwn.push(Object.assign({}, b, { id: b.id || id, dayK: k })); }); });
   var d = new Date(), nowM = d.getHours() * 60 + d.getMinutes();
@@ -38809,7 +38811,7 @@ function MySchedule(props) {
   // what the child should do about it right now
   function action(b) {
     if (!b.activity) return h('div', { style: { fontSize: 14, color: '#d8d8e8', marginTop: 6 } }, 'No clock for this one — do it, then check it off in “My day”.');
-    if (runIds.indexOf(b.activity) !== -1) return h('div', { style: { fontSize: 15, color: '#81C784', fontWeight: 800, marginTop: 6 } }, '✅ You are clocked into ' + actLbl(b.activity) + ' — you are on track');
+    if (runIds.indexOf(b.activity) !== -1) return h('div', null, h('div', { style: { fontSize: 15, color: '#81C784', fontWeight: 800, marginTop: 6 } }, '✅ You are clocked into ' + actLbl(b.activity) + ' — you are on track'), bigBtn('#7E57C2', '#fff', function () { if (typeof clockOutActivity === 'function') clockOutActivity(pid, props.sessions || {}, props.onUpdate, b.activity); }, '⏹ Clock out of ' + actLbl(b.activity)));
     var wrong = runIds.length ? h('div', { style: { fontSize: 14, color: '#FF8A80', fontWeight: 800, marginTop: 6 } }, '⚠️ You are clocked into ' + runIds.map(actLbl).join(' + ') + ' but this block is ' + actLbl(b.activity)) : h('div', { style: { fontSize: 14, color: '#FFB74D', fontWeight: 800, marginTop: 6 } }, '⏱ Not clocked in yet — this block clocks into ' + actLbl(b.activity));
     if (!clocked) return h('div', null, wrong, bigBtn('#4CAF82', '#000', function () { scrollTo('fm-step-1'); }, '⬇ First: Start my day'));
     if (!ready && b.activity !== 'free') return h('div', null, wrong, bigBtn('#4CAF82', '#000', function () { scrollTo('fm-step-2'); }, '⬇ Tap “I am ready for the day” to unlock this'));
@@ -38833,10 +38835,12 @@ function MySchedule(props) {
     cur ? h('div', null,
       h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', letterSpacing: 1 } }, 'RIGHT NOW · ' + cur.time + ' to ' + msFmt(cur._end)),
       h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff', margin: '2px 0' } }, (cur.emoji ? cur.emoji + ' ' : '') + cur.title),
+      h('div', { style: { fontSize: 36, fontWeight: 900, color: (cur._end - nowM) < 3 ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, Math.max(0, cur._end - nowM) + ' min left'),
       action(cur), lessonBtn(cur), heroNext)
       : h('div', null,
         h('div', { style: { fontSize: 16, color: '#fff', fontWeight: 800 } }, blocks.length === 0 ? 'No schedule set for today.' : (next ? 'Nothing right now.' : 'Your schedule is finished for today. 🎉')),
         heroNext),
+    props.role !== 'parent' && typeof BreakTimer === 'function' && h('div', { style: { marginTop: 10 } }, h(BreakTimer, { sid: pid, sessions: props.sessions, onUpdate: props.onUpdate })),
     props.role === 'parent' && h(SchedAddApprovals, { family: typeof FAMILY !== 'undefined' ? FAMILY : [], compact: true }),
     props.role === 'parent' && typeof SchedPermCard === 'function' && h(SchedPermCard, { family: typeof FAMILY !== 'undefined' ? FAMILY : [] }),
     pendOwn.length > 0 && h('div', { style: { marginTop: 10, background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10 } },
@@ -38847,10 +38851,13 @@ function MySchedule(props) {
       h('div', { style: { fontSize: 12, fontWeight: 800, color: '#c8c8d8', letterSpacing: 1, marginBottom: 4 } }, allOpen ? 'THE WHOLE DAY' : 'COMING UP TODAY'),
       list.map(function (b) {
         var s = statusOf(b), col = b.color || '#9C8DC4';
-        return h('div', { key: b.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', marginBottom: 5, background: s === 'now' ? 'rgba(255,213,79,.18)' : col + '14', border: '1px solid ' + (s === 'now' ? '#FFD54F' : col + '44'), borderRadius: 12, opacity: s === 'done' ? .6 : 1 } },
+        var opn = bOpen === b.id;
+        return h('div', { key: b.id, onClick: function () { setBOpen(opn ? null : b.id); }, style: { cursor: 'pointer', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: '12px 10px', minHeight: 56, marginBottom: 5, background: s === 'now' ? 'rgba(255,213,79,.18)' : col + '14', border: '1px solid ' + (s === 'now' ? '#FFD54F' : col + '44'), borderRadius: 12, opacity: s === 'done' ? .6 : 1 } },
           h('div', { style: { width: 64, fontSize: 13, fontWeight: 800, color: '#fff' } }, b.time || 'Anytime'),
           h('div', { style: { fontSize: 16 } }, ICON[s]),
           h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, (b.emoji ? b.emoji + ' ' : '') + b.title + (b.own ? '  ⭐' : '')), b.activity && h('div', { style: { fontSize: 11, color: '#b8b8c8' } }, '⏱ clocks into ' + actLbl(b.activity))),
+          h('span', { style: { fontSize: 22, color: '#FFD54F' } }, opn ? '▾' : '▸'),
+          opn && h('div', { onClick: function (e) { e.stopPropagation(); }, style: { flexBasis: '100%', paddingTop: 4 } }, h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700 } }, b._t != null ? '⏱ ' + msFmt(b._t) + ' – ' + msFmt(b._end) + ' · ' + (b._end - b._t) + ' min planned' + (s === 'now' ? ' · ' + Math.max(0, b._end - nowM) + ' min left' : '') : 'No set time'), s !== 'done' && action(b)),
           b.own && canEdit && h('button', { onClick: function () { removeOwn(b); }, style: { background: 'transparent', border: 'none', color: '#EF9A9A', fontSize: 16, cursor: 'pointer' } }, '✕'));
       }),
       h('div', { style: { display: 'flex', gap: 8, marginTop: 4 } },
@@ -39184,8 +39191,15 @@ function ssLessons(sid, day) {
       topic = bcTopic(L); if (!topic) return; act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
     }
     try { scr = String((L && L.script) || ''); } catch (e) {}
+    if (!ans) ans = sub.id === 'bible' ? 'Look for: ' + st.name + ' names at least one thing ' + ((en && en[4]) || 'the scripture') + ' teaches about Jehovah (his love, justice, wisdom or power) in his or her own words, and can say how to apply it today. There is no single right sentence — listen for the verse’s main point: ' + topic + '.' : 'Look for: ' + st.name + ' can explain the main idea of “' + topic + '” in his or her own words, finished every step of the activity above, and can show or tell you how the answer was found. If something is wrong, ask “How did you get that?” before you correct it.';
     out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, scr: scr, wnote: ssIsWriting(sub.id, topic, act) ? SS_WRITE_NOTE : '', key: sid + '_d' + day + '_' + sub.id });
   });
+  // Music class: a lesson like the others — check it off when done
+  try {
+    var ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(sid)) || ['guitar'], lines = [], first = '';
+    ins.forEach(function (id) { var ml = typeof getMusicLesson === 'function' ? getMusicLesson(id, day) : null; if (!ml) return; var nm = id.charAt(0).toUpperCase() + id.slice(1); if (!first) first = ml.title; lines.push(nm + ' — ' + ml.title + '. ' + (ml.focus || '') + (ml.chord ? ' Chord: ' + ml.chord + '.' : '') + (ml.song ? ' Song: ' + ml.song + '.' : '')); });
+    out.push({ id: 'music', label: '🎵 Music Class', color: '#E91E63', topic: first || 'Instrument lesson, chords and rhythm', act: (lines.join('\n') || 'Instrument lesson, chords and rhythm.') + '\nPlay slowly first, then up to speed. Practice for 30 minutes, then play it for someone at home.', ans: 'Look for: ' + st.name + ' can show today’s chord or rhythm cleanly at a slow speed, can name what the lesson was about, and practiced the full time.', scr: 'Say: “Music class. Get your instrument and tune it. Today’s lesson is ' + (first || 'your next step') + '. Show me when you are ready, and play it slowly first.”', wnote: '', key: sid + '_d' + day + '_music' });
+  } catch (e) {}
   // Computer Lab: its own checkoff right under Bible study
   var labRow = { id: 'lab', lab: true, label: '💻 Computer Lab', color: '#00ACC1', topic: 'Your next computer step + typing practice', act: '', key: sid + '_d' + day + '_lab' };
   var bi = -1; out.forEach(function (r, i) { if (r.id === 'bible') bi = i; });
@@ -39366,8 +39380,10 @@ function SchoolSimple(props) {
       lessons.length > 0 && h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginTop: 6 } }, h('div', { style: { height: '100%', width: (nDone / lessons.length * 100) + '%', background: '#4CAF82', transition: 'width .4s' } }))),
     !admin && autoDay && !lockS[0] && autoDay > 1 && h(KidPastDays, { day: day, autoDay: autoDay, setViewDay: setViewDay }),
     admin && h(PastLockToggle, null),
+    admin && typeof SchoolAutoToggle === 'function' && h(SchoolAutoToggle, null),
     admin && single && h(SchoolDayPicker, { day: day, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen }),
     admin && single && day && h(TeacherLessonCard, { day: day, onAdv: props.onAdv }),
+    single && viewDay == null && typeof SchoolTimeline === 'function' && h(SchoolTimeline, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
     single && h(SchoolCatchCard, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
     single && day && h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, viewDay != null && day !== autoDay ? 'LESSONS FOR DAY ' + day : 'TODAY’S LESSONS'),
     single && day && h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
@@ -39559,6 +39575,19 @@ function SchoolDayPicker(props) {
     vd != null && h('div', { style: { padding: '0 12px 12px' } }, h('button', { onClick: function () { props.setViewDay(null); }, style: { width: '100%', minHeight: 46, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '↩ Back to today')));
 }
 // ── MOM / TEACHER tab: day strip + every subject's script, how-to-say and answers, per child ──
+function DailyTextCard(props) {
+  var h = React.createElement, day = props.day, DT = fpDoc('classroom/dailytext/' + day, {}), link = (DT[0] && DT[0].link) || (typeof crDtFor === 'function' ? crDtFor(day) : 'https://wol.jw.org/en/wol/h/r1/lp-e'), cS = React.useState(false), cp = cS[0], setCp = cS[1];
+  var dl = ''; try { dl = schoolDayDate(day).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }); } catch (e) {}
+  var qs = ['Read the daily text aloud, slowly. Then ask: “What is the main thought of the scripture?”', 'Ask: “What does this teach us about Jehovah?”', 'Ask: “How can you use this today — at home, in school, or with a friend?”', 'Writing for the day: each child writes the scripture in the journal book with a pencil, working on neat handwriting.'];
+  return h('div', { style: { background: 'rgba(156,141,196,.16)', border: '2px solid rgba(156,141,196,.55)', borderRadius: 16, padding: 14, marginBottom: 12 } },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#D1C4E9', letterSpacing: 1 } }, '📅 DAILY TEXT · DAY ' + day + ' · ' + dl.toUpperCase()),
+    h('div', { style: { fontSize: 14, color: '#E0D7F5', margin: '4px 0 8px', lineHeight: 1.5 } }, 'This link opens the wol.jw.org daily text for the SAME date as this school day, so the text always matches the lesson date.'),
+    h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 } },
+      h('a', { href: link, target: '_blank', rel: 'noopener', style: { flex: 1, minWidth: 150, minHeight: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#7986CB', color: '#fff', borderRadius: 14, fontWeight: 900, fontSize: 16, textDecoration: 'none' } }, '📖 Open ' + dl + '’s text'),
+      h('button', { onClick: function () { try { navigator.clipboard.writeText(link); } catch (e) {} setCp(true); setTimeout(function () { setCp(false); }, 2200); }, style: { flex: 1, minWidth: 130, minHeight: 50, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, cp ? '✅ Copied' : '📋 Copy link')),
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '6px 0 4px' } }, 'QUESTIONS & WRITING FOR TODAY'),
+    qs.map(function (q, i) { return h('div', { key: i, style: { display: 'flex', gap: 8, fontSize: 15, color: '#f2f2f8', lineHeight: 1.55, padding: '3px 0' } }, h('span', null, (i + 1) + '.'), h('span', null, q)); }));
+}
 function TeacherHome(props) {
   var h = React.createElement, kids = ssKids(), tkS = React.useState('all'), tk = tkS[0], setTk = tkS[1], qoS = React.useState(false), qOpen = qoS[0], setQ = qoS[1];
   var tday = props.day || Math.max(1, props.restart.day - 1), cfg = bcUse();
@@ -39574,6 +39603,7 @@ function TeacherHome(props) {
     h(SchoolDayPicker, { day: props.day, autoDay: props.autoDay, viewDay: props.viewDay, setViewDay: props.setViewDay, restart: props.restart, openSet: props.openSet, setSetOpen: props.setSetOpen }),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, 'FOR WHICH CHILD?'),
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, [{ id: 'all', name: 'All kids', emoji: '👨‍👩‍👧‍👦' }].concat(kids).map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
+    h(DailyTextCard, { day: tday }),
     teacherSubjects(groups).map(function (sb) { return h(TeacherSubjectColumns, { key: sb.id + tday, sb: sb, day: tday, posted: postedK, putP: putPK }); }),
     rows.map(function (r) {
       return h('div', { key: r.id + tk + tday, style: { marginBottom: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 12 } },
@@ -39892,6 +39922,120 @@ function ClockTimeSettings() {
 
 </script>
 <script>
+// ═══ TODAY'S SCHEDULE WITH TIMERS: drop-down tiles, countdowns, clock in / out (linked to My Day), breaks, optional auto timer ═══
+function btParse(t) {
+  var m = /(\d{1,2}):(\d{2})\s*(?:-\s*(\d{1,2}):(\d{2}))?/.exec(t || ''); if (!m) return null;
+  var fix = function (h) { h = +h; return h < 7 ? h + 12 : h; }, s = fix(m[1]) * 60 + (+m[2]), e = m[3] ? fix(m[3]) * 60 + (+m[4]) : s + 60; return [s, e];
+}
+function btAct(label) { var l = String(label || ''); if (/worship/i.test(l)) return 'spiritual'; if (/snack|movement|break/i.test(l)) return 'free'; if (/chores|life skills/i.test(l)) return 'chores'; return 'school'; }
+function btFmt(m) { var h = Math.floor(m / 60) % 24, mi = m % 60; return ((h % 12) || 12) + ':' + (mi < 10 ? '0' : '') + mi + (h >= 12 ? ' PM' : ' AM'); }
+function btNowM() { var d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
+function btLeft(mins) { var m = Math.abs(mins), s = Math.round(m * 60), mm = Math.floor(s / 60), ss = s % 60; return mm + ':' + (ss < 10 ? '0' : '') + ss; }
+function btStart(sid, sessions, onUpdate, label) { var a = btAct(label); if (a === 'school') ssStart(sid, sessions, onUpdate, label); else clockInActivity(sid, sessions, onUpdate, a, { label: label }); }
+function btStop(sid, sessions, onUpdate, label) { var a = btAct(label); if (a === 'school') { try { ssFinish(sid, sessions, onUpdate, label); } catch (e) {} } else clockOutActivity(sid, sessions, onUpdate, a); }
+
+// admin only: allow the auto timer
+function SchoolAutoToggle() {
+  var h = React.createElement, on = !!ktUse('school/autotimer', false)[0];
+  return h('button', { onClick: function () { try { syncSet('school/autotimer', on ? null : true); } catch (e) {} }, style: { width: '100%', minHeight: 50, marginBottom: 12, background: on ? 'rgba(76,175,130,.2)' : 'rgba(255,255,255,.07)', color: '#fff', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.25)'), borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', textAlign: 'left', padding: '8px 14px' } }, on ? '🤖 Auto timers are ON — each lesson block clocks the students in and out on its own at its scheduled time. Tap to turn off.' : '⏱ Auto timers are OFF — students tap Clock in / Clock out themselves. Tap to turn ON for school blocks.');
+}
+
+// break timer: 5 / 10 / 15 minutes, linked to My Day clock (clocks into Rest/Break, back out when it ends)
+function BreakTimer(props) {
+  var h = React.createElement, sid = props.sid, day = (typeof todayKey === 'function' ? todayKey() : ''), bS = fpDoc('breaks/' + day + '/' + sid, {}), br = bS[0] || {}, put = bS[1];
+  var tS = React.useState(0), setT = tS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
+  var active = br.start && !br.end, left = active ? br.mins - (Date.now() - br.start) / 60000 : 0, over = active && left <= 0;
+  React.useEffect(function () { if (over && !br.buzzed) { try { put('buzzed', true); if (navigator.vibrate) navigator.vibrate([300, 150, 300]); if (typeof playOnce === 'function') playOnce('clockOut'); } catch (e) {} } }, [over]);
+  function begin(m) { try { syncSet('breaks/' + day + '/' + sid, { start: Date.now(), mins: m }); } catch (e) {} try { clockInActivity(sid, props.sessions || {}, props.onUpdate, 'free', { label: 'Break' }); } catch (e) {} }
+  function end() { try { syncSet('breaks/' + day + '/' + sid + '/end', Date.now()); } catch (e) {} try { clockOutActivity(sid, props.sessions || {}, props.onUpdate, 'free'); } catch (e) {} }
+  var pill = function (m) { return h('button', { key: m, onClick: function () { begin(m); }, style: { flex: 1, minHeight: 54, background: 'rgba(255,255,255,.12)', color: '#fff', border: '2px solid rgba(255,255,255,.25)', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, m + ' min'); };
+  return h('div', { style: { background: over ? 'rgba(239,83,80,.2)' : 'rgba(239,83,80,.1)', border: '2px solid ' + (over ? '#EF5350' : 'rgba(239,83,80,.5)'), borderRadius: 16, padding: 12, marginBottom: 12 } },
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFAB91', letterSpacing: 1 } }, '☕ BREAK TIMER'),
+    active ? h('div', null,
+      h('div', { style: { fontSize: 40, fontWeight: 900, color: over ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace', margin: '4px 0' } }, (over ? '+' : '') + btLeft(over ? -left : left)),
+      h('div', { style: { fontSize: 15, color: '#f2f2f8', marginBottom: 8, fontWeight: 700 } }, over ? '⏰ Break is over — time to get back to work!' : 'Enjoy your break. The clock is paused for school.'),
+      h('button', { onClick: end, style: { width: '100%', minHeight: 52, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '▶ Break done — back to work'))
+      : h('div', null, h('div', { style: { fontSize: 14, color: '#f2f2f8', margin: '4px 0 8px' } }, 'Need a break? Pick how long. It counts down and tells you when to come back.'), h('div', { style: { display: 'flex', gap: 8 } }, [5, 10, 15].map(pill))));
+}
+
+function SchoolTimeline(props) {
+  var h = React.createElement, sid = props.sid, admin = !!props.admin, sessions = props.sessions, onUpdate = props.onUpdate, day = (typeof todayKey === 'function' ? todayKey() : '');
+  var autoOn = !!ktUse('school/autotimer', false)[0], lgS = fpDoc('blocklog/' + day + '/' + sid, {}), log = lgS[0] || {}, putLog = function (i, v) { lgS[1]('b' + i, v); };
+  var tS = React.useState(0), setT = tS[1], oS = React.useState(null), openI = oS[0], setOpen = oS[1], rf = React.useRef(-2);
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
+  var blocks = (typeof DKA_BLOCKS !== 'undefined' ? DKA_BLOCKS : []).map(function (b, i) { var t = btParse(b.t); return t ? { i: i, l: b.l, s: b.s, c: b.c, st: t[0], en: t[1] } : null; }).filter(Boolean);
+  var now = btNowM(), curI = -1; blocks.forEach(function (b) { if (b.st <= now && now < b.en) curI = b.i; });
+  var run = null; try { run = clockActiveList((sessions || {})[sid] || {}).filter(function (a) { return a.label && blocks.some(function (b) { return b.l === a.label; }); })[0] || null; } catch (e) {}
+  // AUTO TIMER: the block whose time it is clocks the student in; when it ends, the next takes over
+  React.useEffect(function () {
+    if (!autoOn || admin || curI === rf.current) return; rf.current = curI;
+    try {
+      blocks.forEach(function (b) { var e = log['b' + b.i]; if (b.i !== curI && e && e.in && !e.out && now >= b.en) putLog(b.i, Object.assign({}, e, { out: Date.now(), auto: true })); });
+      if (curI >= 0) { var b = blocks.filter(function (x) { return x.i === curI; })[0]; if (b && !(log['b' + curI] && log['b' + curI].in)) { putLog(curI, { in: Date.now(), auto: true }); btStart(sid, sessions, onUpdate, b.l); } }
+      else if (run) { var rb = blocks.filter(function (x) { return x.l === run.label; })[0]; if (rb) btStop(sid, sessions, onUpdate, rb.l); }
+    } catch (e) {}
+  }, [curI, autoOn]);
+  var wd = new Date().getDay(); if (wd === 0 || wd === 6) return null;
+  function clockIn(b) { blocks.forEach(function (o) { var e = log['b' + o.i]; if (o.i !== b.i && e && e.in && !e.out) putLog(o.i, Object.assign({}, e, { out: Date.now() })); }); putLog(b.i, { in: Date.now() }); btStart(sid, sessions, onUpdate, b.l); }
+  function clockOut(b) { var e = log['b' + b.i] || {}; putLog(b.i, Object.assign({}, e, { out: Date.now() })); btStop(sid, sessions, onUpdate, b.l); }
+  var curB = blocks.filter(function (b) { return b.i === curI; })[0], nextB = blocks.filter(function (b) { return b.st > now; })[0];
+  var left = curB ? curB.en - now : 0;
+  var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { flex: 1, minWidth: 130, minHeight: 52, background: bg, color: fg, border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, t); };
+  return h('div', { style: { marginBottom: 12 } },
+    h('div', { style: { background: curB ? 'rgba(255,213,79,.12)' : 'rgba(255,255,255,.05)', border: '2px solid ' + (curB ? '#FFD54F' : 'rgba(255,255,255,.15)'), borderRadius: 18, padding: 14, marginBottom: 10 } },
+      curB ? h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, 'RIGHT NOW · ' + btFmt(curB.st) + ' – ' + btFmt(curB.en)),
+        h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff', margin: '2px 0' } }, curB.l),
+        h('div', { style: { fontSize: 44, fontWeight: 900, color: left < 3 ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, btLeft(left)),
+        h('div', { style: { fontSize: 14, color: '#d8d8e8', marginBottom: 8 } }, 'minutes left in this block' + (autoOn ? ' · 🤖 auto timer on' : '')),
+        !admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+          !(log['b' + curI] && log['b' + curI].in && !log['b' + curI].out) ? btn('#4CAF82', '#000', function () { clockIn(curB); }, '▶ Clock in') : btn('#7E57C2', '#fff', function () { clockOut(curB); }, '⏹ Clock out')))
+        : h('div', { style: { fontSize: 16, fontWeight: 800, color: '#fff' } }, nextB ? 'Next: ' + nextB.l + ' at ' + btFmt(nextB.st) + ' (in ' + Math.max(1, Math.round(nextB.st - now)) + ' min)' : 'The school schedule is finished for today. 🎉')),
+    !admin && h(BreakTimer, { sid: sid, sessions: sessions, onUpdate: onUpdate }),
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, '📅 TODAY’S SCHEDULE — tap a block'),
+    blocks.map(function (b) {
+      var e = log['b' + b.i] || {}, going = e.in && !e.out, done = !!e.out, isNow = b.i === curI, open = openI === b.i, plan = b.en - b.st, past = now >= b.en;
+      var act = e.in ? Math.round(((e.out || Date.now()) - e.in) / 60000) : 0, status = going ? '▶ running ' + act + ' min' : done ? '✅ ' + act + ' min' : isNow ? 'now' : past ? 'missed' : 'in ' + Math.max(1, Math.round(b.st - now)) + ' min';
+      return h('div', { key: b.i, style: { marginBottom: 7, borderRadius: 14, overflow: 'hidden', border: '2px solid ' + (going ? '#4CAF82' : isNow ? '#FFD54F' : 'rgba(255,255,255,.14)'), background: isNow ? 'rgba(255,213,79,.08)' : (b.c || '#9C8DC4') + '12', opacity: done ? .75 : 1 } },
+        h('button', { onClick: function () { setOpen(open ? -1 : b.i); }, style: { width: '100%', minHeight: 60, display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', color: '#fff', padding: '10px 12px', cursor: 'pointer', textAlign: 'left' } },
+          h('div', { style: { width: 74, fontSize: 14, fontWeight: 800, color: '#E8E8F4' } }, btFmt(b.st).replace(' ', ' ')),
+          h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontSize: 17, fontWeight: 900 } }, b.l), h('div', { style: { fontSize: 13, color: going ? '#81C784' : isNow ? '#FFD54F' : '#c8c8d8', fontWeight: 700 } }, status)),
+          h('span', { style: { fontSize: 24, color: '#FFD54F' } }, open || (openI == null && isNow) ? '▾' : '▸')),
+        (open || (openI == null && isNow)) && h('div', { style: { padding: '0 12px 12px' } },
+          h('div', { style: { fontSize: 14, color: '#d8d8e8', lineHeight: 1.5, marginBottom: 6 } }, b.s),
+          h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 8 } }, '⏱ ' + btFmt(b.st) + ' – ' + btFmt(b.en) + ' · ' + plan + ' min planned' + (e.in ? ' · ' + act + ' min clocked' : '')),
+          !admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, going ? btn('#7E57C2', '#fff', function () { clockOut(b); }, '⏹ Clock out') : btn('#4CAF82', '#000', function () { clockIn(b); }, done ? '▶ Clock in again' : '▶ Clock in'))));
+    }));
+}
+
+// ── one student's status for one schedule block; the student can clock in / out, the teacher sees it live ──
+function BlockLink(props) {
+  var h = React.createElement, pid = props.pid, idx = props.idx, label = props.label, day = (typeof todayKey === 'function' ? todayKey() : '');
+  var lgS = fpDoc('blocklog/' + day + '/' + pid + '/b' + idx, {}), e = lgS[0] || {}, put = lgS[1], tS = React.useState(0), setT = tS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 15000); return function () { clearInterval(iv); }; }, []);
+  var api = window._clockApi || {}, going = e.in && !e.out, done = !!e.out, mins = e.in ? Math.round(((e.out || Date.now()) - e.in) / 60000) : 0;
+  var st = going ? '▶ ' + mins + ' min' : done ? '✅ ' + mins + ' min' : '—', col = going ? '#81C784' : done ? '#9be3bd' : '#9aa0b4';
+  function cin() {
+    try { var all = (typeof ktLocal === 'function' ? ktLocal('blocklog/' + day + '/' + pid, {}) : {}) || {}; Object.keys(all).forEach(function (k) { var o = all[k]; if (k !== 'b' + idx && o && o.in && !o.out) syncSet('blocklog/' + day + '/' + pid + '/' + k + '/out', Date.now()); }); } catch (x) {}
+    try { syncSet('blocklog/' + day + '/' + pid + '/b' + idx, { in: Date.now() }); } catch (x) {}
+    try { btStart(pid, api.sessions || {}, api.onUpdate, label); } catch (x) {}
+  }
+  function cout() { try { syncSet('blocklog/' + day + '/' + pid + '/b' + idx + '/out', Date.now()); } catch (x) {} try { btStop(pid, api.sessions || {}, api.onUpdate, label); } catch (x) {} }
+  var small = { minHeight: 44, border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer' };
+  return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+    props.name && h('span', { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, props.name),
+    h('span', { style: { fontSize: 14, fontWeight: 800, color: col } }, st),
+    props.interactive && (going ? h('button', { onClick: cout, style: Object.assign({}, small, { background: '#7E57C2', color: '#fff' }) }, '⏹ Clock out') : h('button', { onClick: cin, style: Object.assign({}, small, { background: '#4CAF82', color: '#000' }) }, done ? '▶ Again' : '▶ Clock in')));
+}
+function BlockLinkRow(props) {
+  var h = React.createElement;
+  if (props.isT) return h('div', { style: { display: 'flex', gap: 14, flexWrap: 'wrap', margin: '8px 0 2px', padding: '8px 10px', background: 'rgba(0,0,0,.18)', borderRadius: 10 } }, (props.kids || []).map(function (k) { return h(BlockLink, { key: k.id, pid: k.id, idx: props.idx, label: props.label, name: k.name, interactive: false }); }));
+  return h('div', { style: { margin: '8px 0 2px' } }, h(BlockLink, { pid: props.pid, idx: props.idx, label: props.label, interactive: true }));
+}
+
+</script>
+<script>
 // ═══ NOTHING TINY: any text smaller than 12px is lifted to 12px so it can be read ═══
 (function () {
   var MIN = 12, t = null;
@@ -39910,7 +40054,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v154';
+var FM_BUILD = 'v157';
 (function () {
   function stamp() {
     try {
