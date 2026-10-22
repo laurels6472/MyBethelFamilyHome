@@ -39714,6 +39714,17 @@ function TeacherSubjectColumns(props) {
         h('div', { style: { fontSize: 14, color: '#c8c8d8', marginBottom: 6 } }, ssClean(c.row.topic, 120)),
         h(TeacherGuide, { row: c.row, sid: c.k.id, day: day, always: true }));
     })),
+    sb.groups.length > 1 && (function () {
+      var all = []; sb.groups.forEach(function (g) { g.kids.forEach(function (k) { all.push(k); }); });
+      var done = all.every(function (k) { return !!(props.posted[k.id] || {})[sb.id]; }), names = all.map(function (k) { return k.name; });
+      function post() {
+        var parts = sb.groups.map(function (g) { var nm = g.kids.map(function (k) { return k.name; }), t = ssClassroomBody(g.kids[0].id, g.row, day).split(g.kids[0].name).join(nm.length > 1 ? nm.slice(0, -1).join(', ') + ' and ' + nm[nm.length - 1] : nm[0]); return 'FOR ' + nm.join(', ').toUpperCase() + ' — ' + ssClean(g.row.topic, 100) + '\n' + t; });
+        window.open(crUrl(crHead(day) + ' · ALL STUDENTS · ' + sb.row.label.replace(/^\S+\s/, ''), parts.join('\n\n'), 'assignment'), '_blank');
+        all.forEach(function (k) { props.putP(k.id + '/' + sb.id, Date.now()); });
+      }
+      function undo() { all.forEach(function (k) { props.putP(k.id + '/' + sb.id, null); }); }
+      return h('button', { onClick: function () { if (done) undo(); else post(); }, style: { width: '100%', minHeight: 54, background: done ? '#4CAF82' : '#FFB300', color: '#000', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 8 } }, done ? '✓ Added to Classroom for ALL students · tap to undo' : '➕ Add to Classroom for ALL students (one post)');
+    })(),
     sb.groups.map(function (g) { return h(TeacherGroupCard, { key: g.key + day, g: g, day: day, posted: props.posted, putP: props.putP, compact: true }); }));
 }
 function TeacherGroupCard(props) {
@@ -39899,7 +39910,7 @@ function ClockTimeSettings() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v153';
+var FM_BUILD = 'v154';
 (function () {
   function stamp() {
     try {
