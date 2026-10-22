@@ -1,0 +1,44 @@
+CAR DETAILING TAB - HOW TO ADD IT TO MyBethelFamilyHome
+(An add-on only. Nothing in your existing app or saved data is changed or replaced.)
+
+1) Upload CarDetailingTab.js to your GitHub repo, in the same folder as index.html.
+
+2) In index.html, add this line just ABOVE your main app <script>:
+     <script src="CarDetailingTab.js"></script>
+   If your app has a service worker that caches files, bump its cache version
+   (or add CarDetailingTab.js to its file list) so phones pick up the new file.
+
+3) Add the tab. Find where your app lists its tabs (admin tabs) and add one entry,
+   for example:   { id: "carDetailing", label: "Car Detailing" }
+   Then where the app shows the content for each tab, add:
+
+     tab === "carDetailing" && React.createElement(window.CarDetailingTab, {
+       isAdmin: true,                                   // use your real admin check here
+       firebaseRef: firebase.database().ref("carDetailing")   // optional, see below
+     })
+
+   (If you write JSX:  const CarDetailingTab = window.CarDetailingTab;  then
+    <CarDetailingTab isAdmin={true} firebaseRef={firebase.database().ref("carDetailing")} />)
+
+4) Saving your data
+   - With no firebaseRef, everything saves on that device (localStorage).
+   - With firebaseRef, it also saves to your existing Firebase Realtime Database under
+     its own path "carDetailing", so Laurel and Eric see the same books. This stays in the
+     free tier. If your database rules only allow certain paths, add "carDetailing"
+     for the admin users only (the data holds customer names, phones and addresses).
+   - Settings > Download backup saves a JSON copy any time.
+
+What is inside the tab (kept simple, 8 buttons):
+ Home        today's jobs, next jobs, unpaid invoices, month collected, profit, Founding spots used
+ Customers   name, phone, email, address, vehicles, plan, referred by, Founding flag, notes
+ Jobs        customer, vehicle, size, package (auto price), add-ons, travel, discount,
+             deposit, status, 5-step checklist, products used, notes -> create invoice
+ Invoices    billing, line items, discounts, tax, payments (cash/card/check/Zelle), balance,
+             overdue, print or save as PDF
+ Purchasing  your shopping list with store links; Ordered / Received (Received logs an expense)
+ Supplies    chemicals and towels on hand, low-stock alerts, auto-deducted when a job is Done
+ Money       expenses, mileage log, monthly income / expense / profit report, CSV export
+ Settings    business info, tax %, Founding offer, price list, backup / restore
+
+Prices start from the plan (car / SUV-truck / 3-row-van) and can be edited in Settings.
+Sales tax starts at 0% until you confirm with SC DOR.
