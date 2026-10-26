@@ -7205,7 +7205,7 @@ function Dashboard({
   setPerms,
   schedHook
 }) {
-  const [tab, setTab] = useState(() => (typeof nvGet === 'function' && nvGet('tab_' + role, null)) || (role === 'child' ? 'start' : role === 'elder' ? 'schedule' : 'clock'));
+  const [tab, setTab] = useState(() => { var home = role === 'child' ? 'start' : role === 'elder' ? 'schedule' : 'clock', fresh = true; try { fresh = !sessionStorage.getItem('fm_alive'); sessionStorage.setItem('fm_alive', '1'); } catch (e) {} return (!fresh && typeof nvGet === 'function' && nvGet('tab_' + role, null)) || home; });
   React.useEffect(() => { if (typeof nvSet === 'function') nvSet('tab_' + role, tab); }, [tab]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMsgs, setShowMsgs] = useState(false);
@@ -7378,7 +7378,7 @@ function Dashboard({
     if (!tabs.find(t => t.id === tab) && tabs.length > 0) setTab(tabs[0].id||'board');
   }, [effectiveId, effectiveRole]);
   const _ncCfg = ktUse('notify_cfg', null)[0] || {};
-  const myNotifs = isAdmin ? notifs.filter(n => typeof ncWants !== 'function' || ncWants(personId, n, _ncCfg)) : notifs.filter(n => !n.adminOnly && n.type !== 'clock_in' && n.type !== 'clock_out' && (n.personId === personId || n.personId === 'all'));
+  const myNotifs = isAdmin ? notifs.filter(n => typeof ncWants !== 'function' || ncWants(personId, n, _ncCfg)) : notifs.filter(n => !n.adminOnly && !/Bills start/i.test(String(n.title || n.msg || n.message || '')) && n.type !== 'clock_in' && n.type !== 'clock_out' && (n.personId === personId || n.personId === 'all'));
   const myUnread = isAdmin ? unread : myNotifs.filter(n => !n.read).length;
   function handleSwitch(pid) {
     setViewingAs(pid === personId ? null : pid);
@@ -31724,7 +31724,7 @@ function StartMyDay(props) {
   var mhS = ktUse('habits/' + pid, null), mhA = ktUse('habits/__all', null), mdS = ktUse('habitsdone/' + (typeof rtDay === 'function' ? rtDay() : todayKey()) + '/' + pid, {}), mSk = ktUse('skips/' + (typeof rtDay === 'function' ? rtDay() : todayKey()) + '/' + pid, {});
   var soS = React.useState(null), stOpen = soS[0], setStOpen = soS[1], cfS = React.useState(null), subS = React.useState(false), subAsk = subS[0], setSubAsk = subS[1];
   var htS = ktUse('habittime/' + pid, null), htAll = htS[0] || {}, mnS = React.useState(false), showMorn = mnS[0], setShowMorn = mnS[1], moS = React.useState(false), showMore = moS[0], setShowMore = moS[1];
-  var bdS = ktUse('blockdone/' + (typeof rtDay === 'function' ? rtDay() : todayKey()) + '/' + pid, {}), bdone = bdS[0] || {}, isKid = props.role !== 'parent';
+  var bdS = ktUse('blockdone/' + (typeof rtDay === 'function' ? rtDay() : todayKey()) + '/' + pid, {}), bdone = bdS[0] || {}, isKid = true;
   var tkS = React.useState(0), setTk = tkS[1];
   React.useEffect(function () { var iv = setInterval(function () { setTk(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
   var graceMs = (cfg.grace != null && cfg.grace !== '' ? +cfg.grace : 7) * 60000, freeEx = cfg.freeEx != null && cfg.freeEx !== '' ? +cfg.freeEx : 3;
@@ -33607,8 +33607,7 @@ function BillsStartNotices(props) {
       if (days > r[0] || days < r[0] - 3 || sent[flag]) return;
       try { syncSet('store/remsent/' + flag, Date.now()); } catch (e) {}
       var head = r[0] === 0 ? '🏠 Bills start TODAY' : '🏠 Bills start in ' + r[1];
-      kids.forEach(function (k) { try { props.addNotif('alert', k.id, head, stStartText(cfg, bills), { requiresApproval: false }); } catch (e) {} });
-      try { props.addNotif('message', 'laurel', head + ' — sent to the kids', 'Reminder went to ' + kids.map(function (k) { return k.name; }).join(', ') + '.', { requiresApproval: false }); } catch (e) {}
+      try { props.addNotif('message', 'laurel', head + ' — admin reminder', 'The kids are not notified automatically. Open Administration → Coming Up to see who still needs bill envelopes and send reminders yourself.', { requiresApproval: false, adminOnly: true }); } catch (e) {}
     });
   });
   return null;
@@ -40117,6 +40116,24 @@ function TimerModePick(props) {
 
 </script>
 <script>
+// ═══ STAY PUT: leave the app for a minute and come back to the same place; a fresh launch starts on My Day ═══
+(function () {
+  var y = 0, cancel = false, SS = null;
+  try { SS = window.sessionStorage; } catch (e) {}
+  function cur() { return window.pageYOffset || document.documentElement.scrollTop || 0; }
+  function save() { try { if (SS) SS.setItem('fm_sy', String(cur())); } catch (e) {} }
+  ['touchstart', 'wheel', 'mousedown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { cancel = true; }, { passive: true }); });
+  function restore(t) { cancel = false; [0, 80, 250, 600, 1200, 2400].forEach(function (ms) { setTimeout(function () { if (cancel) return; if (Math.abs(cur() - t) > 3) { try { window.scrollTo(0, t); } catch (e) {} } }, ms); }); }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) { y = cur(); save(); } else if (y > 0) restore(y); });
+  window.addEventListener('pagehide', function () { y = cur(); save(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted && y > 0) restore(y); });
+  window.addEventListener('scroll', function () { if (!document.hidden) y = cur(); }, { passive: true });
+  // same session reloaded (not a fresh launch): put the scroll back
+  try { var s0 = SS && parseFloat(SS.getItem('fm_sy') || '0'); if (s0 > 0 && SS.getItem('fm_alive')) setTimeout(function () { restore(s0); }, 1200); } catch (e) {}
+})();
+
+</script>
+<script>
 // ═══ NOTHING TINY: any text smaller than 12px is lifted to 12px so it can be read ═══
 (function () {
   var MIN = 12, t = null;
@@ -40135,7 +40152,7 @@ function TimerModePick(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v158';
+var FM_BUILD = 'v159';
 (function () {
   function stamp() {
     try {
