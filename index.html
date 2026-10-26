@@ -7663,8 +7663,9 @@ function Dashboard({
     isTeacher: isLaurel,
     syncSet: syncSet
   }), (tab === 'clock' || tab === 'admin') && /*#__PURE__*/React.createElement("div", null,
-  tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Overview'], ['ops', '🏠 Operations'], ['settings', '⚙️ Settings & tools'], ['budget', '💵 Budget'], ['live', '🔴 Live now'], ['links', '🏫 Classroom'], ['waste', '📉 Time waste']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
+  tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Overview'], ['ops', '🏠 Operations'], ['settings', '⚙️ Settings & tools'], ['budget', '💵 Budget'], ['live', '🔴 Live now'], ['links', '🏫 Classroom'], ['waste', '📉 Time waste'], ['reset', '🔄 Reset & Restore']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { if (t[0] === 'reset') { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; } setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
+  secVis('reset') && typeof ResetCenter === 'function' && React.createElement('div', null, React.createElement(ResetCenter, { family: fam, sessions: sessions })),
   (secVis('ops')) && React.createElement(Fold, { id: 'operations', title: '🏠 My Bethel Operations' },
     React.createElement('div', {style:{fontSize:12,color:'rgba(255,255,255,.55)',lineHeight:1.5,padding:'2px 4px 8px'}}, 'Routines, schedule, tasks and chores all live here. Every approved piece of work earns points toward the paycheck.'),
     React.createElement(Fold, { id: 'clockinout', title: '🕐 Clock In / Out — ' + (effectivePerson && effectivePerson.name) },
@@ -7745,7 +7746,7 @@ function Dashboard({
     typeof PciWhereBoard === 'function' && React.createElement(PciWhereBoard, null),
     (isAdmin || isOwner) && typeof PasscodeRotate === 'function' && React.createElement(PasscodeRotate, null),
     typeof PciSettings === 'function' && React.createElement(PciSettings, null),
-    typeof ResetCenter === 'function' ? React.createElement(ResetCenter, { family: fam, sessions: sessions }) : [typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, { key: 'ra' }), typeof ErasedBackups === 'function' && React.createElement(ErasedBackups, { key: 'eb' })],
+    typeof ResetCenter === 'function' ? null : [typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, { key: 'ra' }), typeof ErasedBackups === 'function' && React.createElement(ErasedBackups, { key: 'eb' })],
     typeof CheckInSettings === 'function' && React.createElement(CheckInSettings, null),
     typeof PointsSettings === 'function' && React.createElement(PointsSettings, null),
     typeof ReadyTimerSettings === 'function' && React.createElement(ReadyTimerSettings, null)),
@@ -33900,8 +33901,9 @@ function MyDayList(props) {
   function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3500); }
   var blocks = (typeof planBlocksFor === 'function') ? planBlocksFor(props.schedHook, pid, day) : [];
   var rows = [], wdN = new Date().getDay(), schoolOn = !!props.flow && wdN > 0 && wdN < 6 && typeof DKA_BLOCKS !== 'undefined' && typeof btParse === 'function' && !!(typeof ssKid === 'function' && ssKid(pid));
-  if (schoolOn) blocks = blocks.filter(function (b) { return !(/worship|bible|lesson|school|reading|handwrit|music class|reconvene|puzzle|academ|assignment/i.test(b.title || '') && (!b.activity || b.activity === 'school' || b.activity === 'spiritual')); });
-  if (schoolOn) { var sdn = pdone.schoolday; rows.push({ k: 'b_schoolday', t: 465, kind: 'block', icon: '📚', label: 'School session — 6 hours', time: btFmt(465), color: '#7986CB', on: !!sdn && (sdn.status === 'approved' || sdn.status === 'submitted'), pts: (typeof psCfg === 'function' ? Math.round(6 * psCfg(psS0[0]).rate) : 0), mins: 360, startM: 465, endM: 825, schoolDay: true, b: { id: 'schoolday', title: 'School day', activity: 'school', own: true, _label: '📚 School day', _t: 465 } }); }
+  if (schoolOn) blocks = blocks.filter(function (b) { return !(/worship|bible|lesson|school|reading|handwrit|music class|reconvene|puzzle|academ|assignment|snack/i.test(b.title || '') && (!b.activity || b.activity === 'school' || b.activity === 'spiritual')); });
+  if (schoolOn) { var sdn = pdone.schoolday; rows.push({ k: 'b_schoolday', t: 480, kind: 'block', icon: '📚', label: 'School session — 6 hours (8:00 AM – 2:00 PM)', time: btFmt(480), color: '#7986CB', on: !!sdn && (sdn.status === 'approved' || sdn.status === 'submitted'), pts: (typeof psCfg === 'function' ? Math.round(6 * psCfg(psS0[0]).rate) : 0), mins: 360, startM: 480, endM: 840, schoolDay: true, b: { id: 'schoolday', title: 'School day', activity: 'school', own: true, _label: '📚 School day', _t: 465 } }); }
+  if (schoolOn) { var snd = pdone.snackbreak; rows.push({ k: 'b_snackbreak', t: 585, kind: 'block', icon: '🍎', label: 'Snack + small break (up to 15 min)', time: btFmt(585), color: '#EF5350', on: !!snd && (snd.status === 'approved' || snd.status === 'submitted'), pts: cfg.blockPts, mins: 15, startM: 585, endM: 600, snackBreak: true, b: { id: 'snackbreak', title: 'Snack + small break', own: true, _label: '🍎 Snack', _t: 585 } }); }
 
   blocks.forEach(function (b, i) {
     var nx = blocks[i + 1], endM = nx && nx._t != null ? nx._t : (b._t != null ? b._t + 30 : null), dn = pdone[b.id];
@@ -33919,7 +33921,7 @@ function MyDayList(props) {
   if (typeof rtItems === 'function') { var its = rtItems(ocS[0], pid, name, olS[0]); chores = its.weekly.concat(its.daily); }
   chores.forEach(function (it, i) {
     var r = odone[it.id], rec = r && r.period === rtPeriod(it.freq) ? r : null, p = oprog[it.id] && oprog[it.id].period === rtPeriod(it.freq) ? oprog[it.id] : null;
-    var tt = /before school|morning|wake|breakfast|\bbeds?\b/i.test(it.label) ? 405 : /dinner|evening|bed ?time|night/i.test(it.label) ? 1110 : 930;
+    var tt = /dinner|evening|bed ?time|night|before bed/i.test(it.label) ? 1110 : /before school|morning|wake|breakfast|\bbeds?\b/i.test(it.label) ? 405 : 930;
     var tm = /(\d{1,2})(?::(\d\d))? ?(AM|PM)\b/i.exec(it.label), dueM = null; if (tm) { dueM = ((+tm[1] % 12) + (/pm/i.test(tm[3]) ? 12 : 0)) * 60 + (+tm[2] || 0); tt = dueM; }
     rows.push({ k: 'c_' + it.id, t: tt + i / 100, kind: 'chore', dueM: dueM, icon: '🧹', label: it.label, color: '#26A69A', on: !!rec && (rec.status === 'approved' || rec.status === 'submitted'), pts: it.pts || 5, mins: it.est || null, it: it, rec: rec, prog: p });
   });
@@ -33986,11 +33988,11 @@ function MyDayList(props) {
     if (st[i]) delete st[i]; else st[i] = true;
     try { syncSet('opsprog/' + it.id, Object.assign({}, p, { steps: st })); } catch (e) {}
   }
-  function grpOf(r) { if (r.schoolDay) return 'school'; if (r.kind === 'habit') return r.per; if (r.t < 465) return r.kind === 'chore' ? 'day' : 'morning'; if (r.t < 900) return 'day'; if (r.t < 1140) return 'afternoon'; return 'evening'; }
+  function grpOf(r) { if (r.schoolDay) return 'school'; if (r.kind === 'habit') return r.per; if (r.t < 480) return 'morning'; if (r.t < 840) return 'school'; if (r.t < 1020) return 'afternoon'; return 'evening'; }
   var schoolRow = rows.filter(function (r) { return r.schoolDay; })[0], afterLocked = !!schoolRow && !schoolRow.on;
   var rowsR = rows;
   if (props.flow) rowsR = (function () {
-    var ORDER = ['morning', 'school', 'day', 'afternoon', 'evening'], TT = { morning: '☀️ Getting ready', school: '🏫 Mid-morning · School (6 hours)', day: '📚 My day', afternoon: '🌤 After school', evening: '🌙 Evening' };
+    var ORDER = ['morning', 'school', 'day', 'afternoon', 'evening'], TT = { morning: '☀️ Getting ready', school: schoolRow ? '🏫 Mid-morning · School (6 hours)' : '🌤 Mid-morning', day: '📚 My day', afternoon: '🌤 After school', evening: '🌙 Evening' };
     var grp = grpOf;
     function grpX(r) { if (r.kind === 'habit') return r.per; if (r.t < 465) return r.kind === 'chore' ? 'day' : 'morning'; if (r.t < 900) return 'day'; if (r.t < 1140) return 'afternoon'; return 'evening'; }
     function dts(r) { return r.kind === 'habit' ? (r.ts || 0) : r.kind === 'block' ? ((pdone[r.b.id] || {}).ts || 0) : ((r.rec || {}).ts || 0); }
@@ -33998,20 +34000,21 @@ function MyDayList(props) {
     var by = {}, out = [], hide = props.groupHide || {}, foot = props.groupFoot || {}; ORDER.forEach(function (g) { by[g] = []; });
     rows.forEach(function (r) { by[grp(r)].push(r); });
     ORDER.forEach(function (g) {
-      var L = by[g].filter(function (r) { return !(r.on || r.skip); }).concat(by[g].filter(function (r) { return r.on || r.skip; })); if (!L.length && !foot[g]) return;
+      var byT = function (a, b) { return a.t - b.t; }, G0 = by[g].slice().sort(byT);
+      var L = G0.filter(function (r) { return !(r.on || r.skip); }).concat(G0.filter(function (r) { return r.on || r.skip; })); if (!L.length && !foot[g]) return;
       if (g === 'afternoon' && afterLocked) { out.push({ sep: true, k: 'gl' + g, el: h('div', { key: 'gl' + g, style: { margin: '14px 2px 8px', padding: 14, borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px dashed rgba(255,255,255,.3)', color: '#d8d8e8', fontSize: 15, fontWeight: 800, textAlign: 'center' } }, '🔒 🌤 After school opens when your school day is done') }); return; }
       var dn = L.filter(function (r) { return r.on || r.skip; }).length, plan = L.reduce(function (n, r) { return n + (r.mins || 0); }, 0), took = 0, should = 0, prev = (g === 'morning' && sd.dayStart) ? sd.dayStart : 0;
       L.filter(function (r) { return r.on && dts(r); }).sort(function (a, b) { return dts(a) - dts(b); }).forEach(function (r) { var t = dts(r), st = hst[r.hid || r.k] || (autoT ? prev : 0); if (st && t > st) { took += t - st; should += (r.mins || 0) * 60000; } prev = t; });
       if (L.length) out.push({ sep: true, k: 'gh' + g, el: h('div', { key: 'gh' + g, style: { display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 2px 6px' } }, h('div', { style: { flex: 1, fontSize: 17, fontWeight: 900, color: '#fff' } }, TT[g]), h('div', { style: { fontSize: 13, fontWeight: 800, color: dn === L.length ? '#81C784' : '#c8c8d8' } }, hide[g] ? '✅ done' : dn + ' of ' + L.length + (plan ? ' · ' + plan + ' min' : ''))) });
       if (g === 'school' && L.length && typeof SchoolSessionBar === 'function') out.push({ sep: true, k: 'gsb', el: h(SchoolSessionBar, { key: 'gsb', sid: pid, sessions: props.sessions, onUpdate: props.onUpdate, controls: true }) });
-      if (!hide[g]) L.forEach(function (r) { out.push(r); });
+      if (!hide[g] || L.some(function (r) { return r.kind === 'chore' && !r.on && !r.skip; })) L.forEach(function (r) { out.push(r); });
       out.push({ sep: true, k: 'gf' + g, el: h('div', { key: 'gf' + g }, should > 0 && h('div', { style: { margin: '2px 0 8px', padding: '10px 12px', borderRadius: 12, background: took <= should ? 'rgba(76,175,130,.14)' : 'rgba(239,83,80,.14)', border: '1px solid ' + (took <= should ? 'rgba(76,175,130,.5)' : 'rgba(239,83,80,.5)'), color: '#fff', fontSize: 14, fontWeight: 800 } }, '⏱ Took ' + mmss(took) + ' · should take ' + mmss(should) + (took <= should ? ' · ⚡ saved ' + mmss(should - took) : ' · ' + mmss(took - should) + ' over')), foot[g] || null) });
     });
     return out;
   })();
   // the next thing to do, with its own timer (manual: tap Start · auto: it starts by itself and moves on when time is up)
   var nowR = null;
-  if (props.flow) rows.forEach(function (r) { if (nowR || r.on || r.skip) return; if (afterLocked && grpOf(r) === 'afternoon') return; if ((props.groupHide || {})[grpOf(r)]) return; var stt = hst[r.hid || r.k]; if (autoT && stt && r.mins && Date.now() - stt >= r.mins * 60000) return; nowR = r; });
+  if (props.flow) rows.forEach(function (r) { if (nowR || r.on || r.skip) return; if (afterLocked && grpOf(r) === 'afternoon') return; if ((props.groupHide || {})[grpOf(r)] && r.kind !== 'chore') return; var stt = hst[r.hid || r.k]; if (autoT && stt && r.mins && Date.now() - stt >= r.mins * 60000) return; nowR = r; });
   var autoRef = React.useRef('');
   React.useEffect(function () { if (!props.flow || !autoT || !nowR) return; var key = nowR.hid || nowR.k; if (hst[key] || autoRef.current === key) return; autoRef.current = key; try { syncSet('habitstart/' + rdy + '/' + pid + '/' + key, Date.now()); } catch (e) {} });
   function flowStrip() {
@@ -34054,6 +34057,7 @@ function MyDayList(props) {
         !r.on && (r.skip ? h('div', { style: { padding: '0 12px 10px 62px', fontSize: 12, color: '#b8c0d0' } }, 'Skipped today. ', h('button', { onClick: function () { skipRow(r, false); }, style: { background: 'transparent', border: 'none', color: '#FFD54F', fontWeight: 800, cursor: 'pointer', fontSize: 12 } }, '↩ undo'))
           : h('div', { style: { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '0 12px 10px 62px' } },
             !autoT && (hst[r.hid || r.k] ? h('span', { style: { fontSize: 12, color: '#FFD54F', fontWeight: 800 } }, '⏱ Running ' + Math.floor((Date.now() - hst[r.hid || r.k]) / 60000) + (r.mins ? ' of ' + r.mins + ' min' : ' min') + ' — tap the circle when done') : h('button', { onClick: function () { startHabit(r); }, style: { background: '#039BE5', color: '#fff', border: 'none', borderRadius: 12, padding: '7px 13px', fontWeight: 900, fontSize: 13, cursor: 'pointer' } }, '▶ Clock in')),
+            r.snackBreak && typeof btBreakBegin === 'function' && h('button', { onClick: function () { btBreakBegin(pid, 15, props.sessions, props.onUpdate); say('☕ 15-minute break started. Come back when it rings!'); }, style: { background: '#EF5350', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, '☕ Start my 15-minute break'),
             r.kind === 'chore' && h('button', { onClick: function () { toggle(r, 0.5); }, style: { background: 'rgba(255,213,79,.15)', color: '#FFD54F', border: '1px dashed rgba(255,213,79,.6)', borderRadius: 12, padding: '6px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' } }, '⚡ Just the quick version (half points)'),
             h('button', { onClick: function () { skipRow(r, true); }, style: { background: 'transparent', border: 'none', color: '#b8c0d0', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' } }, 'Not today'))),
         ((r.kind === 'chore') || (props.flow && r.kind === 'habit' && r.on)) && sibsT.length > 0 && h('div', { style: { padding: '0 12px 10px' } },
@@ -40038,6 +40042,7 @@ function SchoolAutoToggle() {
 }
 
 // break timer: 5 / 10 / 15 minutes, linked to My Day clock (clocks into Rest/Break, back out when it ends)
+function btBreakBegin(sid, m, sessions, onUpdate) { var day = todayKey(), cur = {}; try { cur = syncGet('breaks/' + day + '/' + sid) || {}; } catch (e) {} try { syncSet('breaks/' + day + '/' + sid, { start: Date.now(), mins: m, n: (cur.n || 0) + 1 }); } catch (e) {} try { clockInActivity(sid, sessions || {}, onUpdate, 'free', { label: 'Break' }); } catch (e) {} }
 function BreakTimer(props) {
   var h = React.createElement, sid = props.sid, day = (typeof todayKey === 'function' ? todayKey() : ''), bS = fpDoc('breaks/' + day + '/' + sid, {}), br = bS[0] || {}, put = bS[1];
   var tS = React.useState(0), setT = tS[1];
@@ -40053,7 +40058,7 @@ function BreakTimer(props) {
       h('div', { style: { fontSize: 40, fontWeight: 900, color: over ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace', margin: '4px 0' } }, (over ? '+' : '') + btLeft(over ? -left : left)),
       h('div', { style: { fontSize: 15, color: '#f2f2f8', marginBottom: 8, fontWeight: 700 } }, over ? '⏰ Break is over — time to get back to work!' : 'Enjoy your break. The clock is paused for school.'),
       h('button', { onClick: end, style: { width: '100%', minHeight: 52, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '▶ Break done — back to work'))
-      : h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 } }, used >= MAXB ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'You used your ' + MAXB + ' breaks today. Great focus — keep going! 💪') : [h('div', { key: 'q', style: { flex: 1, fontSize: 12, color: '#c8c8d8', minWidth: 90 } }, 'Short break (' + (MAXB - used) + ' left today)'), [5, 10].map(pill)]));
+      : h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 } }, used >= MAXB ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'You used your ' + MAXB + ' breaks today. Great focus — keep going! 💪') : [h('div', { key: 'q', style: { flex: 1, fontSize: 12, color: '#c8c8d8', minWidth: 90 } }, 'Short break (' + (MAXB - used) + ' left today)'), [5, 10, 15].map(pill)]));
 }
 
 function SchoolTimeline(props) {
@@ -40518,7 +40523,7 @@ function DayTopBar(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v170';
+var FM_BUILD = 'v171';
 (function () {
   function stamp() {
     try {
