@@ -7675,6 +7675,7 @@ function Dashboard({
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof AdminTaskList === 'function' && React.createElement(AdminTaskList, { schedHook: schedHook, family: fam }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof QuietHoursCard === 'function' && React.createElement(Fold, { id: 'quiethours', title: '🔕 Quiet times — no sounds or notifications' }, React.createElement(QuietHoursCard, null)),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof FixedApptCard === 'function' && React.createElement(FixedApptCard, { schedHook: schedHook, family: fam }),
+  tab === 'admin' && admSec === 'settings' && (isAdmin || isOwner) && typeof ClockStyleCard === 'function' && React.createElement(ClockStyleCard, null),
   tab === 'admin' && admSec === 'settings' && (isAdmin || isOwner) && typeof AccessCard === 'function' && React.createElement(Fold, { id: 'accesscard', title: '✅ Who gets what (tasks, chores, school, clocks…)' }, React.createElement(AccessCard, { family: fam })),
   secVis('reset') && typeof ResetCenter === 'function' && React.createElement('div', null, React.createElement(ResetCenter, { family: fam, sessions: sessions })),
   tab === 'admin' && admSec === 'ops' && (isAdmin || isOwner) && typeof DailyPlanEditor === 'function' && React.createElement(DailyPlanEditor, { schedHook: schedHook, family: fam }),
@@ -32502,7 +32503,7 @@ function DayClock(props) {
   function reopen() { try { syncSet(key, Object.assign({}, sd, { dayEnd: null })); } catch (e) {} }
   var card = { background: 'linear-gradient(135deg,rgba(76,175,130,.28),rgba(3,155,229,.2))', border: '2px solid ' + (started && !ended ? '#4CAF82' : 'rgba(255,255,255,.25)'), borderRadius: 20, padding: 16, marginBottom: 12 };
   if (!started) return h('div', { style: card },
-    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1 } }, '🕐 MY DAY CLOCK'),
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1 } }, '🕐 MY DAY CLOCK'), typeof WallClock === 'function' && h(WallClock, { admin: !!props.canReset })),
     h('div', { style: { fontSize: 14, color: '#d8d8e8', margin: '4px 0 12px' } }, 'Start this first. It shows how long your whole day was.'),
     h('button', { onClick: startDay, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 18, padding: 20, fontWeight: 900, fontSize: 22, cursor: 'pointer' } }, '▶ Start my day'),
     props.canReset && props.inside && h('div', { style: { margin: '14px -14px 0' } }, props.inside),
@@ -32534,8 +32535,9 @@ function DayClock(props) {
   var pctOf = function (sec) { var v = sec / L * 100; return (v < 10 ? Math.round(v * 10) / 10 : Math.round(v)) + '%'; };
   var mono = 'ui-monospace,Menlo,monospace', hms = function (sec) { sec = Math.max(0, Math.round(sec)); var hh = Math.floor(sec / 3600), mm = Math.floor((sec % 3600) / 60), ss = sec % 60; return (hh ? hh + ':' : '') + ('0' + mm).slice(hh ? -2 : -2) + ':' + ('0' + ss).slice(-2); };
   return h('div', { style: card },
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } }, h('div', { style: { flex: 1, minWidth: 0 } },
     h('div', { style: { fontSize: 12, fontWeight: 900, color: '#fff', letterSpacing: 1 } }, ended ? '🌙 DAY FINISHED' : '🟢 CLOCKED IN — MY DAY IS RUNNING'),
-    h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Started ' + dcTime(sd.dayStart) + (ended ? ' · Ended ' + dcTime(sd.dayEnd) : ''), !ended && total < 900 && h('button', { onClick: function () { try { if (typeof mdClockUndo === 'function') { mdClockUndo(pid, props.sessions || {}, props.onUpdate, 'free'); } syncSet(key, Object.assign({}, sd, { dayStart: null, dayEnd: null, clockedAt: null, readyAt: null })); } catch (e) {} }, style: { marginLeft: 10, background: 'transparent', color: '#FFD54F', border: '1px solid rgba(255,213,79,.5)', borderRadius: 8, padding: '3px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' } }, '↩ Undo — I started by mistake')),
+    h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Started ' + dcTime(sd.dayStart) + (ended ? ' · Ended ' + dcTime(sd.dayEnd) : ''), !ended && total < 900 && h('button', { onClick: function () { try { if (typeof mdClockUndo === 'function') { mdClockUndo(pid, props.sessions || {}, props.onUpdate, 'free'); } syncSet(key, Object.assign({}, sd, { dayStart: null, dayEnd: null, clockedAt: null, readyAt: null })); } catch (e) {} }, style: { marginLeft: 10, background: 'transparent', color: '#FFD54F', border: '1px solid rgba(255,213,79,.5)', borderRadius: 8, padding: '3px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' } }, '↩ Undo — I started by mistake'))), typeof WallClock === 'function' && h(WallClock, { admin: !!props.canReset })),
     h('div', { style: { textAlign: 'center', fontSize: 56, fontWeight: 900, color: '#fff', fontFamily: mono, margin: '6px 0 2px', lineHeight: 1 } }, hms(total)),
     h('div', { style: { textAlign: 'center', fontSize: 12, color: '#c8c8d8', marginBottom: 6 } }, 'time since you started your day'),
     h('div', { style: { display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 } }, h('span', { style: { color: '#81C784' } }, '✅ Clocked: ' + dcFmt(Math.max(0, total - un))), h('span', { style: { color: un > 1800 ? '#FF8A80' : '#FFD54F' } }, '⚪ Not clocked: ' + dcFmt(un)), h('span', null, Math.round((total - un) / Math.max(1, total) * 100) + '% of my time counted')),
@@ -37186,14 +37188,14 @@ function PrincipleBar(props) {
   var h = React.createElement, v = pnPick(props.tab);
   var cp = !!props.compact;
   return h('div', { style: { margin: cp ? '6px 12px 2px' : '8px 12px 4px', flexShrink: 0, padding: cp ? '6px 12px' : '10px 14px', borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)' } },
-    h('div', { style: { fontSize: 10, fontWeight: 900, letterSpacing: 1.5, color: '#FFD54F', marginBottom: 3 } }, '📖 TODAY’S PRINCIPLE'),
-    h('div', { style: { fontSize: cp ? 12 : 13, color: '#fff', fontWeight: 700, lineHeight: 1.45 } }, '“' + v[1] + '”'),
-    h('div', { style: { fontSize: 11, color: 'rgba(255,255,255,.55)', marginTop: 3, fontWeight: 800 } }, v[0] + ' · New World Translation'));
+    h('div', { style: { fontSize: 12, fontWeight: 900, letterSpacing: 1.5, color: '#40C4FF', marginBottom: 3 } }, '📖 TODAY’S PRINCIPLE'),
+    h('div', { style: { fontSize: cp ? 14 : 15, color: '#40C4FF', fontWeight: 700, lineHeight: 1.45 } }, '“' + v[1] + '”'),
+    h('div', { style: { fontSize: 12.5, color: '#80D8FF', marginTop: 3, fontWeight: 800 } }, v[0] + ' · New World Translation'));
 }
 function PrincipleBox(props) {
   var h = React.createElement, a = pnPick(props.slot || 'login'), b = pnPick((props.slot ? 0 : 0) + 'x' === 'x' ? 7 : 7);
   b = PN_VERSES[(PN_VERSES.indexOf(a) + 11) % PN_VERSES.length];
-  var cell = function (v, last) { return h('div', { style: { padding: '14px 12px', borderRight: last ? 'none' : '1px solid rgba(255,255,255,.08)' } }, h('div', { style: { fontSize: 10, fontWeight: 800, color: '#fff', marginBottom: 6 } }, v[0]), h('div', { style: { fontSize: 10.5, fontWeight: 700, color: '#fff', lineHeight: 1.5 } }, v[1])); };
+  var cell = function (v, last) { return h('div', { style: { padding: '14px 12px', borderRight: last ? 'none' : '1px solid rgba(255,255,255,.08)' } }, h('div', { style: { fontSize: 12, fontWeight: 800, color: '#80D8FF', marginBottom: 6 } }, v[0]), h('div', { style: { fontSize: 12.5, fontWeight: 700, color: '#40C4FF', lineHeight: 1.5 } }, v[1])); };
   return h('div', { style: Object.assign({ width: '100%', maxWidth: 380, display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#0b0b12', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, overflow: 'hidden', margin: '18px 0 22px' }, props.style || {}) }, cell(a, false), cell(b, true));
 }
 
@@ -41035,6 +41037,7 @@ function DailyPlanEditor(props) {
         steps && h('div', { style: { marginBottom: 8 } }, h('div', { style: { fontSize: 12.5, color: '#c8c8d8', fontWeight: 800 } }, 'Routine steps (one per line, add “ | 10” for minutes)'),
           h('textarea', { key: sel + per, defaultValue: steps.join('\n'), rows: Math.min(8, steps.length + 1), onBlur: function (e) { saveSteps(per, e.target.value); }, style: Object.assign({}, inp, { width: '100%', boxSizing: 'border-box', padding: 8 }) }),
           h('div', { style: { fontSize: 11.5, color: '#9aa' } }, 'Saves when you tap away. Saving for ' + selName + '.')),
+        per === 'mid' && (function () { var wd = new Date().getDay(), kids = sel === '__all' ? fam.filter(function (p) { return typeof ssKid === 'function' && ssKid(p.id); }) : (typeof ssKid === 'function' && ssKid(sel) ? [selP] : []); if (!kids.length) return null; return h('div', { style: { padding: '6px 8px', margin: '2px 0 6px', borderRadius: 10, background: 'rgba(121,134,203,.18)', border: '1px solid rgba(121,134,203,.5)', color: '#fff', fontSize: 13.5 } }, '📚 School session — 6 hours, 8:00 AM – 2:00 PM, Mon–Fri (clock in)', h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, (wd > 0 && wd < 6 ? 'Showing today for ' : 'Shows Mon–Fri for ') + kids.map(function (k) { return k.name; }).join(', '))); })(),
         h('div', { style: { fontSize: 12.5, color: '#c8c8d8', fontWeight: 800 } }, 'Today’s schedule'),
         bl.length === 0 && h('div', { style: { fontSize: 12.5, color: '#889', padding: '2px 0' } }, 'Nothing scheduled.'),
         bl.map(function (b) { return h('div', { key: b.id, style: { display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', color: '#fff', fontSize: 14 } }, h('span', { style: { color: '#FFD54F', fontWeight: 800, minWidth: 64 } }, b.time), h('span', { style: { flex: 1 } }, (b.emoji ? b.emoji + ' ' : '') + b.title), h('button', { onClick: function () { try { sch.deleteBlock(day, b.id); } catch (e) {} }, 'aria-label': 'Remove', style: { minHeight: 36, minWidth: 36, borderRadius: 8, border: '1px solid rgba(255,255,255,.3)', background: 'transparent', color: '#EF9A9A', cursor: 'pointer' } }, '✕')); }),
@@ -41086,8 +41089,41 @@ function HelpAsk(props) {
 
 </script>
 <script>
+// ═══ WALL CLOCK (top right of the day card): current time + date, digital or analog; admin picks the style and whether kids may switch ═══
+function WallClock(props) {
+  var h = React.createElement, tS = React.useState(Date.now()), now = tS[0], setNow = tS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setNow(Date.now()); }, 1000); return function () { clearInterval(iv); }; }, []);
+  var cS = ktUse('clockstyle/cfg', null), cfg = cS[0] || {}, lsk = 'fm_clockstyle', mine = null;
+  try { mine = localStorage.getItem(lsk); } catch (e) {}
+  var ch = React.useState(0), setCh = ch[1];
+  var admin = !!props.admin, style = cfg.kidsChoose && mine ? mine : (cfg.style || 'digital');
+  function toggle() { var nx = style === 'digital' ? 'analog' : 'digital'; if (admin) { try { syncSet('clockstyle/cfg', Object.assign({}, cfg, { style: nx })); } catch (e) {} } else if (cfg.kidsChoose) { try { localStorage.setItem(lsk, nx); } catch (e) {} setCh(function (x) { return x + 1; }); } }
+  var d = new Date(now), canTap = admin || !!cfg.kidsChoose;
+  var dateTxt = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  var body;
+  if (style === 'analog') {
+    var s = d.getSeconds(), m = d.getMinutes() + s / 60, hr = (d.getHours() % 12) + m / 60, hand = function (deg, len, w, col) { var r = (deg - 90) * Math.PI / 180; return h('line', { x1: 50, y1: 50, x2: (50 + len * Math.cos(r)).toFixed(1), y2: (50 + len * Math.sin(r)).toFixed(1), stroke: col, strokeWidth: w, strokeLinecap: 'round' }); };
+    var ticks = []; for (var i = 0; i < 12; i++) { var a = i * 30 * Math.PI / 180; ticks.push(h('line', { key: i, x1: (50 + 40 * Math.sin(a)).toFixed(1), y1: (50 - 40 * Math.cos(a)).toFixed(1), x2: (50 + 45 * Math.sin(a)).toFixed(1), y2: (50 - 45 * Math.cos(a)).toFixed(1), stroke: '#fff', strokeWidth: i % 3 === 0 ? 3 : 1.5 })); }
+    body = h('svg', { viewBox: '0 0 100 100', width: 84, height: 84, 'aria-label': d.toLocaleTimeString() }, h('circle', { cx: 50, cy: 50, r: 47, fill: 'rgba(0,0,0,.35)', stroke: 'rgba(255,255,255,.5)', strokeWidth: 2 }), ticks, hand(hr * 30, 24, 4, '#fff'), hand(m * 6, 36, 3, '#FFD54F'), hand(s * 6, 40, 1.5, '#EF5350'), h('circle', { cx: 50, cy: 50, r: 3, fill: '#fff' }));
+  } else {
+    var t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).split(' ');
+    body = h('div', { style: { textAlign: 'right', lineHeight: 1 } }, h('span', { style: { fontSize: 30, fontWeight: 900, color: '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, t[0]), h('span', { style: { fontSize: 14, fontWeight: 800, color: '#FFD54F', marginLeft: 3 } }, t[1] || ''));
+  }
+  return h('div', { onClick: canTap ? toggle : undefined, title: canTap ? 'Tap to switch clock style' : '', style: { flexShrink: 0, textAlign: 'center', cursor: canTap ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 } }, body, h('div', { style: { fontSize: 12, fontWeight: 800, color: '#d8d8e8' } }, dateTxt));
+}
+function ClockStyleCard() {
+  var h = React.createElement, cS = ktUse('clockstyle/cfg', null), cfg = cS[0] || {}, st = cfg.style || 'digital';
+  function set(o) { try { syncSet('clockstyle/cfg', Object.assign({}, cfg, o)); } catch (e) {} }
+  var b = function (on, t, fn) { return h('button', { onClick: fn, style: { minHeight: 42, padding: '0 14px', borderRadius: 12, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.25)'), background: on ? 'rgba(255,213,79,.2)' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, t); };
+  return h('div', { style: { margin: '10px 14px', padding: 12, borderRadius: 16, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.15)', color: '#fff' } },
+    h('div', { style: { fontSize: 15, fontWeight: 900, marginBottom: 6 } }, '🕐 Kids’ clock (top right of their day box)'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' } }, b(st === 'digital', '🔢 Digital', function () { set({ style: 'digital' }); }), b(st === 'analog', '🕐 Analog', function () { set({ style: 'analog' }); }), b(!!cfg.kidsChoose, cfg.kidsChoose ? '✅ Kids may switch' : 'Let kids switch', function () { set({ kidsChoose: !cfg.kidsChoose }); })));
+}
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v185';
+var FM_BUILD = 'v187';
 (function () {
   function stamp() {
     try {
