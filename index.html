@@ -33948,7 +33948,7 @@ function MyDayList(props) {
       var cst = (r.prog && r.prog.start) || hst[r.k] || 0; if (hst[r.k] && typeof otCheck === 'function') otCheck(pid, r.label, hst[r.k], r.mins);
       var mins = r.prog && r.prog.start ? Math.max(1, Math.round((Date.now() - r.prog.start) / 60000)) : null, saved3 = (cst && (it.est || r.mins)) ? (it.est || r.mins) - (Date.now() - cst) / 60000 : 0;
       var rawC = Math.round(((window._payMode || 'pay') === 'points' ? (it.pts || 0) : (+it.cash || 0)) * frac * 100) / 100, ptsC = Math.round((it.pts || 0) * frac * 10) / 10;
-      try { syncSet('opsdone/' + it.id, { status: 'approved', auto: true, by: pid, byName: name, ts: Date.now(), period: per, label: it.label, freq: it.freq, mins: mins, pts: ptsC, quick: frac < 1 || undefined, cash: Math.round((+it.cash || 0) * frac * 100) / 100, credited: { amt: rawC, mode: window._payMode || 'pay', ts: Date.now() } }); } catch (e) {}
+      try { syncSet('opsdone/' + it.id, { status: 'approved', auto: true, by: pid, byName: name, ts: Date.now(), period: per, label: it.label, freq: it.freq, mins: mins, pts: ptsC, quick: frac < 1 ? true : null, cash: Math.round((+it.cash || 0) * frac * 100) / 100, credited: { amt: rawC, mode: window._payMode || 'pay', ts: Date.now() } }); } catch (e) {}
       finish(r, ptsC, rawC, '🧹 ' + (frac < 1 ? '(quick version) ' : '') + it.label.slice(0, 60), saved3);
     }
   }
@@ -39400,7 +39400,7 @@ function SchoolSimple(props) {
   var vdS = React.useState(null), viewDay = vdS[0], setViewDay = vdS[1], lockS = ktUse('school/pastlock', false);
   var autoDay = ssLessonDay(restart), day = viewDay != null && (admin || (autoDay && (!lockS[0]) && viewDay <= autoDay)) ? viewDay : autoDay, qDay = day || 0;
   var stS = React.useState(false), setOpenSet = stS[0], setSetOpen = stS[1];
-  var selS = React.useState(function () { return (kids.filter(function (k) { return k.id === props.personId; })[0] || kids[0] || {}).id; }), sel = selS[0], setSel = selS[1];
+  var selS = React.useState(function () { if (admin) return 'teacher'; return (kids.filter(function (k) { return k.id === props.personId; })[0] || kids[0] || {}).id; }), sel = selS[0], setSel = selS[1];
   var teacherMode = admin && sel === 'teacher', allMode = admin && sel === 'all', single = !teacherMode && !allMode, sid = admin ? ((teacherMode || allMode) ? (kids[0] || {}).id : sel) : props.personId, st = ssKid(sid);
   var pS = ktUse('school/progress', {}), prog = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/progress', {}) : null) || {}, pS[0] || {});
   var tiS = ktUse('school/turnin/' + qDay, {}), ti = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/turnin/' + qDay, {}) : null) || {}, tiS[0] || {});
@@ -39426,7 +39426,7 @@ function SchoolSimple(props) {
   }
   return h('div', { style: { padding: '12px 14px 28px' } },
     admin && h('div', { style: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' } }, [allChip(), teacherChip()].concat(kids.map(chip))),
-    admin && (teacherMode || allMode) && viewDay == null && props.personId && typeof SchoolTimeline === 'function' && h(SchoolTimeline, { sid: props.personId, admin: false, sessions: props.sessions, onUpdate: props.onUpdate }),
+    admin && (teacherMode || allMode) && viewDay == null && props.personId && typeof SchoolTimeline === 'function' && h(SchoolTimeline, { sid: props.personId, admin: false, teacher: true, schoolDay: day, sessions: props.sessions, onUpdate: props.onUpdate }),
     allMode && h(SchoolAllStudents, { day: day, kids: kids, prog: prog, ti: ti, allSub: allSub, viewDay: viewDay, autoDay: autoDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen, onPick: function (id) { setSel(id); } }),
     teacherMode && h(TeacherHome, { day: day, restart: restart, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, openSet: setOpenSet, setSetOpen: setSetOpen, onAdv: props.onAdv }),
     single && h('div', { style: { marginBottom: 12 } },
@@ -39650,8 +39650,6 @@ function TeacherHome(props) {
   var PGd = fpDoc('classroom/posted/' + tday, {}), postedK = PGd[0] || {}, putPK = PGd[1], tkid = tk === 'all' ? (kids[0] || {}).id : tk, rows = tk === 'all' ? [] : ssLessons(tk, tday), groups = tk === 'all' ? ssGroupLessons(kids, tday) : [], en = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[tday - 1]) || null;
   var qs = (function () { try { return bcQuestions(tkid, Math.min(cfg.through, tday)).filter(function (q) { return q.day === tday; }); } catch (e) { return []; } })();
   return h('div', null,
-    h(ClassScriptPost, { key: 'cs' + tday, day: tday }),
-    typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + tday, isAdmin: true, personId: 'laurel', startDay: tday, startOpen: true }),
     h('div', { style: { background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', borderRadius: 16, padding: 14, marginBottom: 12 } },
       h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '👩‍🏫 Mom / Teacher'),
       h('div', { style: { fontSize: 14, color: '#C5CAE9', lineHeight: 1.5 } }, 'Day ' + tday + ' · ' + ssDayLabel(tday) + (en ? ' · ' + en[3] : '') + '. What to say, how to say it, and the answers. Only you can see this.'),
@@ -39660,6 +39658,7 @@ function TeacherHome(props) {
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, 'FOR WHICH CHILD?'),
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, [{ id: 'all', name: 'All kids', emoji: '👨‍👩‍👧‍👦' }].concat(kids).map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
     h(DailyTextCard, { day: tday }),
+    h(Fold, { id: 'tg-all', title: '🧰 Every lesson, script & answer key' },
     teacherSubjects(groups).map(function (sb) { return h(TeacherSubjectColumns, { key: sb.id + tday, sb: sb, day: tday, posted: postedK, putP: putPK }); }),
     rows.map(function (r) {
       return h('div', { key: r.id + tk + tday, style: { marginBottom: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 12 } },
@@ -39669,6 +39668,7 @@ function TeacherHome(props) {
     tk !== 'all' && qs.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '2px solid #FFB74D', borderRadius: 16, padding: 12 } },
       h('button', { onClick: function () { setQ(!qOpen); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 16, cursor: 'pointer', padding: 0 } }, (qOpen ? '▲ ' : '▼ ') + '📝 Review quiz questions & answer keys — Day ' + tday),
       qOpen && qs.map(function (q) { return h('div', { key: q.id, style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.12)' } }, h('div', { style: { fontSize: 15, color: '#fff', lineHeight: 1.6 } }, q.text), q.key && h('div', { style: { fontSize: 14, color: '#9be3bd', lineHeight: 1.6, marginTop: 4 } }, '🔑 ' + q.key)); })),
+    ),
     props.onAdv && h('button', { onClick: function () { props.onAdv('manual'); }, style: { width: '100%', minHeight: 54, background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.2)', borderRadius: 14, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '📖 Open the full Teacher Manual'));
 }
 
@@ -39832,6 +39832,22 @@ function TeacherGroupCard(props) {
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 8px' } }, ssClean(r.topic, 120)),
     h(TeacherGuide, { row: r, sid: first.id, day: day }),
     h('button', { onClick: function () { if (done) undo(); else post(); }, style: { width: '100%', minHeight: 46, background: done ? '#4CAF82' : '#1A73E8', color: done ? '#000' : '#fff', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer', marginTop: 4 } }, done ? '✓ Added to Classroom for ' + names.join(', ') + ' · tap to undo' : '➕ Add to Google Classroom for ' + names.join(', ')));
+}
+
+
+// ── MOM / TEACHER: what opens inside a schedule block — the lecture, the script, the answer keys, and the Classroom buttons ──
+function AdminBlockBody(props) {
+  var h = React.createElement, label = props.label || '', day = props.day, kids = ssKids();
+  if (!day) return h('div', { style: { fontSize: 13, color: '#FFB74D' } }, 'Daily lessons have not started yet.');
+  var groups = ssGroupLessons(kids, day), subs = teacherSubjects(groups);
+  var pick = function (test) { return subs.filter(function (sb) { return test(sb.id); }).map(function (sb) { return h(TeacherSubjectColumns, { key: sb.id + day, sb: sb, day: day, posted: {}, putP: function () {} }); }); };
+  var isW = /worship/i.test(label), isB = /bible lecture/i.test(label), isM = /music class/i.test(label), isL = /level assign|reading|handwrit|independent/i.test(label);
+  var box = { marginTop: 4 };
+  if (isW) return h('div', { style: box }, h(DailyTextCard, { day: day }), h(ClassScriptPost, { key: 'cs' + day, day: day }));
+  if (isB) return h('div', { style: box }, h(TeacherLessonCard, { day: day, onAdv: null }), pick(function (id) { return id === 'bible'; }));
+  if (isM) return h('div', { style: box }, pick(function (id) { return id === 'music'; }));
+  if (isL) return h('div', { style: box }, pick(function (id) { return id !== 'bible' && id !== 'music'; }), typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + day, isAdmin: true, personId: 'laurel', startDay: day, startOpen: false }));
+  return null;
 }
 
 </script>
@@ -40045,10 +40061,10 @@ function SchoolTimeline(props) {
         h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff', margin: '2px 0' } }, curB.l),
         h('div', { style: { fontSize: 44, fontWeight: 900, color: left < 3 ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, btLeft(left)),
         h('div', { style: { fontSize: 14, color: '#d8d8e8', marginBottom: 8 } }, 'minutes left in this block' + (autoOn ? ' · 🤖 auto timer on' : '')),
-        !admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+        !admin && !props.teacher && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
           !(log['b' + curI] && log['b' + curI].in && !log['b' + curI].out) ? btn('#4CAF82', '#000', function () { clockIn(curB); }, '▶ Clock in') : btn('#7E57C2', '#fff', function () { clockOut(curB); }, '⏹ Clock out')))
         : h('div', { style: { fontSize: 16, fontWeight: 800, color: '#fff' } }, nextB ? 'Next: ' + nextB.l + ' at ' + btFmt(nextB.st) + ' (in ' + Math.max(1, Math.round(nextB.st - now)) + ' min)' : 'The school schedule is finished for today. 🎉')),
-    !admin && !props.noBreak && h(BreakTimer, { sid: sid, sessions: sessions, onUpdate: onUpdate }),
+    !admin && !props.teacher && !props.noBreak && h(BreakTimer, { sid: sid, sessions: sessions, onUpdate: onUpdate }),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, '📅 TODAY’S SCHEDULE — tap a block'),
     blocks.map(function (b) {
       var e = log['b' + b.i] || {}, going = e.in && !e.out, done = !!e.out, isNow = b.i === curI, open = openI === b.i, plan = b.en - b.st, past = now >= b.en;
@@ -40061,7 +40077,8 @@ function SchoolTimeline(props) {
         (open || (openI == null && isNow)) && h('div', { style: { padding: '0 12px 12px' } },
           h('div', { style: { fontSize: 14, color: '#d8d8e8', lineHeight: 1.5, marginBottom: 6 } }, b.s),
           h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 8 } }, '⏱ ' + btFmt(b.st) + ' – ' + btFmt(b.en) + ' · ' + plan + ' min planned' + (e.in ? ' · ' + act + ' min clocked' : '')),
-          !admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, going ? btn('#7E57C2', '#fff', function () { clockOut(b); }, '⏹ Clock out') : btn('#4CAF82', '#000', function () { clockIn(b); }, done ? '▶ Clock in again' : '▶ Clock in'))));
+          props.teacher && typeof AdminBlockBody === 'function' && h(AdminBlockBody, { key: 'ab' + b.i + props.schoolDay, label: b.l, day: props.schoolDay }),
+          !admin && !props.teacher && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, going ? btn('#7E57C2', '#fff', function () { clockOut(b); }, '⏹ Clock out') : btn('#4CAF82', '#000', function () { clockIn(b); }, done ? '▶ Clock in again' : '▶ Clock in'))));
     }));
 }
 
@@ -40157,7 +40174,7 @@ function TimerModePick(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v162';
+var FM_BUILD = 'v163';
 (function () {
   function stamp() {
     try {
