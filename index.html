@@ -7664,11 +7664,9 @@ function Dashboard({
     syncSet: syncSet
   }), (tab === 'clock' || tab === 'admin') && /*#__PURE__*/React.createElement("div", null,
   (tab === 'admin' || tab === 'clock') && (isAdmin || isOwner) && typeof ExcuseBar === 'function' && React.createElement(ExcuseBar, { family: fam }),
-  tab === 'clock' && (isAdmin || isOwner) && typeof BadDayCard === 'function' && React.createElement(BadDayCard, { family: fam }),
   tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Today'], ['ops', '🏠 Home'], ['pay', '💵 Pay'], ['settings', '⚙️ Settings'], ['reports', '📊 Reports'], ['reset', '🔄 Reset']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { if (t[0] === 'reset') { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; } setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
   tab === 'admin' && (isAdmin || isOwner) && admSec !== 'reset' && React.createElement('div', { style: { padding: '2px 14px 6px' } }, React.createElement('button', { onClick: function () { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; setAdmSec('reset'); try { window.scrollTo(0, 0); } catch (e) {} }, style: { width: '100%', minHeight: 44, borderRadius: 12, border: '2px solid #4FC3F7', background: 'rgba(79,195,247,.14)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '💾 Back up the app / restart from a backup')),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
-  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof BadDayCard === 'function' && React.createElement(BadDayCard, { family: fam }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof ApprovalCenter === 'function' && React.createElement(ApprovalCenter, { personId: effectiveId, family: fam, pendingNotifs: pending, onOpenNotifs: () => setShowNotifs(true) }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof SchoolClockFix === 'function' && React.createElement(SchoolClockFix, { family: fam, sessions: sessions, onUpdate: onUpdate }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function' && React.createElement(ClockControl, { family: fam, sessions: sessions }),
@@ -40708,6 +40706,7 @@ function exRedeem(pid, name, typed, amt, addNotif) {
   if (!t || t !== w) return { ok: false, msg: 'That is not today’s code word. Ask Mom politely.' };
   var lk = 'fm_exbonus_' + todayKey() + '_' + pid, already = !!(window._excused && window._excused[pid] && window._excused[pid].bonus); try { if (localStorage.getItem(lk)) already = true; else if (!already) localStorage.setItem(lk, '1'); } catch (e) {}
   exApply(pid, name, true, 'code word');
+  try { if (typeof bdExcuse === 'function') bdExcuse({ id: pid, name: name }, 'Code word'); } catch (e) {}
   try { syncSet('excused/' + todayKey() + '/' + pid + '/bonus', amt > 0 && !already ? amt : (already ? ((window._excused[pid] && window._excused[pid].bonus) || 0) : 0)); } catch (e) {}
   if (amt > 0 && !already && typeof window._walletCredit === 'function') { try { window._walletCredit(pid, amt, '🌟 Respectful check-in excuse bonus', 'exbonus_' + todayKey() + '_' + pid); } catch (e) {} }
   try { if (addNotif) addNotif('info', pid, '🤫 ' + name + ' used today’s code word', 'Excused from check-ins today' + (amt > 0 && !already ? ' — bonus given instead of a deduction.' : '.'), { adminOnly: true }); } catch (e) {}
@@ -40718,6 +40717,7 @@ function ExcuseBar(props) {
   var exS = ktUse('excused/' + todayKey(), null), ex = exS[0] || {};
   var cwS = ktUse('codeword/' + todayKey(), null), cw = cwS[0] && cwS[0].word;
   React.useEffect(function () { if (cwS[0] === null || cwS[0] === undefined) { var t = setTimeout(function () { try { if (!syncGet('codeword/' + todayKey())) exSetWord(); } catch (e) {} }, 2500); return function () { clearTimeout(t); }; } }, [cwS[0] == null]);
+  var rS = React.useState(''), reason = rS[0], setReason = rS[1];
   var anyOn = !!ex.all || fam.some(function (p) { return ex[p.id]; });
   function sw(on, label, onClick, key) {
     return h('button', { key: key, onClick: onClick, 'aria-pressed': on, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 8px', minHeight: 44, borderRadius: 22, cursor: 'pointer', fontWeight: 800, fontSize: 14, color: '#fff', background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.07)', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.22)') } },
@@ -40730,9 +40730,14 @@ function ExcuseBar(props) {
       h('span', { style: { fontSize: 12.5, color: '#c8c8d8' } }, '🤫 Today’s code word (tell them only if they ask respectfully):'),
       h('span', { style: { fontSize: 17, fontWeight: 900, color: '#FFD54F', letterSpacing: .5 } }, cw || '…'),
       h('button', { onClick: function () { exSetWord(); }, style: { marginLeft: 'auto', minHeight: 36, padding: '4px 10px', borderRadius: 10, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,.35)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 } }, '🔀 New word')),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, ['Sick', 'Family emergency', 'Appointment', 'Hard morning'].map(function (t) { var on = reason === t; return h('button', { key: t, onClick: function () { setReason(on ? '' : t); }, style: { minHeight: 36, padding: '0 10px', borderRadius: 18, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.25)'), background: on ? 'rgba(255,213,79,.2)' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: 12.5 } }, t); }),
+      h('input', { value: reason, onChange: function (e) { setReason(e.target.value); }, placeholder: 'Reason (saved)', style: { flex: 1, minWidth: 120, minHeight: 36, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: '0 8px', fontSize: 13 } })),
+    h('div', { style: { fontSize: 11.5, color: '#9aa', marginBottom: 6 } }, 'A switch ON clocks them in (if not already), excuses them and removes late marks and deductions. Typing the code word on their screen does the same.'),
     h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
-      sw(!!ex.all, 'Everyone', function () { exApply('all', 'Everyone', !ex.all); }, 'all'),
-      fam.map(function (p) { return sw(!!ex[p.id], (p.emoji ? p.emoji + ' ' : '') + (p.name || p.id), function () { exApply(p.id, p.name, !ex[p.id]); }, p.id); })));
+      sw(!!ex.all, 'Everyone', function () { var on = !ex.all; exApply('all', 'Everyone', on); fam.forEach(function (p) { if (on) bdExcuse(p, reason.trim() || 'Excused by Mom/Dad'); }); }, 'all'),
+      fam.map(function (p) { return sw(!!ex[p.id], (p.emoji ? p.emoji + ' ' : '') + (p.name || p.id), function () { if (ex[p.id]) exApply(p.id, p.name, false); else bdExcuse(p, reason.trim() || 'Excused by Mom/Dad'); }, p.id); })),
+    ex && Object.keys(ex).some(function (k) { return ex[k] && ex[k].reason; }) && h('div', { style: { marginTop: 6, fontSize: 12, color: '#c8c8d8' } }, fam.filter(function (p) { return ex[p.id] && ex[p.id].reason; }).map(function (p) { return p.name + ': ' + ex[p.id].reason; }).join(' · ')),
+    typeof ClockTimeFix === 'function' && h(ClockTimeFix, { fam: fam }));
 }
 
 </script>
@@ -41087,6 +41092,21 @@ function HelpAsk(props) {
     h('div', { style: { display: 'flex', gap: 6, marginTop: 6 } }, h('button', { onClick: send, style: { flex: 1, minHeight: 42, borderRadius: 10, border: 'none', background: '#FFD54F', color: '#000', fontWeight: 900, cursor: 'pointer' } }, 'Send to Mom/Dad'), h('button', { onClick: function () { setOpen(false); }, style: { minHeight: 42, padding: '0 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'transparent', color: '#fff', cursor: 'pointer' } }, 'Cancel')));
 }
 
+// change the clock-in time (and date) of anyone's day
+function ClockTimeFix(props) {
+  var h = React.createElement, oS = React.useState(false), open = oS[0], setOpen = oS[1], vS = React.useState({}), vals = vS[0], setVals = vS[1], mS = React.useState('');
+  var k = todayKey(), sdS = ktUse('startday/' + k, null), sd = sdS[0] || {};
+  function loc(ms) { var d = new Date(ms), p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function save(pid) { var v = vals[pid]; if (!v) return; var ms = new Date(v).getTime(); if (!ms) return; var nk = loc(ms).slice(0, 10), rec = Object.assign({}, sd[pid] || {}, { dayStart: ms, readyAt: (sd[pid] && sd[pid].readyAt) || ms, penalized: true, lateKind: (sd[pid] && sd[pid].lateKind) || 'excused', lateReason: (sd[pid] && sd[pid].lateReason) || 'Time corrected by Mom/Dad' });
+    try { if (nk !== k) { syncSet('startday/' + k + '/' + pid, null); syncSet('startday/' + nk + '/' + pid, rec); } else syncSet('startday/' + k + '/' + pid, rec); } catch (e) {} var o = {}; o[pid] = null; setVals(Object.assign({}, vals, o)); }
+  return h('div', { style: { marginTop: 8 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { minHeight: 38, padding: '0 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,.35)', background: 'transparent', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, (open ? '▾' : '▸') + ' 🕐 Change clock-in time / date'),
+    open && h('div', { style: { marginTop: 6 } }, (props.fam || []).map(function (p) { var cur = sd[p.id] && sd[p.id].dayStart; return h('div', { key: p.id, style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '4px 0', color: '#fff', fontSize: 13.5 } },
+      h('span', { style: { minWidth: 70, fontWeight: 800 } }, p.name),
+      h('input', { type: 'datetime-local', value: vals[p.id] != null ? vals[p.id] : (cur ? loc(cur) : loc(Date.now())), onChange: function (e) { var o = {}; o[p.id] = e.target.value; setVals(Object.assign({}, vals, o)); }, style: { minHeight: 38, borderRadius: 8, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: '0 6px' } }),
+      h('button', { onClick: function () { save(p.id); }, disabled: vals[p.id] == null, style: { minHeight: 38, padding: '0 12px', borderRadius: 8, border: 'none', background: vals[p.id] != null ? '#4CAF82' : '#555', color: '#000', fontWeight: 900, cursor: 'pointer' } }, cur ? 'Save' : 'Clock in'), !cur && h('span', { style: { fontSize: 11.5, color: '#9aa' } }, 'not clocked in')); })));
+}
+
 </script>
 <script>
 // ═══ WALL CLOCK (top right of the day card): current time + date, digital or analog; admin picks the style and whether kids may switch ═══
@@ -41123,7 +41143,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v187';
+var FM_BUILD = 'v188';
 (function () {
   function stamp() {
     try {
