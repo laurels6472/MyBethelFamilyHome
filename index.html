@@ -37790,7 +37790,7 @@ function bcKidize(t, grade) {
   if (grade > 5) return t;
   return String(t || '').replace(/tell (a )?(grown-up|adult|parent|Mom or Dad)( one thing)?/gi, function (m, a, b, c) { return 'type (or speak) ' + (c ? 'one thing' : 'it'); }).replace(/then talk about/gi, 'then type or speak');
 }
-function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} var legacy = c && c.date === '2026-10-26' && (+c.day || 12) === 12; return { date: (c && !legacy && c.date) || '2026-10-21', day: (c && !legacy && +c.day) || 12 }; }
+function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} var legacy = c && (c.date === '2026-10-26' || c.date === '2026-10-21') && (+c.day || 12) === 12; return { date: (c && !legacy && c.date) || '2026-11-02', day: (c && !legacy && +c.day) || 20 }; }
 function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(ssRestartCfg().day - 1, (typeof cuTodayDay === 'function' ? cuTodayDay() : 11) || 11); return { on: true, through: (c && +c.through) || t }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
 function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
@@ -37874,7 +37874,7 @@ function BigCatchCard(props) {
   var ta = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.22)', borderRadius: 10, color: '#fff', padding: 10, fontSize: 15, fontFamily: 'inherit', marginBottom: 8 };
   function setA(k, v) { var n = Object.assign({}, ans); n[k] = v; setLocal(n); }
   function save(st, quiet) { var rec = Object.assign({}, sub || {}, { answers: ans, through: through, status: st, ts: Date.now() }); if (st === 'submitted') rec.submittedAt = Date.now(); bcWrite('school/bigcatch_sub/' + sid, rec, function (er) { say('⚠️ Could not save (' + er + '). Tell Mom or Dad.'); }); if (!quiet) say(st === 'submitted' ? '✅ Turned in!' : '💾 Saved'); }
-  var answered = qs.filter(function (q) { return (ans[q.id] || '').trim().length > 2; }).length;
+  var answered = qs.filter(function (q) { return (ans[q.id] || '').trim().length > 2 || !!ans[q.id + '_img']; }).length;
   function approve() { var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'approved', approvedAt: Date.now(), marked: n }), function (er) { say('⚠️ Could not save (' + er + ')'); }); say('✅ Approved — ' + n + ' lessons marked caught up.'); }
   function excuse() { if (!window.confirm('Mark ALL of ' + s.name + '’s lessons from Day 1 to Day ' + through + ' as caught up without a turn-in?')) return; var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { answers: ans, status: 'approved', approvedAt: Date.now(), marked: n, excused: true })); say('✅ Excused — ' + n + ' lessons marked caught up.'); }
   function redo() { var note = ''; try { note = window.prompt('What should ' + s.name + ' fix? (optional)', '') || ''; } catch (e) {} bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'redo', note: note })); say('🔁 Sent back to ' + s.name + '.'); }
@@ -37894,6 +37894,8 @@ function BigCatchCard(props) {
           return h('div', { key: q.id, style: { marginBottom: 6 } },
             h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 4, lineHeight: 1.5 } }, (i + 1) + '. ' + q.text),
             h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked && local) save(status || 'draft', true); }, placeholder: 'Type your answer here', style: ta }),
+            ans[q.id + '_img'] && h('div', { style: { margin: '4px 0 6px' } }, h('img', { src: ans[q.id + '_img'], alt: 'My picture', style: { maxWidth: '100%', maxHeight: 220, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)' } }), !locked && !admin && h('button', { onClick: function () { setA(q.id + '_img', ''); }, style: { display: 'block', marginTop: 4, background: 'transparent', color: '#FF8A80', border: '1px solid rgba(255,138,128,.5)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 } }, '✕ Remove picture')),
+            !admin && !locked && h('label', { style: { display: 'inline-block', margin: '2px 0 6px', padding: '10px 14px', minHeight: 44, boxSizing: 'border-box', borderRadius: 12, background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🎨 Draw a picture instead — add a photo', h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: function (e) { var f = e.target.files && e.target.files[0]; if (!f || typeof ntResizeImage !== 'function') return; ntResizeImage(f, 700, function (d) { setA(q.id + '_img', d); }); e.target.value = ''; } })),
             !admin && !locked && s.grade <= 5 && h('div', { style: { margin: '4px 0 6px' } }, h(MicButton, { onText: function (t) { setA(q.id, ((ans[q.id] || '') + ' ' + t).trim()); } })),
             admin && q.key && h('div', { style: { fontSize: 11, color: '#9be3bd', marginBottom: 6 } }, '🔑 ' + q.key.slice(0, 240)));
         }));
@@ -37935,7 +37937,7 @@ function BulkAssign(props) {
 
 </script>
 <script>
-// ═══ REVIEW QUIZ (Oct 6 – Oct 21 = school Days 1–11): two hand-written questions per day, tailored to that day's lessons ═══
+// ═══ REVIEW QUIZ (Oct 6 – Oct 30 = school Days 1–19): two hand-written questions per day, tailored to that day's lessons ═══
 // y = wording for younger students (grade 5 and under), o = wording for older students, key = what a good answer includes (teacher only)
 var BC_TAIL = {
   1: [
@@ -37983,6 +37985,39 @@ var BC_TAIL = {
     { sub: 'math', label: 'Math', y: 'Math: Solve 3 + 4 × 2 and show your steps. Why is the answer not 14?', o: 'Math — Order of operations: solve 3 + 6² × 5 − (9 + 3) showing every step, and explain the order you used and why.', key: 'Younger: 4 × 2 = 8 first, then 3 + 8 = 11 (multiply before add). Older: parentheses 12; exponent 36; multiply 180; 3 + 180 − 12 = 171. Order: parentheses, exponents, multiplication/division, addition/subtraction.' }
   ]
 };
+
+BC_TAIL[12] = [
+  { sub: 'bible', label: 'Bible', y: 'Cain and Abel both brought gifts to Jehovah (Genesis 4). Why was Abel’s gift accepted and Cain’s was not? What did Jehovah tell Cain to do about his anger?', o: 'Genesis 4:1-16 and Hebrews 11:4: explain why Jehovah approved Abel’s worship but not Cain’s. What does Jehovah’s warning to Cain at Genesis 4:6-7 teach about controlling anger and sin?', key: 'Abel offered with faith and a right heart; Cain’s heart was wrong (1 John 3:12). Jehovah warned Cain kindly, “sin is crouching at the door… you must master it.” Cain refused and murdered Abel. True worship is from the heart.' },
+  { sub: 'science', label: 'Science', y: 'Science: Genesis calls each creation step a “day.” Some people think the “days” were very long periods of time. Why might that make sense?', o: 'Science — Age of the earth: explain why the Bible’s creative “days” can be understood as long periods rather than 24-hour days. Use Genesis 2:4 and give one reason scientists and the Bible do not have to be in conflict.', key: 'Hebrew “yom” can mean a long period; Gen 2:4 calls the whole creative period “the day.” The Bible does not state the earth’s age, so there is no conflict with evidence of an old earth.' }
+];
+BC_TAIL[13] = [
+  { sub: 'bible', label: 'Bible', y: 'Jesus said true worshippers worship “with spirit and truth” (John 4:23-24). What do you think that means? How can you worship Jehovah in your everyday life?', o: 'John 4:23-24 and Romans 12:1: explain what it means to worship “with spirit and truth” and to offer our bodies as a “sacrifice.” Give two ways a young person can show whole-souled worship each day.', key: 'Spirit = sincere, heartfelt, guided by God’s spirit; truth = based on accurate Bible teaching. Romans 12:1 — present ourselves as a living sacrifice; daily life of obedience, prayer, study, meetings, ministry.' },
+  { sub: 'science', label: 'Science', y: 'Science: A fossil is a clue left in rock from a plant or animal long ago. What do many fossils show about how living things looked in the past?', o: 'Science — Fossils: explain what a fossil is and what the fossil record shows about the appearance of living things. Why does this support the Bible’s statement that creatures appear “according to their kinds”?', key: 'Fossils are preserved remains/impressions. The record shows groups appearing abruptly and staying basically the same, with gaps between kinds, matching Gen 1:21-25.' }
+];
+BC_TAIL[14] = [
+  { sub: 'bible', label: 'Bible', y: 'Genesis 5 lists men who lived a very long time. Enoch is special because he “walked with the true God.” What does walking with God mean?', o: 'Genesis 5:1-32 and Hebrews 11:5: what do we learn about Enoch, and why is “walking with the true God” a good goal? How does the chronology of Genesis 5 help us trace history from Adam to Noah?', key: 'Enoch pleased Jehovah and was taken so he did not see death; walking with God = living in harmony with his will daily. Genesis 5 gives lifespans/begetting ages that link Adam to Noah.' },
+  { sub: 'math', label: 'Math', y: 'Math: Is 23 prime or composite? Is 35? Tell how you know.', o: 'Math — Prime and composite numbers: classify 23, 35, 51 and 97 as prime or composite and show the factors that prove it. Then explain why 1 is neither.', key: '23 prime; 35 composite (5 × 7); 51 composite (3 × 17); 97 prime. 1 has only one factor so it is neither.' }
+];
+BC_TAIL[15] = [
+  { sub: 'bible', label: 'Bible', y: 'Think about Genesis chapters 3 to 5 (the first people, Cain and Abel, and the men before the Flood). Pick one part and tell what it teaches us about Jehovah.', o: 'Review of Genesis 3-5: choose two events and explain what each teaches about Jehovah’s qualities (for example justice, loyal love, patience) and how we can imitate him.', key: 'Any well-explained examples: Gen 3:15 hope/promise; Gen 3:21 care; Gen 4:6-7 patience and warning; Gen 5:24 reward for faithful walking. Connects to a quality and a personal application.' },
+  { sub: 'science', label: 'Science', y: 'Science: Some birds fly thousands of miles to a warm place and back again. How do you think they find their way? What does this show about the One who made them?', o: 'Science — Bird migration: describe two ways migrating birds navigate and explain how Jeremiah 8:7 and the design in these birds point to a wise Designer.', key: 'Sun, stars, Earth’s magnetic field, landmarks; built-in instinct. Jer 8:7 — the stork knows its appointed times. Design points to Creator.' }
+];
+BC_TAIL[16] = [
+  { sub: 'bible', label: 'Bible', y: 'Noah was told to build an ark (Genesis 6). What was hard about the job? How did Noah show faith?', o: 'Genesis 6:1-22 and Hebrews 11:7: describe how Noah showed faith in action. What made his assignment difficult, and what can we learn from him about obeying Jehovah when others do not listen?', key: 'Noah obeyed exactly as commanded (Gen 6:22), built for decades, and preached (2 Pet 2:5) while others ignored him. Faith is shown by works; Jehovah is a refuge for those who obey.' },
+  { sub: 'math', label: 'Math', y: 'Math: What is the greatest common factor (GCF) of 12 and 18? Show how you found it.', o: 'Math — Greatest common factor: find the GCF of 24 and 36, and of 28 and 42. Show your list of factors or prime factorization, and explain one way GCF is useful (such as simplifying a fraction).', key: 'GCF(12,18)=6. GCF(24,36)=12; GCF(28,42)=14. Method: list factors or prime factors, pick the largest shared. Use: simplify fractions, share things into equal groups.' }
+];
+BC_TAIL[17] = [
+  { sub: 'bible', label: 'Bible', y: 'Genesis 7 and 8 tell about the Flood. Who was kept safe, and how did Jehovah show he is faithful? What did Noah do when he stepped out of the ark?', o: 'Genesis 7-8 and 2 Peter 2:5: explain how the Flood showed Jehovah’s justice and his faithfulness to those who obeyed. What does Noah’s first act after the Flood (Gen 8:20) show about his heart?', key: 'Noah’s family of eight was preserved; the wicked were destroyed; Jehovah remembered Noah (8:1). Noah built an altar and gave thanks — gratitude and worship first.' },
+  { sub: 'science', label: 'Science', y: 'Science: Bats and dolphins make sounds that bounce back to “see” in the dark or in murky water. What is this called? Why is it a clever design?', o: 'Science — Echolocation: explain how bats and dolphins use sound to locate objects, and how engineers copy this design (biomimicry). What does this suggest about the origin of the design?', key: 'Animals send out sound pulses and interpret returning echoes to judge distance, size and movement. Humans copied it for sonar/radar. Design with purpose points to a Designer.' }
+];
+BC_TAIL[18] = [
+  { sub: 'bible', label: 'Bible', y: 'After the Flood, Jehovah put a rainbow in the sky (Genesis 9). What did the rainbow remind Noah of?', o: 'Genesis 9:1-17 and Acts 17:26: explain Jehovah’s promise and the rainbow covenant, and how Acts 17:26 shows that all nations come from one man. Why is it a reason to treat all people kindly?', key: 'Jehovah promised never again to destroy all flesh by a flood; the rainbow is the sign. All people descend from Noah’s sons, and from Adam — one human family, so no basis for prejudice.' },
+  { sub: 'math', label: 'Math', y: 'Math: What is the least common multiple (LCM) of 4 and 6? Show how you found it.', o: 'Math — Least common multiple: find the LCM of 8 and 12, and of 9 and 24. Show your method and describe a real-life time when you would need an LCM.', key: 'LCM(4,6)=12; LCM(8,12)=24; LCM(9,24)=72. List multiples or use prime factors. Use: add fractions with unlike denominators, schedules that repeat.' }
+];
+BC_TAIL[19] = [
+  { sub: 'bible', label: 'Bible', y: 'Genesis 11 tells about people who built a tall tower in Babel. What did they want? What did Jehovah do, and why?', o: 'Genesis 11:1-9: explain the motives of the builders of Babel and how Jehovah stopped them. How does Acts 17:26 and the confusion of languages help explain the nations we see today?', key: 'They wanted to make a name for themselves and not spread over the earth as Jehovah commanded (Gen 9:1). Jehovah confused their language and scattered them. Human pride and independence from God fail.' },
+  { sub: 'science', label: 'Science', y: 'Science: Plants use sunlight to make their own food. What goes in and what comes out? Why do we need plants?', o: 'Science — Photosynthesis: write the inputs and outputs of photosynthesis, explain where in the plant it happens, and describe how it provides for all living things.', key: 'Sunlight + water + carbon dioxide → sugar (glucose) + oxygen, in chloroplasts (chlorophyll). Plants make food and oxygen that animals and people need — Jehovah’s provision.' }
+];
 function bcTailored(d) { return BC_TAIL[d] || null; }
 
 </script>
@@ -39486,7 +39521,7 @@ function SchoolCatchCard(props) {
   var card = { background: 'rgba(255,152,0,.1)', border: '2px solid #FFB74D', borderRadius: 18, padding: 14, marginBottom: 12 };
   var step = function (n, title, sub2, done, on, content) { return h('div', { style: { marginTop: 10, padding: 10, borderRadius: 14, background: 'rgba(0,0,0,.18)', border: '1px solid ' + (done ? 'rgba(76,175,130,.5)' : 'rgba(255,255,255,.12)') } },
     h('div', { onClick: function () { setOpen(open === n ? '' : n); }, style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' } }, h('div', { style: { fontSize: 22 } }, done ? '✅' : n === 'read' ? '1️⃣' : '2️⃣'), h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff' } }, title), h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, sub2)), h('div', { style: { color: '#c8c8d8' } }, open === n ? '▲' : '▼')), on && content); };
-  var qs = bcQuestions(sid, through), ans = sub.answers || {}, answered = qs.filter(function (x) { return (ans[x.id] || '').trim().length > 2; }).length;
+  var qs = bcQuestions(sid, through), ans = sub.answers || {}, answered = qs.filter(function (x) { return (ans[x.id] || '').trim().length > 2 || !!ans[x.id + '_img']; }).length;
   return h('div', { style: card },
     h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, '📝 Review quiz — ' + ssDayLabelShort(1) + ' to ' + ssDayLabelShort(through) + ' (Days 1–' + through + ')'),
     h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.5, marginTop: 2 } }, 'We missed school, so there are no old assignments. Read the review, then answer 2 questions for each school day. Tell what you learned about Jehovah and his creation.'),
@@ -39530,7 +39565,7 @@ function ssDayLabelShort(n) { try { return schoolDayDate(n).toLocaleDateString([
 function ssDayLabel(n) { try { return typeof schoolDayDate === 'function' ? schoolDayDate(n).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : ''; } catch (e) { return ''; } }
 function SchoolSimple(props) {
   var h = React.createElement, kids = ssKids(), admin = !!props.isAdmin;
-  var rsS = ktUse('school/restart', null), rsv = rsS[0] || {}, restart = (rsv.date === '2026-10-26' && (+rsv.day || 12) === 12) ? { date: '2026-10-21', day: 12 } : { date: rsv.date || '2026-10-21', day: +rsv.day || 12 };
+  var rsS = ktUse('school/restart', null), rsv = rsS[0] || {}, restart = ((rsv.date === '2026-10-26' || rsv.date === '2026-10-21') && (+rsv.day || 12) === 12) ? { date: '2026-11-02', day: 20 } : { date: rsv.date || '2026-11-02', day: +rsv.day || 20 };
   var vdS = React.useState(null), viewDay = vdS[0], setViewDay = vdS[1], lockS = ktUse('school/pastlock', false);
   var autoDay = ssLessonDay(restart), day = viewDay != null && (admin || (autoDay && (!lockS[0]) && viewDay <= autoDay)) ? viewDay : autoDay, qDay = day || 0;
   var stS = React.useState(false), setOpenSet = stS[0], setSetOpen = stS[1];
@@ -41236,7 +41271,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v191';
+var FM_BUILD = 'v192';
 (function () {
   function stamp() {
     try {
