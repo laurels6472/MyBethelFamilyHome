@@ -7378,7 +7378,7 @@ function Dashboard({
     if (!tabs.find(t => t.id === tab) && tabs.length > 0) setTab(tabs[0].id||'board');
   }, [effectiveId, effectiveRole]);
   const _ncCfg = ktUse('notify_cfg', null)[0] || {};
-  const myNotifs = isAdmin ? notifs.filter(n => typeof ncWants !== 'function' || ncWants(personId, n, _ncCfg)) : notifs.filter(n => !n.adminOnly && !/Bills start/i.test(String(n.title || n.msg || n.message || '')) && n.type !== 'clock_in' && n.type !== 'clock_out' && (n.personId === personId || n.personId === 'all'));
+  const myNotifs = isAdmin ? notifs.filter(n => !/Bills start/i.test(String(n.title || n.msg || n.message || '')) && (typeof ncWants !== 'function' || ncWants(personId, n, _ncCfg))) : notifs.filter(n => !n.adminOnly && !/Bills start/i.test(String(n.title || n.msg || n.message || '')) && n.type !== 'clock_in' && n.type !== 'clock_out' && (n.personId === personId || n.personId === 'all'));
   const myUnread = isAdmin ? unread : myNotifs.filter(n => !n.read).length;
   function handleSwitch(pid) {
     setViewingAs(pid === personId ? null : pid);
@@ -40152,7 +40152,7 @@ function TimerModePick(props) {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v159';
+var FM_BUILD = 'v160';
 (function () {
   function stamp() {
     try {
