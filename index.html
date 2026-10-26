@@ -7667,6 +7667,7 @@ function Dashboard({
   tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Today'], ['ops', '🏠 Home'], ['pay', '💵 Pay'], ['settings', '⚙️ Settings'], ['reports', '📊 Reports'], ['reset', '🔄 Reset']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { if (t[0] === 'reset') { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; } setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
   tab === 'admin' && (isAdmin || isOwner) && admSec !== 'reset' && React.createElement('div', { style: { padding: '2px 14px 6px' } }, React.createElement('button', { onClick: function () { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; setAdmSec('reset'); try { window.scrollTo(0, 0); } catch (e) {} }, style: { width: '100%', minHeight: 44, borderRadius: 12, border: '2px solid #4FC3F7', background: 'rgba(79,195,247,.14)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '💾 Back up the app / restart from a backup')),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof TimeAdjustCard === 'function' && React.createElement(TimeAdjustCard, { family: fam, sessions: sessions, onUpdate: onUpdate }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof ApprovalCenter === 'function' && React.createElement(ApprovalCenter, { personId: effectiveId, family: fam, pendingNotifs: pending, onOpenNotifs: () => setShowNotifs(true) }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof SchoolClockFix === 'function' && React.createElement(SchoolClockFix, { family: fam, sessions: sessions, onUpdate: onUpdate }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function' && React.createElement(ClockControl, { family: fam, sessions: sessions }),
@@ -31906,6 +31907,7 @@ function StartMyDay(props) {
         tile('#FF1493', '#fff', function () { if (typeof pciOpen === 'function') pciOpen(); }, '👋 Check in'),
         schoolBtn,
         !submitted ? tile('#7E57C2', '#fff', endFlow, '🏁 End my day') : h('div', { style: { flex: 1, minWidth: 140, padding: 10, borderRadius: 14, background: 'rgba(76,175,130,.18)', border: '2px solid #4CAF82', color: '#fff', fontWeight: 900, textAlign: 'center' } }, '🎉 Day ended ' + tm(sd.dayEnd), h('div', null, h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { dayEnd: null, submittedAt: null, forgotOut: null })); } catch (e) {} }, style: { marginTop: 6, background: 'transparent', color: '#FFD54F', border: '1px solid rgba(255,213,79,.6)', borderRadius: 10, padding: '6px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '↩ Undo — I am not done yet')))),
+      typeof LateStartAsk === 'function' && h(LateStartAsk, { pid: pid, name: nm, sessions: props.sessions, addNotif: props.addNotif }),
       typeof HelpAsk === 'function' && h(HelpAsk, { pid: pid, name: nm, addNotif: props.addNotif }),
       typeof ExcuseCodeTile === 'function' && h(ExcuseCodeTile, { pid: pid, name: nm, addNotif: props.addNotif }),
       subWarnEl,
@@ -40938,7 +40940,7 @@ var RF_ORIG = planBlocksFor;
 function rfReflow(bl, pid) {
   var movable = bl.filter(function (b) { return !b.fixed && b._t != null; }), fixed = bl.filter(function (b) { return b.fixed && b._t != null; }), free = bl.filter(function (b) { return b._t == null; });
   var sd = null; try { sd = syncGet('startday/' + todayKey() + '/' + pid); } catch (e) {}
-  var floor = 0, dsM = null; if (sd && sd.dayStart) { var dd = new Date(sd.dayStart); dsM = dd.getHours() * 60 + dd.getMinutes(); }
+  var floor = 0, dsM = null, ap = typeof taApprovedLate === 'function' ? taApprovedLate(pid) : null; if (ap && ap.start) { var dd = new Date(ap.start); dsM = dd.getHours() * 60 + dd.getMinutes(); }
   if (!fixed.length && !(dsM != null && movable.length && dsM > movable[0]._t + 2)) return bl;
   if (dsM != null && movable.length && dsM > movable[0]._t + 2) floor = dsM;
   var wins = [], extra = [];
@@ -41146,6 +41148,60 @@ function ForgotTimers(props) {
 
 </script>
 <script>
+// ═══ LATE CLOCK-IN: ask what really happened, then the schedule slides only after Mom/Dad approve ═══
+function taSchoolStart(sessions, pid) {
+  var d = (sessions && sessions[pid]) || {}, L = [], best = 0;
+  try { L = clockActiveList(d).concat(d.today || []); } catch (e) { L = d.today || []; }
+  L.forEach(function (r) { if (r && r.activity === 'school' && r.startTime && (!best || r.startTime < best)) best = r.startTime; });
+  return best;
+}
+function taMin(ms) { var d = new Date(ms); return d.getHours() * 60 + d.getMinutes(); }
+// does an approved late slide exist for this child today? (used by the schedule re-flow)
+function taApprovedLate(pid) { try { var r = syncGet('timeadj/' + todayKey() + '/' + pid); return r && r.status === 'approved' && r.kind === 'late' ? r : null; } catch (e) { return null; } }
+function LateStartAsk(props) {
+  var h = React.createElement, pid = props.pid, k = todayKey(), rS = ktUse('timeadj/' + k + '/' + pid, null), rec = rS[0];
+  var tS = React.useState(''), tv = tS[0], setTv = tS[1], mS = React.useState(false), more = mS[0], setMore = mS[1];
+  var ss = taSchoolStart(props.sessions, pid), wd = new Date().getDay();
+  if (!(typeof ssKid === 'function' && ssKid(pid)) || wd < 1 || wd > 5 || !ss || taMin(ss) <= 480 + 7) return null;
+  var tm = function (ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  function send(kind, start) { var r = { kind: kind, start: start, clockedAt: ss, status: 'pending', ts: Date.now(), name: props.name }; try { syncSet('timeadj/' + k + '/' + pid, r); } catch (e) {} try { var f = typeof window._addNotifFn === 'function' ? window._addNotifFn : props.addNotif; if (f) f('info', pid, '⏰ ' + (props.name || pid) + ' asked to adjust a late school start', kind === 'late' ? 'Clocked in at ' + tm(ss) + ' (school starts 8:00 AM). Wants the schedule to slide. Approve in Administration → Today.' : 'Says school really started at ' + tm(start) + ' and they forgot to clock in. Approve in Administration → Today.', { adminOnly: true }); } catch (e) {} }
+  var box = { margin: '8px 0', padding: 12, borderRadius: 14, background: 'rgba(255,213,79,.12)', border: '2px solid #FFD54F', color: '#fff' }, bt = function (bg, fg) { return { display: 'block', width: '100%', textAlign: 'left', minHeight: 44, borderRadius: 12, border: 'none', background: bg, color: fg, fontWeight: 800, fontSize: 14, padding: '8px 12px', marginTop: 6, cursor: 'pointer' }; };
+  if (rec) return h('div', { style: box }, rec.status === 'approved' ? '✅ Approved — your schedule was adjusted.' : rec.status === 'denied' ? '❌ Not approved. Ask Mom or Dad if you have questions.' : '⏳ Waiting for Mom or Dad to approve your time change.');
+  return h('div', { style: box },
+    h('div', { style: { fontSize: 15, fontWeight: 900 } }, '⏰ You clocked into school at ' + tm(ss) + ' — school starts at 8:00 AM'),
+    h('div', { style: { fontSize: 13, color: '#e8e8f4', margin: '2px 0' } }, 'What happened? Mom or Dad will approve it.'),
+    h('button', { onClick: function () { send('late', ss); }, style: bt('#FFB74D', '#000') }, 'I really started late — slide my schedule to fit'),
+    !more ? h('button', { onClick: function () { setMore(true); }, style: bt('rgba(255,255,255,.14)', '#fff') }, 'I started on time but forgot to clock in') :
+      h('div', { style: { marginTop: 6 } }, h('div', { style: { fontSize: 13, fontWeight: 800 } }, 'What time did you really start?'), h('div', { style: { display: 'flex', gap: 6, marginTop: 4 } },
+        h('input', { type: 'time', value: tv, onChange: function (e) { setTv(e.target.value); }, style: { flex: 1, minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: '0 8px', fontSize: 16 } }),
+        h('button', { onClick: function () { if (!tv) return; var p = tv.split(':'), d = new Date(); d.setHours(+p[0], +p[1], 0, 0); if (d.getTime() >= ss) return; send('forgot', d.getTime()); }, disabled: !tv, style: { minHeight: 44, padding: '0 14px', borderRadius: 10, border: 'none', background: tv ? '#4CAF82' : '#555', color: '#000', fontWeight: 900, cursor: 'pointer' } }, 'Ask'))));
+}
+function TimeAdjustCard(props) {
+  var h = React.createElement, k = todayKey(), aS = ktUse('timeadj/' + k, null), all = aS[0] || {}, ids = Object.keys(all).filter(function (id) { return all[id] && all[id].status === 'pending'; });
+  if (!ids.length) return null;
+  var tm = function (ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  function decide(pid, ok) {
+    var r = all[pid]; if (!r) return;
+    if (ok && r.kind === 'forgot') { try {
+      var api = window._clockApi || {}, sessions = api.sessions || props.sessions || {}, up = api.onUpdate || props.onUpdate, d = sessions[pid] || {}, act = clockActiveList(d), today = (d.today || []).slice(), done = false;
+      act = act.map(function (x) { if (!done && x.activity === 'school' && x.startTime > r.start) { done = true; return Object.assign({}, x, { startTime: r.start, adjustedBy: 'parent' }); } return x; });
+      if (!done) today = today.map(function (x) { if (!done && x.activity === 'school' && x.startTime > r.start) { done = true; var e = Object.assign({}, x, { startTime: r.start, adjustedBy: 'parent' }); if (x.endTime) e.duration = Math.round(((x.endTime - r.start) / 60000) * 10) / 10; return e; } return x; });
+      clockSave(pid, sessions, up, act[0] || null, act.slice(1), today);
+      var iso = typeof tcIso === 'function' ? tcIso(new Date()) : k, at = syncGet('attendance/' + iso + '/' + pid); if (at && at.status === 'late') syncSet('attendance/' + iso + '/' + pid + '/status', 'present');
+    } catch (e) {} }
+    try { syncSet('timeadj/' + k + '/' + pid, Object.assign({}, r, { status: ok ? 'approved' : 'denied', decidedAt: Date.now() })); } catch (e) {}
+    try { if (typeof window._addNotifFn === 'function') window._addNotifFn('info', pid, ok ? '✅ Your time change was approved' : '❌ Your time change was not approved', ok ? 'Your schedule has been adjusted.' : 'Ask Mom or Dad if you have questions.', { requiresApproval: false }); } catch (e) {}
+  }
+  return h('div', { style: { margin: '10px 14px', padding: 12, borderRadius: 16, background: 'rgba(255,213,79,.1)', border: '2px solid #FFD54F', color: '#fff' } },
+    h('div', { style: { fontSize: 15, fontWeight: 900, marginBottom: 4 } }, '⏰ Time changes waiting for you (' + ids.length + ')'),
+    ids.map(function (id) { var r = all[id], p = (props.family || []).find(function (x) { return x.id === id; }); return h('div', { key: id, style: { padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.12)' } },
+      h('div', { style: { fontSize: 14, fontWeight: 800 } }, (p ? p.name : id) + ': clocked into school ' + tm(r.clockedAt)),
+      h('div', { style: { fontSize: 13, color: '#d8d8e8' } }, r.kind === 'late' ? 'Says they really started late — slide the rest of the schedule to fit.' : 'Says they really started at ' + tm(r.start) + ' and forgot to clock in — change the start time.'),
+      h('div', { style: { display: 'flex', gap: 6, marginTop: 4 } }, h('button', { onClick: function () { decide(id, true); }, style: { flex: 1, minHeight: 44, borderRadius: 10, border: 'none', background: '#4CAF82', color: '#000', fontWeight: 900, cursor: 'pointer' } }, '✅ Approve'), h('button', { onClick: function () { decide(id, false); }, style: { flex: 1, minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,.35)', background: 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, 'Deny'))); }));
+}
+
+</script>
+<script>
 // ═══ WALL CLOCK (top right of the day card): current time + date, digital or analog; admin picks the style and whether kids may switch ═══
 function WallClock(props) {
   var h = React.createElement, tS = React.useState(Date.now()), now = tS[0], setNow = tS[1];
@@ -41180,13 +41236,13 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v190';
+var FM_BUILD = 'v191';
 (function () {
   function stamp() {
     try {
       if (document.getElementById('fm-build-stamp')) return;
       var d = document.createElement('div'); d.id = 'fm-build-stamp';
-      d.style.cssText = 'position:fixed;left:6px;bottom:4px;z-index:50;font:11px sans-serif;color:rgba(255,255,255,.45);pointer-events:none';
+      d.style.cssText = 'position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 64px);z-index:50;font:bold 13px sans-serif;color:rgba(255,255,255,.7);background:rgba(0,0,0,.35);padding:2px 7px;border-radius:8px;pointer-events:none';
       d.textContent = FM_BUILD; document.body.appendChild(d);
     } catch (e) {}
   }
