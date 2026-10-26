@@ -6476,7 +6476,7 @@ function NotifPanel({ notifs, onClose, onApprove, onApproveTask, onMarkAllRead, 
           ),
           n.approved === true && /*#__PURE__*/React.createElement('div',{style:{fontSize:9,color:'#4CAF82',fontWeight:800}},'✓ Approved'),
           n.approved === false && /*#__PURE__*/React.createElement('div',{style:{fontSize:9,color:'#EF5350',fontWeight:800}},'✗ Sent back'),
-          n.goto && window._gotoDest && /*#__PURE__*/React.createElement('button',{onClick:()=>window._gotoDest(n.goto, n.id),style:{display:'block',width:'100%',marginTop:6,background:'#FFB74D',color:'#000',border:'none',borderRadius:14,padding:'11px',fontSize:13,fontWeight:900,cursor:'pointer'}},'🛒 Open the flyers & menu →'),
+          (isAdmin && window._ntSetTab && (function(){ const d = typeof ntDest === 'function' ? ntDest(n) : null; return d && /*#__PURE__*/React.createElement('button',{onClick:()=>window._ntGo(d.go, n.id, window._ntSetTab, window._ntClose),style:{display:'block',width:'100%',marginTop:6,background:'#FFB74D',color:'#000',border:'none',borderRadius:14,padding:'13px',fontSize:14,fontWeight:900,cursor:'pointer',minHeight:48}}, d.label); })()),
           /*#__PURE__*/React.createElement('div',{style:{display:'flex',gap:8,marginTop:8}},
             (n.fromId || n.personId) && (n.fromId || n.personId) !== 'all' && (n.fromId || n.personId) !== currentPersonId && window._msgTo && /*#__PURE__*/React.createElement('button',{onClick:()=>window._msgTo(n.fromId || n.personId),style:{fontSize:13,fontWeight:800,background:'#1A73E8',color:'#fff',border:'none',borderRadius:16,padding:'9px 14px',cursor:'pointer'}},'💬 Reply'),
             onToggleSave && /*#__PURE__*/React.createElement('button',{onClick:()=>onToggleSave(n.id),style:{fontSize:13,fontWeight:800,background:n.saved?'#FFD54F':'rgba(255,213,79,.15)',color:n.saved?'#000':'#FFD54F',border:'none',borderRadius:16,padding:'9px 14px',cursor:'pointer'}},n.saved?'⭐ Saved':'☆ Save'),
@@ -7286,6 +7286,7 @@ function Dashboard({
   const effectiveId = viewingAs || personId;
   React.useEffect(() => { window._dashSetTab = setTab; }, []);
   React.useEffect(() => { window._clockApi = { sessions: sessions, onUpdate: onUpdate }; });
+  React.useEffect(() => { window._ntSetTab = setTab; window._ntClose = function () { setShowNotifs(false); }; });
   React.useEffect(() => { window._gotoDest = function (d, nid) { try { if (nid) syncSet('notifs/' + nid + '/read', true); } catch (e) {} var a = String(d || '').split(':'); if (a[0] === 'kitchen') { window._kitchenGo = a[1] || null; setShowNotifs(false); setTab('menu'); try { window.scrollTo(0, 0); } catch (e) {} } }; });
   React.useEffect(() => {
     window._currentPersonId = effectiveId; window._loginPersonId = personId;
@@ -7738,8 +7739,7 @@ function Dashboard({
     typeof PciWhereBoard === 'function' && React.createElement(PciWhereBoard, null),
     (isAdmin || isOwner) && typeof PasscodeRotate === 'function' && React.createElement(PasscodeRotate, null),
     typeof PciSettings === 'function' && React.createElement(PciSettings, null),
-    typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, null),
-    typeof ErasedBackups === 'function' && React.createElement(ErasedBackups, null),
+    typeof ResetCenter === 'function' ? React.createElement(ResetCenter, { family: fam, sessions: sessions }) : [typeof ResetAppCard === 'function' && React.createElement(ResetAppCard, { key: 'ra' }), typeof ErasedBackups === 'function' && React.createElement(ErasedBackups, { key: 'eb' })],
     typeof CheckInSettings === 'function' && React.createElement(CheckInSettings, null),
     typeof PointsSettings === 'function' && React.createElement(PointsSettings, null),
     typeof ReadyTimerSettings === 'function' && React.createElement(ReadyTimerSettings, null)),
@@ -7886,7 +7886,7 @@ function Dashboard({
       : /*#__PURE__*/React.createElement("div", {style:{padding:14,color:'rgba(255,255,255,.35)',fontSize:11,textAlign:'center'}}, "Pick who you're inspecting above — this shows THEIR steps and awards points to THEM. (Fastest way to approve day-to-day: tap the 🔔 notification bell instead — it lists everyone's pending SOP and chore approvals in one place.)")
   ),
   tab === 'admin' && isAdmin && typeof ScheduleRequestsPanel !== 'undefined' && /*#__PURE__*/React.createElement("div", {
-    style:{margin:'16px 0',background:'rgba(255,152,0,.04)',
+    'data-fold': 'schedreq', style:{margin:'16px 0',background:'rgba(255,152,0,.04)',
       border:'1px solid rgba(255,152,0,.15)',borderRadius:14,overflow:'hidden'}},
     /*#__PURE__*/React.createElement("div", {
       style:{padding:'10px 14px',background:'rgba(255,152,0,.06)',
@@ -34452,9 +34452,10 @@ function SchoolBlank(props) {
 function Fold(props) {
   var h = React.createElement, key = props.id; window._foldMem = window._foldMem || {};
   var oS = React.useState(window._foldMem[key] === true), open = oS[0], setOpen = oS[1];
+  React.useEffect(function () { var f = function (e) { if (e.detail === key) { setOpen(true); window._foldMem[key] = true; } }; window.addEventListener('fm-fold-open', f); return function () { window.removeEventListener('fm-fold-open', f); }; }, [key]);
   function tog() { var n = !open; setOpen(n); window._foldMem[key] = n; }
   var kids = React.Children ? React.Children.toArray(props.children) : [].concat(props.children || []);
-  return h('div', { style: { margin: '8px 14px', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, overflow: 'hidden' } },
+  return h('div', { 'data-fold': key, style: { margin: '8px 14px', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, overflow: 'hidden' } },
     h('button', { onClick: tog, style: { width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: open ? 'rgba(255,255,255,.07)' : 'transparent', border: 'none', color: '#fff', padding: '16px 16px', minHeight: 60, fontSize: 18, fontWeight: 900, cursor: 'pointer', textAlign: 'left' } },
       h('span', { style: { flex: 1 } }, props.title), props.badge ? h('span', { style: { background: '#EF5350', color: '#fff', borderRadius: 10, padding: '2px 8px', fontSize: 12 } }, props.badge) : null, h('span', { style: { fontSize: 26, color: '#FFD54F' } }, open ? '▾' : '▸')),
     open && h('div', { style: { padding: '2px 0 8px' } }, kids));
@@ -38370,9 +38371,9 @@ function ClockControl(props) {
 function lkBackup(o) {
   var ts = Date.now(), by = window._currentPersonName || 'admin';
   function put(items) {
-    var rec = { ts: ts, title: o.title, by: by, n: items.length, items: items };
+    var rec = { ts: ts, title: o.title, by: by, n: items.length, items: items, full: o.backupAll ? true : null, keep: o.keep ? true : null };
     syncSet('erase_backup/' + ts, rec);
-    try { var all = syncGet('erase_backup') || {}, ks = Object.keys(all).sort(); while (ks.length > 12) { syncSet('erase_backup/' + ks.shift(), null); } } catch (e) {}
+    try { var all = syncGet('erase_backup') || {}, ks = Object.keys(all).sort().filter(function (k) { return !(all[k] && all[k].keep); }); while (ks.length > 20) { syncSet('erase_backup/' + ks.shift(), null); } } catch (e) {}
     return ts;
   }
   if (o.backupAll) {
@@ -40173,8 +40174,143 @@ function TimerModePick(props) {
 
 </script>
 <script>
+// ═══ RESET & RESTORE CENTER (admin) — reset a timer, the day, or the whole app; save, restore and delete restore points ═══
+var RC_KEEP_ALWAYS = { erase_backup: 1, reset_backup: 1, reset_backup_last: 1, app_version: 1 };
+function rcDayPaths(pid) {
+  var tk = todayKey(), dk = typeof planDayKey === 'function' ? planDayKey() : tk, iso = typeof tcIso === 'function' ? tcIso(new Date()) : tk;
+  return ['startday/' + tk + '/' + pid, 'habitsdone/' + dk + '/' + pid, 'habitsrun/' + dk + '/' + pid, 'taskruns/' + dk + '/' + pid, 'plansdone/' + dk + '/' + pid, 'planlog/' + dk + '/' + pid, 'sessions/' + tk + '/' + pid,
+    'blocklog/' + tk + '/' + pid, 'breaks/' + tk + '/' + pid, 'attendance/' + iso + '/' + pid, 'checkin_pause/' + pid];
+}
+function rcClearClockUi(pids) { try { var up = window._clockApi && window._clockApi.onUpdate, cur = (window._clockApi && window._clockApi.sessions) || {}; if (up) { var n = Object.assign({}, cur); pids.forEach(function (p) { delete n[p]; }); up(n); } } catch (e) {} }
+function rcSnapshotItems(rec) { var o = {}; (rec.items || []).forEach(function (it) { o[it.p] = it.v; }); return o; }
+function ResetCenter(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.id !== 'grandpa'; });
+  var mS = React.useState(''), msg = mS[0], setMsg = mS[1], pS = React.useState(''), pick = pS[0], setPick = pS[1], nS = React.useState(''), nm = nS[0], setNm = nS[1], sS = React.useState({}), sel = sS[0], setSel = sS[1], oS = React.useState(false), showAll = oS[0], setShowAll = oS[1];
+  var bS = ktUse('erase_backup', {}), b = bS[0] || {};
+  var list = Object.keys(b).map(function (k) { return b[k]; }).filter(function (x) { return x && x.ts; }).sort(function (a, c) { return c.ts - a.ts; });
+  var shown = showAll ? list : list.slice(0, 5), chosen = Object.keys(sel).filter(function (k) { return sel[k]; });
+  function say(t) { setMsg(t); }
+  function guard(title, paths, then, okMsg) {
+    say('Saving a restore point first…');
+    lkBackup({ title: title, paths: paths }).then(function () { try { then(); say(okMsg + ' A restore point was saved — you can undo it below.'); } catch (e) { say('Error: ' + (e && e.message || e)); } })
+      .catch(function (e) { say('Nothing was reset — the restore point failed: ' + (e && e.message || e)); });
+  }
+  function resetTimer() {
+    var p = fam.filter(function (x) { return x.id === pick; })[0]; if (!p) { say('Pick a person first.'); return; }
+    var paths = rcDayPaths(p.id);
+    guard('Before: reset ' + p.name + '’s timers (today)', paths, function () { paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi([p.id]); }, '✅ ' + p.name + '’s timers, clock-ins, breaks and Start My Day are cleared.');
+  }
+  function resetDay() {
+    var paths = []; fam.forEach(function (p) { paths = paths.concat(rcDayPaths(p.id)); }); paths = paths.concat(['opsdone', 'opsprog', 'late_req']);
+    guard('Before: reset today for everyone', paths, function () { paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi(fam.map(function (p) { return p.id; })); }, '✅ Today is reset for everyone. Money, schedules, members and passwords were not touched.');
+  }
+  function wipe(keepPins) {
+    return function () {
+      if (typeof db === 'undefined' || !db) { say('Not connected — nothing was erased.'); return; }
+      db.ref('argilan').once('value').then(function (snap) {
+        var v = snap.val() || {}, ups = {}; Object.keys(v).forEach(function (k) { if (!RC_KEEP_ALWAYS[k] && !(keepPins && k === 'pins')) ups[k] = null; }); ups.reset_epoch = Date.now();
+        return db.ref('argilan').update(ups);
+      }).then(function () { rsClearLocal(); say('✅ Reset. Reloading as a brand-new app…'); setTimeout(function () { location.reload(); }, 900); })
+        .catch(function (e) { say('Could not reset: ' + (e && e.message || e)); });
+    };
+  }
+  function lockWipe(keepPins) {
+    window._lockedAction({ title: keepPins ? 'Reset the whole app (keep passwords)' : 'Reset EVERYTHING — passwords too', word: keepPins ? 'RESET' : 'NEWAPP', backupAll: true,
+      detail: keepPins ? 'Every wallet, history, schedule, grade, log, plan and setting goes back to brand-new. Everyone keeps their login passcode.' : 'The app goes back to brand-new, like a fresh install: all data AND all passcodes are erased on every device. Everyone will pick a new passcode.', run: wipe(keepPins) });
+  }
+  function restoreRec(x) {
+    if (x.full) {
+      window._lockedAction({ title: 'Restore the whole app to: ' + x.title, word: 'RESTORE', backupAll: true, detail: 'Everything goes back to how it was on ' + new Date(x.ts).toLocaleString() + '. What is there now is saved as a new restore point first, so you can come back.', run: function () {
+        var snapItems = rcSnapshotItems(x);
+        db.ref('argilan').once('value').then(function (s) {
+          var cur = s.val() || {}, ups = {}; Object.keys(cur).forEach(function (k) { if (!RC_KEEP_ALWAYS[k] && !(k in snapItems)) ups[k] = null; });
+          Object.keys(snapItems).forEach(function (k) { if (!RC_KEEP_ALWAYS[k]) ups[k] = snapItems[k]; }); ups.reset_epoch = Date.now();
+          return db.ref('argilan').update(ups);
+        }).then(function () { rsClearLocal(); say('↩ Restored. Reloading…'); setTimeout(function () { location.reload(); }, 900); }).catch(function (e) { say('Could not restore: ' + (e && e.message || e)); });
+      } });
+      return;
+    }
+    var paths = (x.items || []).map(function (it) { return it.p; });
+    guard('Before restoring: ' + x.title, paths, function () { (x.items || []).forEach(function (it) { try { syncSet(it.p, it.v); } catch (e) {} }); }, '↩ Restored “' + x.title + '”.');
+  }
+  function saveNow() {
+    var t = '💾 ' + (nm.trim() || 'Restore point'); say('Saving…');
+    lkBackup({ title: t, backupAll: true, keep: true }).then(function () { setNm(''); say('✅ Saved “' + t + '”. It is kept until you delete it.'); }).catch(function (e) { say('Could not save: ' + (e && e.message || e)); });
+  }
+  function delSel() { chosen.forEach(function (k) { try { syncSet('erase_backup/' + k, null); } catch (e) {} }); setSel({}); say('🗑 Deleted ' + chosen.length + ' restore point(s).'); }
+  var btn = function (bg, fg, on, t) { return h('button', { onClick: on, style: { display: 'block', width: '100%', textAlign: 'left', background: bg, color: fg, border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, padding: '13px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 8, minHeight: 48 } }, t); };
+  var dc = function (on, label, sure, extra) { return h(DcConfirm, { onConfirm: on, label: label, sure: sure, style: Object.assign({ display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, padding: '13px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 8, minHeight: 48 }, extra || {}) }); };
+  var hd = function (t) { return h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '16px 0 2px' } }, t); };
+  var sm = { fontSize: 12, color: '#b8b8c8', lineHeight: 1.5 };
+  return h(Fold, { id: 'resetcenter', title: '🔄 Reset & Restore' },
+    h('div', { style: { padding: '0 12px 8px' } },
+      h('div', { style: sm }, 'Every reset saves a restore point first, then asks you to confirm. Nothing here is permanent — you can always go back below.'),
+      hd('RESET A TIMER'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 } }, fam.map(function (p) { var on = pick === p.id; return h('button', { key: p.id, onClick: function () { setPick(p.id); }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: '#fff', background: on ? 'rgba(255,213,79,.2)' : 'rgba(255,255,255,.06)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.15)') } }, (p.emoji || '') + ' ' + p.name); })),
+      dc(resetTimer, '⏱ Reset ' + ((fam.filter(function (x) { return x.id === pick; })[0] || {}).name || 'their') + ' timers & clock-ins (today)', 'Tap again — clears their clocks'),
+      hd('RESET THE DAY'),
+      dc(resetDay, '☀️ Reset today for everyone (timers, checklists, attendance)', 'Tap again — everyone starts today over'),
+      h('div', { style: sm }, 'Money, members, schedules and passwords are not touched.'),
+      hd('SAVE & RESTORE POINTS'),
+      h('input', { value: nm, onChange: function (e) { setNm(e.target.value); }, placeholder: 'Name it (e.g. “Working great – Oct 26”)', style: { width: '100%', boxSizing: 'border-box', marginTop: 6, padding: 12, fontSize: 15, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff' } }),
+      btn('#4CAF82', '#000', saveNow, '💾 Save a restore point of the whole app now'),
+      list.length > 0 && btn('rgba(255,213,79,.15)', '#FFD54F', function () { restoreRec(list[0]); }, '↩ Go back to the newest restore point (' + new Date(list[0].ts).toLocaleString() + ')'),
+      !list.length && h('div', { style: Object.assign({}, sm, { marginTop: 8 }) }, 'No restore points yet. Save one before you test something big.'),
+      shown.map(function (x) {
+        return h('div', { key: x.ts, style: { padding: '10px 0', borderTop: '1px solid rgba(255,255,255,.1)', marginTop: 8 } },
+          h('label', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' } },
+            h('input', { type: 'checkbox', checked: !!sel[x.ts], onChange: function () { var n = Object.assign({}, sel); n[x.ts] = !n[x.ts]; setSel(n); }, style: { width: 22, height: 22, marginTop: 2 } }),
+            h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 14, fontWeight: 800, color: '#fff' } }, x.title), h('div', { style: { fontSize: 11, color: '#9a9ab0' } }, new Date(x.ts).toLocaleString() + ' · ' + (x.full ? 'whole app' : 'part of the app') + ' · ' + (x.n || 0) + ' item(s)' + (x.keep ? ' · 📌 kept' : '')))),
+          h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 } },
+            h(DcConfirm, { onConfirm: function () { restoreRec(x); }, label: '↩ Restore', sure: 'Tap again — go back to this', style: { background: 'rgba(255,213,79,.15)', color: '#FFD54F', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: '10px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer', minHeight: 44 } }),
+            h(DcConfirm, { onConfirm: function () { try { syncSet('erase_backup/' + x.ts, null); } catch (e) {} say('🗑 Deleted.'); }, label: '🗑 Delete', sure: 'Tap again — delete it', style: { background: 'rgba(255,255,255,.07)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, padding: '10px 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer', minHeight: 44 } })));
+      }),
+      list.length > 5 && btn('rgba(255,255,255,.07)', '#fff', function () { setShowAll(!showAll); }, showAll ? '▲ Show fewer' : '▼ Show all ' + list.length + ' restore points'),
+      chosen.length > 0 && dc(delSel, '🗑 Delete the ' + chosen.length + ' selected', 'Tap again — delete ' + chosen.length + ' restore point(s)'),
+      hd('START OVER (BIG)'),
+      btn('rgba(229,57,53,.15)', '#FF8A80', function () { lockWipe(true); }, '🧹 Reset the whole app — keep everyone’s passwords'),
+      btn('rgba(229,57,53,.25)', '#FF8A80', function () { lockWipe(false); }, '🧨 Reset EVERYTHING — brand-new app, passwords too'),
+      h('div', { style: sm }, 'These two take three steps (type a word, wait a few seconds) and save a full restore point first.'),
+      msg && h('div', { style: { fontSize: 13, color: '#81C784', marginTop: 12, lineHeight: 1.5 } }, msg)));
+}
+
+</script>
+<script>
+// ═══ NOTIFICATIONS THAT TAKE YOU THERE (admin): each one that needs action becomes a button to the right place; plain messages stay plain ═══
+function ntDest(n) {
+  if (!n) return null;
+  if (n.goto) return { go: n.goto, label: n.gotoLabel || '🛒 Open the flyers & menu →' };
+  var t = String(n.type || ''), s = String(n.title || '') + ' ' + String(n.message || '');
+  if (t === 'message' || t === 'checkin' || t === 'payment' || t === 'paycheck') return null;
+  if (t === 'pin_reset_request' || /passcode|\bpin\b/i.test(s)) return { go: 'admin:adminsettings', label: '🔑 Go change the passcode →' };
+  if (/was late|late request|excus|absen/i.test(s)) return { go: 'admin:clockctl', label: '⏰ Excuse or deny →' };
+  if (/needs your OK|wants to add to their schedule/i.test(s)) return { go: 'admin:schedreq', label: '📅 Approve the schedule request →' };
+  if (t === 'overdue' || /forgotten to clock|overdue/i.test(s)) return { go: 'admin:clockctl', label: '⏱ Fix their clock →' };
+  if (/clocked into school/i.test(s)) return { go: 'work:school', label: '📚 Open School →' };
+  if (/new grade/i.test(s)) return { go: 'work:grades', label: '📒 Open grades →' };
+  if (/flyers|menu/i.test(s)) return { go: 'kitchen:menu', label: '🛒 Open the flyers & menu →' };
+  if (/bills? start|envelope/i.test(s)) return { go: 'admin:top', label: '🏠 Open Coming Up →' };
+  if (t === 'approval' || t === 'sop_inspection' || n.requiresApproval) return null; // decided right in the notification
+  return null;
+}
+window._ntGo = function (d, nid, setTab, closeNotifs) {
+  try { if (nid) syncSet('notifs/' + nid + '/read', true); } catch (e) {}
+  var a = String(d || '').split(':'), k = a[0], v = a[1] || '';
+  try { closeNotifs && closeNotifs(); } catch (e) {}
+  if (k === 'admin') {
+    setTab('admin');
+    var ids = v === 'adminsettings' ? ['adminsettings'] : v === 'clockctl' ? ['clockctl'] : v === 'schedreq' || v === 'top' ? [] : [v];
+    window._foldMem = window._foldMem || {}; ids.forEach(function (i) { window._foldMem[i] = true; });
+    setTimeout(function () { try { ids.forEach(function (i) { window.dispatchEvent(new CustomEvent('fm-fold-open', { detail: i })); }); } catch (e) {} }, 120);
+    setTimeout(function () { try { var el = v === 'top' ? null : document.querySelector('[data-fold="' + (ids[0] || v) + '"]'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo(0, 0); } catch (e) {} }, 500);
+  } else if (k === 'work') { window._workStart = v || 'school'; setTab('work'); try { window.scrollTo(0, 0); } catch (e) {} }
+  else if (typeof window._gotoDest === 'function') window._gotoDest(d, nid);
+};
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v163';
+var FM_BUILD = 'v164';
 (function () {
   function stamp() {
     try {
