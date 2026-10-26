@@ -7762,7 +7762,8 @@ function Dashboard({
     typeof PointsSettings === 'function' && React.createElement(PointsSettings, null),
     typeof ReadyTimerSettings === 'function' && React.createElement(ReadyTimerSettings, null)),
   secVis('pay') && isAdmin && typeof BudgetHomeCard !== 'undefined' && React.createElement(Fold, { id: 'budget', title: '💵 Budget snapshot' }, React.createElement(BudgetHomeCard, {isAdmin: true, onOpen: () => setTab('bills')})),
-  secVis('reports') && isOwner && typeof LiveNow === 'function' && React.createElement(Fold, { id: 'livenow', title: '🔴 Live now' }, React.createElement(LiveNow, {family: fam})),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof LiveNow === 'function' && React.createElement(LiveNow, { family: fam, sessions: sessions, onUpdate: onUpdate }),
+  secVis('reports') && (isAdmin || isOwner) && typeof LiveNow === 'function' && React.createElement(Fold, { id: 'livenow', title: '🔴 Live now' }, React.createElement(LiveNow, {family: fam})),
   secVis('reports') && typeof SchoolLinks !== 'undefined' && React.createElement(Fold, { id: 'schoollinks', title: '🏫 Google Classroom & school links' }, React.createElement(SchoolLinks, {personId: effectiveId, isAdmin: isOwner, family: fam})),
   secVis('reports') && typeof WasteReport !== 'undefined' && isAdmin && React.createElement(Fold, { id: 'waste', title: '📉 Time waste report' }, React.createElement(WasteReport, {sessions: sessions, family: fam, wallets: wallets, payMode: payMode}))), tab === 'menu' && (typeof KitchenModule !== 'undefined' ? /*#__PURE__*/React.createElement(KitchenModule, { isAdmin: isAdmin || isOwner, personId: effectiveId, family: fam }) : (typeof WeeklyMenuReview !== 'undefined' && /*#__PURE__*/React.createElement(WeeklyMenuReview, {isAdmin:isAdmin||isOwner}))),
   tab === 'admin' && admSec === 'reports' && (isAdmin || isOwner) && typeof ComingUp === 'function' && React.createElement(ComingUp, { personId: effectiveId, isAdmin: true, family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }),
@@ -31664,14 +31665,17 @@ function LiveNow(props) {
   var fam = props.family || [];
   var now = Date.now(), live = Object.values(pres).filter(function (p) { return p && p.ts && now - p.ts < 70000 && p.pid; });
   var byPid = {}; live.forEach(function (p) { byPid[p.pid] = (byPid[p.pid] || 0) + 1; });
+  var oS = React.useState(null), openId = oS[0], setOpenId = oS[1];
+  Object.keys(sdAll).forEach(function (id) { var r = sdAll[id]; if (r && r.dayStart && !r.dayEnd && !byPid[id]) byPid[id] = 0; });
+  Object.keys(ses).forEach(function (id) { var d = ses[id] || {}; if ((d.current || (d.others && d.others.length)) && byPid[id] == null) byPid[id] = 0; });
   var who = Object.keys(byPid);
   var nm = function (id) { var p = fam.find(function (x) { return x.id === id; }); return p ? p.emoji + ' ' + p.name : id; };
   var acts = function (id) { var d = ses[id] || {}; return [d.current].concat(d.others || []).filter(Boolean).map(function (a) { return a.activity; }); };
   return h('div', { style: { background: 'rgba(76,175,130,.1)', border: '1px solid rgba(76,175,130,.4)', borderRadius: 16, padding: 14, margin: '10px 14px' } },
     h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '🟢 Live now (' + who.length + ')'),
     typeof db === 'undefined' || !db ? h('div', { style: { fontSize: 12, color: '#FFB74D' } }, 'This device is not connected to family sync yet. Open Admin → Sync Setup and follow the 6 easy steps.') :
-      who.length === 0 ? h('div', { style: { fontSize: 13, color: '#b8b8c8' } }, 'No one else has the app open right now.') :
-        who.map(function (id) { var a = acts(id); return h('div', { key: id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 14, color: '#fff' } }, h('span', { style: { fontWeight: 800 } }, nm(id)), byPid[id] > 1 && h('span', { style: { fontSize: 11, color: '#b8b8c8' } }, byPid[id] + ' devices'), h('span', { style: { fontSize: 12, color: a.length ? '#81C784' : '#999' } }, a.length ? '⏱ ' + a.join(' + ') : 'not clocked in'), (sdAll[id] || {}).readyAt && h('span', { style: { fontSize: 12, color: '#FFD54F' } }, '🌅 ready')); }));
+      who.length === 0 ? h('div', { style: { fontSize: 13, color: '#b8b8c8' } }, 'No one is clocked in or has the app open right now.') :
+        who.map(function (id) { var a = acts(id), per = fam.find(function (x) { return x.id === id; }); return h('div', { key: id }, h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 14, color: '#fff', flexWrap: 'wrap' } }, h('button', { onClick: function () { setOpenId(openId === id ? null : id); }, style: { fontWeight: 800, fontSize: 14, color: '#fff', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, minHeight: 38, padding: '0 10px', cursor: 'pointer' } }, nm(id) + (openId === id ? ' ▾' : ' ✎')), byPid[id] > 1 && h('span', { style: { fontSize: 11, color: '#b8b8c8' } }, byPid[id] + ' devices'), h('span', { style: { fontSize: 12, color: a.length ? '#81C784' : '#999' } }, a.length ? '⏱ ' + a.join(' + ') : 'not clocked in'), (sdAll[id] || {}).readyAt && h('span', { style: { fontSize: 12, color: '#FFD54F' } }, '🌅 ready')), openId === id && per && typeof PersonTimeEditor === 'function' && h(PersonTimeEditor, { person: per, sessions: props.sessions, onUpdate: props.onUpdate })); }));
 }
 
 </script>
@@ -31778,6 +31782,7 @@ function StartMyDay(props) {
   var allDays = Object.keys(htAll).sort().slice(-7);
   var submitted = !!sd.dayEnd;
   var startOpen = stOpen != null ? stOpen : !clocked;
+  window._forgotMorning = function () { readyGo({ forgot: true }); };
   function readyGo(opts) { playOnce('success');
     var forgot = !!(opts && opts.forgot === true), rNow = Date.now(), planned = limMin * 60, elapsed = sd.dayStart ? Math.round((rNow - sd.dayStart) / 1000) : 0, dkR = typeof rtDay === 'function' ? rtDay() : todayKey();
     try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, forgot ? { readyAt: rNow, forgotTimers: true } : { readyAt: rNow })); } catch (e) {}
@@ -31785,7 +31790,7 @@ function StartMyDay(props) {
     try {
       var haveM = ((htAll[dkR] || {}).morning) || null;
       if (forgot) { syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: planned, ts: rNow, forgot: true });
-        mornList.forEach(function (lb) { var hid = 'morning_' + rtHash(lb); if (!(mdS[0] || {})[hid] && !(mSk[0] || {})['h_' + hid]) syncSet('skips/' + dkR + '/' + pid + '/h_' + hid, { ts: rNow, label: lb }); }); }
+        mornList.forEach(function (lb) { var hid = 'morning_' + rtHash(lb); if (!(mdS[0] || {})[hid]) syncSet('habitsdone/' + dkR + '/' + pid + '/' + hid, rNow); }); }
       else if (!haveM && sd.dayStart && elapsed > 0 && elapsed < planned) syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: elapsed, ts: rNow });
     } catch (e) {}
     // getting ready is over: clock out of My Time. Work and Household Work unlock — the child clocks into each one by hand.
@@ -31853,15 +31858,15 @@ function StartMyDay(props) {
           var mornFoot = h('div', null,
         !ready && mornDone && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 10, color: '#fff', fontWeight: 900, fontSize: 16, textAlign: 'center' } }, '✅ Every morning step is checked off!'),
             !ready && !isKid && big('#4CAF82', '#000', function () { readyGo(); }, "✅ I'm ready for the day — unlock Work & Household Work"),
-            !ready && !lateNow && h('button', { onClick: function () { var q = 'I forgot to use my timers, but I was ready and at the table before ' + limMin + ' minutes. No points earned or taken. Is that true?'; var okc = typeof window._safeConfirm === 'function' ? window._safeConfirm(q) : window.confirm(q); if (okc) readyGo({ forgot: true }); }, style: { display: 'block', width: '100%', background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.3)', borderRadius: 14, padding: 12, fontWeight: 800, fontSize: 14, marginTop: 8, cursor: 'pointer' } }, '⏱ I forgot to use my timers — I was ready in under ' + limMin + ' min'),
             ready && h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 13 } },
               h('div', { style: { flex: 1 } }, '✅ Ready at ' + tm(sd.readyAt) + (sd.forgotTimers ? ' · timers not used — nothing earned or taken' : mornToday ? ' · morning routine ' + (mornToday.planned - mornToday.actual >= 0 ? '⚡ saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over') : '') + (sd.lateAt ? ' · ⏰ late' : '')),
               !submitted && h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null })); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' } }, '↩ Not ready')));
           var eveFoot = (!submitted && typeof clocked !== 'undefined' && clocked && !isKid) ? evenSubmit : null;
           if (isKid && typeof MyDayList === 'function') {
             var dkA = typeof rtDay === 'function' ? rtDay() : todayKey();
-            var afterFoot = bdone.afternoon ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 14 } }, h('div', { style: { flex: 1 } }, '✅ Afternoon done'), h('button', { onClick: function () { try { syncSet('blockdone/' + dkA + '/' + pid + '/afternoon', null); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, '↩ undo'))
-              : big('rgba(255,255,255,.14)', '#fff', function () { try { syncSet('blockdone/' + dkA + '/' + pid + '/afternoon', Date.now()); } catch (e) {} }, '✅ I’m done with my afternoon');
+            var doneFootFor = function (key, label) { return bdone[key] ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 14 } }, h('div', { style: { flex: 1 } }, '✅ ' + label + ' done — now tap 🏁 End my day at the top when your whole day is finished'), h('button', { onClick: function () { try { syncSet('blockdone/' + dkA + '/' + pid + '/' + key, null); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, '↩ undo'))
+              : big('rgba(255,255,255,.14)', '#fff', function () { try { syncSet('blockdone/' + dkA + '/' + pid + '/' + key, Date.now()); } catch (e) {} try { if (typeof clockOutAll === 'function') clockOutAll(pid, props.sessions || {}, props.onUpdate); } catch (e) {} }, '✅ I’m done with my ' + label + ' (forgot to clock out? this clocks you out)'); };
+            var afterFoot = doneFootFor('afternoon', 'afternoon'), schoolFoot = doneFootFor('school', 'mid-morning'), eveKidFoot = doneFootFor('evening', 'evening');
             var gotEl = (mornToday || ready) ? h('div', { style: { background: 'rgba(76,175,130,.12)', border: '2px solid rgba(76,175,130,.5)', borderRadius: 16, padding: 14, marginBottom: 10 } },
               h('div', { style: { fontSize: 12, fontWeight: 900, color: '#9be3bd', letterSpacing: 1 } }, '☀️ GETTING READY'),
               mornToday ? h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', margin: '4px 0' } }, 'Took ' + fm(mornToday.actual) + ' · should take ' + fm(mornToday.planned)) : h('div', { style: { fontSize: 18, fontWeight: 800, color: '#fff', margin: '4px 0' } }, ready ? 'Ready at ' + tm(sd.readyAt) : ''),
@@ -31869,7 +31874,7 @@ function StartMyDay(props) {
               !submitted && h(DcConfirm, { onConfirm: function () { try { var dkR = typeof rtDay === 'function' ? rtDay() : todayKey(); ['habitsdone', 'habitstart', 'habitsrun'].forEach(function (b) { var all = syncGet(b + '/' + dkR + '/' + pid) || {}; Object.keys(all).forEach(function (k) { if (/^morning/.test(k)) syncSet(b + '/' + dkR + '/' + pid + '/' + k, null); }); }); syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null, lateAt: null })); } catch (e) {} }, label: '↺ Start getting ready over', sure: 'Tap again — clears this morning’s checkmarks', style: { display: 'block', width: '100%', minHeight: 56, background: 'rgba(255,255,255,.12)', color: '#fff', border: '2px solid rgba(255,255,255,.35)', borderRadius: 14, fontWeight: 900, fontSize: 17, cursor: 'pointer' } })) : null;
             return h('div', null,
               (function () {
-                var mdp = { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, flow: true, noSchoolBar: true, groupHide: { morning: ready, afternoon: !!bdone.afternoon }, groupFoot: { morning: mornFoot, afternoon: afterFoot, evening: eveFoot } };
+                var mdp = { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, flow: true, noSchoolBar: true, forgotOK: { morning: !ready && !lateNow, school: !bdone.school, afternoon: !bdone.afternoon, evening: !bdone.evening }, groupHide: { morning: ready, afternoon: !!bdone.afternoon }, groupFoot: { morning: mornFoot, school: schoolFoot, afternoon: afterFoot, evening: eveKidFoot } };
                 kidGlanceEl = h(MyDayList, Object.assign({ key: 'glance', glance: true, preEl: [gotEl && h('div', { key: 'got' }, gotEl), !ready && countdown && h('div', { key: 'cd' }, countdown)], postEl: [] }, mdp));
                 return h(MyDayList, Object.assign({ key: 'full', noHead: true }, mdp));
               })());
@@ -34089,6 +34094,7 @@ function MyDayList(props) {
       var dn = L.filter(function (r) { return r.on || r.skip; }).length, plan = L.reduce(function (n, r) { return n + (r.mins || 0); }, 0), took = 0, should = 0, prev = (g === 'morning' && sd.dayStart) ? sd.dayStart : 0;
       L.filter(function (r) { return r.on && dts(r); }).sort(function (a, b) { return dts(a) - dts(b); }).forEach(function (r) { var t = dts(r), st = hst[r.hid || r.k] || (autoT ? prev : 0); if (st && t > st) { took += t - st; should += (r.mins || 0) * 60000; } prev = t; });
       if (L.length) out.push({ sep: true, k: 'gh' + g, el: h('div', { key: 'gh' + g, style: { display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 2px 6px' } }, h('div', { style: { flex: 1, fontSize: 17, fontWeight: 900, color: '#fff' } }, TT[g]), h('div', { style: { fontSize: 13, fontWeight: 800, color: dn === L.length ? '#81C784' : '#c8c8d8' } }, hide[g] ? '✅ done' : dn + ' of ' + L.length + (plan ? ' · ' + plan + ' min' : ''))) });
+      if (props.forgotOK && props.forgotOK[g] && L.some(function (r) { return !(r.on || r.skip); }) && typeof ForgotTimers === 'function') out.push({ sep: true, k: 'gfg' + g, el: h(ForgotTimers, { key: 'gfg' + g, g: g, pid: pid, rows: L, sessions: props.sessions, onUpdate: props.onUpdate }) });
       if (g === 'school' && L.length && !props.noSchoolBar && typeof SchoolSessionBar === 'function') out.push({ sep: true, k: 'gsb', el: h(SchoolSessionBar, { key: 'gsb', sid: pid, sessions: props.sessions, onUpdate: props.onUpdate, controls: true }) });
       if (!hide[g] || L.some(function (r) { return r.kind === 'chore' && !r.on && !r.skip; })) L.forEach(function (r) { out.push(r); });
       out.push({ sep: true, k: 'gf' + g, el: h('div', { key: 'gf' + g }, should > 0 && h('div', { style: { margin: '2px 0 8px', padding: '10px 12px', borderRadius: 12, background: took <= should ? 'rgba(76,175,130,.14)' : 'rgba(239,83,80,.14)', border: '1px solid ' + (took <= should ? 'rgba(76,175,130,.5)' : 'rgba(239,83,80,.5)'), color: '#fff', fontSize: 14, fontWeight: 800 } }, '⏱ Took ' + mmss(took) + ' · should take ' + mmss(should) + (took <= should ? ' · ⚡ saved ' + mmss(should - took) : ' · ' + mmss(took - should) + ' over')), foot[g] || null) });
@@ -41107,6 +41113,37 @@ function ClockTimeFix(props) {
       h('button', { onClick: function () { save(p.id); }, disabled: vals[p.id] == null, style: { minHeight: 38, padding: '0 12px', borderRadius: 8, border: 'none', background: vals[p.id] != null ? '#4CAF82' : '#555', color: '#000', fontWeight: 900, cursor: 'pointer' } }, cur ? 'Save' : 'Clock in'), !cur && h('span', { style: { fontSize: 11.5, color: '#9aa' } }, 'not clocked in')); })));
 }
 
+// click a name in Live now: edit when their day started / ended, plus every clock they have
+function PersonTimeEditor(props) {
+  var h = React.createElement, p = props.person, pid = p.id, k = todayKey(), sdS = ktUse('startday/' + k + '/' + pid, null), sd = sdS[0] || {};
+  var vS = React.useState({}), v = vS[0], setV = vS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  function loc(ms) { var d = new Date(ms), q = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + q(d.getMonth() + 1) + '-' + q(d.getDate()) + 'T' + q(d.getHours()) + ':' + q(d.getMinutes()); }
+  function put(field, val) { try { syncSet('startday/' + k + '/' + pid, Object.assign({}, sd, (function () { var o = {}; o[field] = val; return o; })())); setMsg('Saved.'); setTimeout(function () { setMsg(''); }, 2000); } catch (e) {} }
+  function saveF(field) { var ms = v[field] ? new Date(v[field]).getTime() : 0; if (!ms) return; put(field, ms); var o = {}; o[field] = null; setV(Object.assign({}, v, o)); }
+  var inp = { minHeight: 38, borderRadius: 8, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: '0 6px' }, bt = function (on) { return { minHeight: 38, padding: '0 12px', borderRadius: 8, border: 'none', background: on ? '#4CAF82' : '#555', color: '#000', fontWeight: 900, cursor: 'pointer' }; };
+  var row = function (field, label) { var cur = sd[field]; return h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '4px 0', color: '#fff', fontSize: 13.5 } }, h('span', { style: { minWidth: 92, fontWeight: 800 } }, label), h('input', { type: 'datetime-local', value: v[field] != null ? v[field] : (cur ? loc(cur) : ''), onChange: function (e) { var o = {}; o[field] = e.target.value; setV(Object.assign({}, v, o)); }, style: inp }), h('button', { onClick: function () { saveF(field); }, disabled: v[field] == null, style: bt(v[field] != null) }, 'Save'), field === 'dayEnd' && cur && h('button', { onClick: function () { put('dayEnd', null); }, style: { minHeight: 38, padding: '0 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,.35)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 12.5 } }, 'Reopen day')); };
+  return h('div', { style: { margin: '4px 0 10px', padding: 10, borderRadius: 12, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.2)' } },
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 2 } }, '🕐 ' + p.name + ' — today’s times'),
+    row('dayStart', 'Day started'), row('dayEnd', 'Day ended'), msg && h('div', { style: { fontSize: 12, color: '#9be5bd' } }, msg),
+    typeof MemberClocks === 'function' && h('div', { style: { marginTop: 6 } }, h(MemberClocks, { person: p, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook })),
+    typeof SchoolClockFix === 'function' && h(SchoolClockFix, { family: [p], sessions: (window._clockApi && window._clockApi.sessions) || props.sessions || {}, onUpdate: props.onUpdate, bare: true }));
+}
+
+// "I forgot to use my timers" — top of each part of the day. 7-second wait (cancel any time), then checks everything off with no points earned or taken.
+function ForgotTimers(props) {
+  var h = React.createElement, sS = React.useState(0), left = sS[0], setLeft = sS[1], g = props.g;
+  React.useEffect(function () { if (left <= 0) return; var t = setTimeout(function () { if (left === 1) { finish(); setLeft(0); } else setLeft(left - 1); }, 1000); return function () { clearTimeout(t); }; }, [left]);
+  function finish() {
+    var pid = props.pid, dk = typeof rtDay === 'function' ? rtDay() : todayKey(), now = Date.now();
+    try { if (g === 'morning' && typeof window._forgotMorning === 'function') window._forgotMorning(); } catch (e) {}
+    try { (props.rows || []).forEach(function (r) { if (r.kind === 'habit' && !r.on) syncSet('habitsdone/' + dk + '/' + pid + '/' + r.hid, now); }); } catch (e) {}
+    if (g !== 'morning') { try { syncSet('blockdone/' + dk + '/' + pid + '/' + g, now); } catch (e) {} try { if (typeof clockOutAll === 'function') clockOutAll(pid, props.sessions || {}, props.onUpdate); } catch (e) {} }
+  }
+  var lbl = { morning: 'morning', school: 'mid-morning', afternoon: 'afternoon', evening: 'evening' }[g] || g;
+  if (left > 0) return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 8px', padding: '10px 12px', borderRadius: 12, background: 'rgba(255,213,79,.14)', border: '2px solid #FFD54F', color: '#fff', fontWeight: 800, fontSize: 14 } }, h('div', { style: { flex: 1 } }, '⏳ Checking in ' + left + '… be honest — were you really done?'), h('button', { onClick: function () { setLeft(0); }, style: { minHeight: 38, padding: '0 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,.4)', background: 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, 'Cancel'));
+  return h('button', { onClick: function () { setLeft(7); }, style: { display: 'block', width: '100%', margin: '0 0 8px', minHeight: 44, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontWeight: 800, fontSize: 13.5, cursor: 'pointer' } }, '⏱ I forgot to use my timers — I was ready in time (' + lbl + ')');
+}
+
 </script>
 <script>
 // ═══ WALL CLOCK (top right of the day card): current time + date, digital or analog; admin picks the style and whether kids may switch ═══
@@ -41143,7 +41180,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v188';
+var FM_BUILD = 'v190';
 (function () {
   function stamp() {
     try {
