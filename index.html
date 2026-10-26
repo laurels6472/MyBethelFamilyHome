@@ -41162,6 +41162,9 @@ function PersonTimeEditor(props) {
   return h('div', { style: { margin: '4px 0 10px', padding: 10, borderRadius: 12, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.2)' } },
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 2 } }, '🕐 ' + p.name + ' — today’s times'),
     row('dayStart', 'Day started'), row('dayEnd', 'Day ended'), msg && h('div', { style: { fontSize: 12, color: '#9be5bd' } }, msg),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '6px 0', color: '#fff', fontSize: 13.5 } }, h('span', { style: { fontWeight: 800 } }, '⏱ Restart day from'),
+      h('input', { type: 'time', value: v.fit != null ? v.fit : '', onChange: function (e) { setV(Object.assign({}, v, { fit: e.target.value })); }, style: inp }),
+      h('button', { onClick: function () { if (!v.fit) return; var q = v.fit.split(':'), d = new Date(); d.setHours(+q[0], +q[1], 0, 0); taFitDay(pid, d.getTime(), p.name); setMsg('Day timer restarted and the schedule fits to ' + v.fit + '.'); setV(Object.assign({}, v, { fit: null })); }, disabled: !v.fit, style: bt(!!v.fit) }, 'Fit the day')),
     typeof MemberClocks === 'function' && h('div', { style: { marginTop: 6 } }, h(MemberClocks, { person: p, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook })),
     typeof SchoolClockFix === 'function' && h(SchoolClockFix, { family: [p], sessions: (window._clockApi && window._clockApi.sessions) || props.sessions || {}, onUpdate: props.onUpdate, bare: true }));
 }
@@ -41196,16 +41199,18 @@ function taApprovedLate(pid) { try { var r = syncGet('timeadj/' + todayKey() + '
 function LateStartAsk(props) {
   var h = React.createElement, pid = props.pid, k = todayKey(), rS = ktUse('timeadj/' + k + '/' + pid, null), rec = rS[0];
   var tS = React.useState(''), tv = tS[0], setTv = tS[1], mS = React.useState(false), more = mS[0], setMore = mS[1];
-  var ss = taSchoolStart(props.sessions, pid), wd = new Date().getDay();
+  var sdS = ktUse('startday/' + k + '/' + pid, null), sdr = sdS[0] || {};
+  var ssc = taSchoolStart(props.sessions, pid), what = ssc ? 'school' : 'day', ss = ssc || sdr.dayStart || 0, wd = new Date().getDay();
   if (!(typeof ssKid === 'function' && ssKid(pid)) || wd < 1 || wd > 5 || !ss || taMin(ss) <= 480 + 7) return null;
+  var what0 = what === 'school' ? 'clocked into school' : 'started your day';
   var tm = function (ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
-  function send(kind, start) { var r = { kind: kind, start: start, clockedAt: ss, status: 'pending', ts: Date.now(), name: props.name }; try { syncSet('timeadj/' + k + '/' + pid, r); } catch (e) {} try { var f = typeof window._addNotifFn === 'function' ? window._addNotifFn : props.addNotif; if (f) f('info', pid, '⏰ ' + (props.name || pid) + ' asked to adjust a late school start', kind === 'late' ? 'Clocked in at ' + tm(ss) + ' (school starts 8:00 AM). Wants the schedule to slide. Approve in Administration → Today.' : 'Says school really started at ' + tm(start) + ' and they forgot to clock in. Approve in Administration → Today.', { adminOnly: true }); } catch (e) {} }
+  function send(kind, start) { var r = { kind: kind, start: start, clockedAt: ss, what: what, status: 'pending', ts: Date.now(), name: props.name }; try { syncSet('timeadj/' + k + '/' + pid, r); } catch (e) {} try { var f = typeof window._addNotifFn === 'function' ? window._addNotifFn : props.addNotif; if (f) f('info', pid, '⏰ ' + (props.name || pid) + ' asked to adjust a late school start', kind === 'late' ? (what === 'school' ? 'Clocked into school at ' : 'Started the day at ') + tm(ss) + ' (planned 8:00 AM). Wants the schedule to slide. Approve in Administration → Today.' : 'Says school really started at ' + tm(start) + ' and they forgot to clock in. Approve in Administration → Today.', { adminOnly: true }); } catch (e) {} }
   var box = { margin: '8px 0', padding: 12, borderRadius: 14, background: 'rgba(255,213,79,.12)', border: '2px solid #FFD54F', color: '#fff' }, bt = function (bg, fg) { return { display: 'block', width: '100%', textAlign: 'left', minHeight: 44, borderRadius: 12, border: 'none', background: bg, color: fg, fontWeight: 800, fontSize: 14, padding: '8px 12px', marginTop: 6, cursor: 'pointer' }; };
   if (rec) return h('div', { style: box }, rec.status === 'approved' ? '✅ Approved — your schedule was adjusted.' : rec.status === 'denied' ? '❌ Not approved. Ask Mom or Dad if you have questions.' : '⏳ Waiting for Mom or Dad to approve your time change.');
   return h('div', { style: box },
-    h('div', { style: { fontSize: 15, fontWeight: 900 } }, '⏰ You clocked into school at ' + tm(ss) + ' — school starts at 8:00 AM'),
+    h('div', { style: { fontSize: 15, fontWeight: 900 } }, '⏰ You ' + what0 + ' at ' + tm(ss) + ' — your day was planned to start at 8:00 AM'),
     h('div', { style: { fontSize: 13, color: '#e8e8f4', margin: '2px 0' } }, 'What happened? Mom or Dad will approve it.'),
-    h('button', { onClick: function () { send('late', ss); }, style: bt('#FFB74D', '#000') }, 'I really started late — slide my schedule to fit'),
+    h('button', { onClick: function () { send('late', ss); }, style: bt('#FFB74D', '#000') }, 'I really started late — restart my timers from there and fit my schedule'),
     !more ? h('button', { onClick: function () { setMore(true); }, style: bt('rgba(255,255,255,.14)', '#fff') }, 'I started on time but forgot to clock in') :
       h('div', { style: { marginTop: 6 } }, h('div', { style: { fontSize: 13, fontWeight: 800 } }, 'What time did you really start?'), h('div', { style: { display: 'flex', gap: 6, marginTop: 4 } },
         h('input', { type: 'time', value: tv, onChange: function (e) { setTv(e.target.value); }, style: { flex: 1, minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: '0 8px', fontSize: 16 } }),
@@ -41217,7 +41222,8 @@ function TimeAdjustCard(props) {
   var tm = function (ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   function decide(pid, ok) {
     var r = all[pid]; if (!r) return;
-    if (ok && r.kind === 'forgot') { try {
+    if (ok && r.kind === 'forgot' && r.what === 'day') { try { var sd0 = syncGet('startday/' + k + '/' + pid) || {}; syncSet('startday/' + k + '/' + pid, Object.assign({}, sd0, { dayStart: r.start })); } catch (e) {} }
+    else if (ok && r.kind === 'forgot') { try {
       var api = window._clockApi || {}, sessions = api.sessions || props.sessions || {}, up = api.onUpdate || props.onUpdate, d = sessions[pid] || {}, act = clockActiveList(d), today = (d.today || []).slice(), done = false;
       act = act.map(function (x) { if (!done && x.activity === 'school' && x.startTime > r.start) { done = true; return Object.assign({}, x, { startTime: r.start, adjustedBy: 'parent' }); } return x; });
       if (!done) today = today.map(function (x) { if (!done && x.activity === 'school' && x.startTime > r.start) { done = true; var e = Object.assign({}, x, { startTime: r.start, adjustedBy: 'parent' }); if (x.endTime) e.duration = Math.round(((x.endTime - r.start) / 60000) * 10) / 10; return e; } return x; });
@@ -41230,9 +41236,16 @@ function TimeAdjustCard(props) {
   return h('div', { style: { margin: '10px 14px', padding: 12, borderRadius: 16, background: 'rgba(255,213,79,.1)', border: '2px solid #FFD54F', color: '#fff' } },
     h('div', { style: { fontSize: 15, fontWeight: 900, marginBottom: 4 } }, '⏰ Time changes waiting for you (' + ids.length + ')'),
     ids.map(function (id) { var r = all[id], p = (props.family || []).find(function (x) { return x.id === id; }); return h('div', { key: id, style: { padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.12)' } },
-      h('div', { style: { fontSize: 14, fontWeight: 800 } }, (p ? p.name : id) + ': clocked into school ' + tm(r.clockedAt)),
+      h('div', { style: { fontSize: 14, fontWeight: 800 } }, (p ? p.name : id) + (r.what === 'day' ? ': started the day ' : ': clocked into school ') + tm(r.clockedAt)),
       h('div', { style: { fontSize: 13, color: '#d8d8e8' } }, r.kind === 'late' ? 'Says they really started late — slide the rest of the schedule to fit.' : 'Says they really started at ' + tm(r.start) + ' and forgot to clock in — change the start time.'),
       h('div', { style: { display: 'flex', gap: 6, marginTop: 4 } }, h('button', { onClick: function () { decide(id, true); }, style: { flex: 1, minHeight: 44, borderRadius: 10, border: 'none', background: '#4CAF82', color: '#000', fontWeight: 900, cursor: 'pointer' } }, '✅ Approve'), h('button', { onClick: function () { decide(id, false); }, style: { flex: 1, minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,.35)', background: 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, 'Deny'))); }));
+}
+
+// admin: fit the whole day to a start time (restarts the day timer from there and slides every task) — no approval needed
+function taFitDay(pid, ms, name) {
+  var k = todayKey();
+  try { var sd = syncGet('startday/' + k + '/' + pid) || {}; syncSet('startday/' + k + '/' + pid, Object.assign({}, sd, { dayStart: ms, readyAt: sd.readyAt || ms, penalized: true, lateKind: sd.lateKind || 'excused', lateReason: sd.lateReason || 'Day fitted to start time by Mom/Dad' })); } catch (e) {}
+  try { syncSet('timeadj/' + k + '/' + pid, { kind: 'late', start: ms, clockedAt: ms, what: 'day', status: 'approved', ts: Date.now(), decidedAt: Date.now(), name: name, by: 'admin' }); } catch (e) {}
 }
 
 </script>
@@ -41271,7 +41284,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v192';
+var FM_BUILD = 'v193';
 (function () {
   function stamp() {
     try {
