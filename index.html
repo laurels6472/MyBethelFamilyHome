@@ -7664,9 +7664,11 @@ function Dashboard({
     syncSet: syncSet
   }), (tab === 'clock' || tab === 'admin') && /*#__PURE__*/React.createElement("div", null,
   (tab === 'admin' || tab === 'clock') && (isAdmin || isOwner) && typeof ExcuseBar === 'function' && React.createElement(ExcuseBar, { family: fam }),
+  tab === 'clock' && (isAdmin || isOwner) && typeof BadDayCard === 'function' && React.createElement(BadDayCard, { family: fam }),
   tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Today'], ['ops', '🏠 Home'], ['pay', '💵 Pay'], ['settings', '⚙️ Settings'], ['reports', '📊 Reports'], ['reset', '🔄 Reset']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { if (t[0] === 'reset') { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; } setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
   tab === 'admin' && (isAdmin || isOwner) && admSec !== 'reset' && React.createElement('div', { style: { padding: '2px 14px 6px' } }, React.createElement('button', { onClick: function () { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; setAdmSec('reset'); try { window.scrollTo(0, 0); } catch (e) {} }, style: { width: '100%', minHeight: 44, borderRadius: 12, border: '2px solid #4FC3F7', background: 'rgba(79,195,247,.14)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '💾 Back up the app / restart from a backup')),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof BadDayCard === 'function' && React.createElement(BadDayCard, { family: fam }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof ApprovalCenter === 'function' && React.createElement(ApprovalCenter, { personId: effectiveId, family: fam, pendingNotifs: pending, onOpenNotifs: () => setShowNotifs(true) }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof SchoolClockFix === 'function' && React.createElement(SchoolClockFix, { family: fam, sessions: sessions, onUpdate: onUpdate }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function' && React.createElement(ClockControl, { family: fam, sessions: sessions }),
@@ -31900,6 +31902,7 @@ function StartMyDay(props) {
         tile('#FF1493', '#fff', function () { if (typeof pciOpen === 'function') pciOpen(); }, '👋 Check in'),
         schoolBtn,
         !submitted ? tile('#7E57C2', '#fff', endFlow, '🏁 End my day') : h('div', { style: { flex: 1, minWidth: 140, padding: 10, borderRadius: 14, background: 'rgba(76,175,130,.18)', border: '2px solid #4CAF82', color: '#fff', fontWeight: 900, textAlign: 'center' } }, '🎉 Day ended ' + tm(sd.dayEnd), h('div', null, h('button', { onClick: function () { try { syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { dayEnd: null, submittedAt: null, forgotOut: null })); } catch (e) {} }, style: { marginTop: 6, background: 'transparent', color: '#FFD54F', border: '1px solid rgba(255,213,79,.6)', borderRadius: 10, padding: '6px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, '↩ Undo — I am not done yet')))),
+      typeof HelpAsk === 'function' && h(HelpAsk, { pid: pid, name: nm, addNotif: props.addNotif }),
       typeof ExcuseCodeTile === 'function' && h(ExcuseCodeTile, { pid: pid, name: nm, addNotif: props.addNotif }),
       subWarnEl,
       typeof BreakTimer === 'function' && h(BreakTimer, { sid: pid, sessions: props.sessions, onUpdate: props.onUpdate }),
@@ -31909,7 +31912,7 @@ function StartMyDay(props) {
       h('div', { style: { borderTop: '1px solid rgba(255,255,255,.15)', margin: '14px 0 4px', paddingTop: 8, fontSize: 13, fontWeight: 800, color: '#c8c8d8' } }, '⬇ Or scroll down and pick what you want to check off'));
   }
   var kidBox = isKid ? h('div', { id: 'fm-step-1', style: { background: 'rgba(255,255,255,.04)', border: '2px solid ' + (clocked ? 'rgba(76,175,130,.55)' : '#FFD54F'), borderRadius: 18, padding: 10, marginBottom: 12 } },
-    !clocked ? h('div', null, h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', margin: '2px 4px 8px' } }, '⏱ Start my day'), props.dayEl, props.topEl) : h('div', null, kidPost, step2Inner)) : null;
+    !clocked ? h('div', null, h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', margin: '2px 4px 8px' } }, '⏱ Start my day'), props.dayEl, props.topEl, typeof HelpAsk === 'function' && h(HelpAsk, { pid: pid, name: nm, addNotif: props.addNotif }), typeof ExcuseCodeTile === 'function' && h(ExcuseCodeTile, { pid: pid, name: nm, addNotif: props.addNotif })) : h('div', null, kidPost, step2Inner)) : null;
   return h('div', { style: { padding: '8px 14px 24px' } },
     h('div', { style: { fontSize: 24, fontWeight: 900, color: '#fff' } }, greet + (nm ? ', ' + nm : '') + '! 👋'),
     h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 10px' } }, new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })),
@@ -41046,8 +41049,45 @@ function DailyPlanEditor(props) {
 
 </script>
 <script>
+// ═══ BAD DAY: parent clocks anyone in + excuses them with a reason (no late, no deductions); kids can ask for help from any clock ═══
+function bdExcuse(p, reason) {
+  var k = todayKey(), now = Date.now(), why = reason || 'Excused by Mom/Dad';
+  try { exApply(p.id, p.name, true, 'Admin'); } catch (e) {}
+  try { syncSet('excused/' + k + '/' + p.id + '/reason', why); } catch (e) {}
+  try { var sd = syncGet('startday/' + k + '/' + p.id) || {}; syncSet('startday/' + k + '/' + p.id, Object.assign({}, sd, { dayStart: sd.dayStart || now, readyAt: sd.readyAt || now, penalized: true, lateReason: 'Excused: ' + why, lateKind: 'excused' })); } catch (e) {}
+  try { if (typeof window._addNotifFn === 'function') window._addNotifFn('info', p.id, '✅ You are excused today', why + ' — you are clocked in, and nothing is deducted. Take it one step at a time.', { requiresApproval: false }); } catch (e) {}
+}
+function BadDayCard(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.role !== 'parent' && p.id !== 'grandpa' && p.inPaySystem !== false; });
+  var rS = React.useState(''), reason = rS[0], setReason = rS[1], dS = React.useState(''), done = dS[0], setDone = dS[1];
+  var exS = ktUse('excused/' + todayKey(), null), ex = exS[0] || {};
+  function go(list) { if (!reason.trim()) { setDone('Pick or type a reason first.'); return; } list.forEach(function (p) { bdExcuse(p, reason.trim()); }); setDone('✅ ' + list.map(function (p) { return p.name; }).join(', ') + ' clocked in and excused: ' + reason.trim()); }
+  var chip = function (t) { var on = reason === t; return h('button', { key: t, onClick: function () { setReason(t); }, style: { minHeight: 40, padding: '0 12px', borderRadius: 20, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.25)'), background: on ? 'rgba(255,213,79,.2)' : 'transparent', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: 13 } }, t); };
+  return h('div', { style: { margin: '10px 14px', padding: 12, borderRadius: 16, background: 'rgba(239,83,80,.1)', border: '2px solid rgba(239,83,80,.55)', color: '#fff' } },
+    h('div', { style: { fontSize: 16, fontWeight: 900 } }, '🌧 Bad day — clock in & excuse'),
+    h('div', { style: { fontSize: 12.5, color: '#c8c8d8', margin: '2px 0 8px' } }, 'Clocks them in as of now and removes any late marks and deductions today. The reason is saved.'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, ['Sick', 'Family emergency', 'Appointment', 'Hard morning'].map(chip)),
+    h('input', { value: reason, onChange: function (e) { setReason(e.target.value); }, placeholder: 'Reason (or type your own)', style: { width: '100%', boxSizing: 'border-box', minHeight: 40, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: '0 10px', fontSize: 14, marginBottom: 8 } }),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+      h('button', { onClick: function () { go(fam); }, style: { minHeight: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: '#FFD54F', color: '#000', fontWeight: 900, cursor: 'pointer' } }, 'Everyone'),
+      fam.map(function (p) { var on = !!(ex[p.id] || ex.all); return h('button', { key: p.id, onClick: function () { go([p]); }, style: { minHeight: 44, padding: '0 14px', borderRadius: 12, border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.3)'), background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.08)', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, (on ? '✅ ' : '') + (p.emoji ? p.emoji + ' ' : '') + p.name); })),
+    done && h('div', { style: { marginTop: 8, fontSize: 13, fontWeight: 700, color: done.charAt(0) === '✅' ? '#9be5bd' : '#EF9A9A' } }, done));
+}
+function HelpAsk(props) {
+  var h = React.createElement, oS = React.useState(false), open = oS[0], setOpen = oS[1], tS = React.useState(''), txt = tS[0], setTxt = tS[1], sS = React.useState(false), sent = sS[0], setSent = sS[1];
+  function send() { try { var f = typeof window._addNotifFn === 'function' ? window._addNotifFn : props.addNotif; if (f) f('info', props.pid, '🙋 ' + (props.name || props.pid) + ' needs help with the clock', txt.trim() || 'Needs Mom or Dad to help (late / clock problem).', { adminOnly: true }); } catch (e) {} setSent(true); setOpen(false); setTxt(''); }
+  if (sent) return h('div', { style: { margin: '8px 0', padding: '8px 12px', borderRadius: 12, background: 'rgba(76,175,130,.18)', border: '1px solid #4CAF82', color: '#fff', fontWeight: 800, fontSize: 13 } }, '✅ Mom and Dad were told. Keep going while you wait.');
+  if (!open) return h('button', { onClick: function () { setOpen(true); }, style: { width: '100%', minHeight: 44, margin: '8px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.07)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🙋 Need help or an exception? Ask Mom/Dad');
+  return h('div', { style: { margin: '8px 0', padding: 10, borderRadius: 12, background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.25)' } },
+    h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 } }, 'What happened? (sick, emergency, clock problem…)'),
+    h('textarea', { rows: 2, value: txt, onChange: function (e) { setTxt(e.target.value); }, style: { width: '100%', boxSizing: 'border-box', borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(0,0,0,.3)', color: '#fff', padding: 8, fontSize: 14 } }),
+    h('div', { style: { display: 'flex', gap: 6, marginTop: 6 } }, h('button', { onClick: send, style: { flex: 1, minHeight: 42, borderRadius: 10, border: 'none', background: '#FFD54F', color: '#000', fontWeight: 900, cursor: 'pointer' } }, 'Send to Mom/Dad'), h('button', { onClick: function () { setOpen(false); }, style: { minHeight: 42, padding: '0 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'transparent', color: '#fff', cursor: 'pointer' } }, 'Cancel')));
+}
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v184';
+var FM_BUILD = 'v185';
 (function () {
   function stamp() {
     try {
