@@ -7663,6 +7663,7 @@ function Dashboard({
     isTeacher: isLaurel,
     syncSet: syncSet
   }), (tab === 'clock' || tab === 'admin') && /*#__PURE__*/React.createElement("div", null,
+  tab === 'admin' && (isAdmin || isOwner) && typeof ExcuseBar === 'function' && React.createElement(ExcuseBar, { family: fam }),
   tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Overview'], ['ops', '🏠 Operations'], ['settings', '⚙️ Settings & tools'], ['budget', '💵 Budget'], ['live', '🔴 Live now'], ['links', '🏫 Classroom'], ['waste', '📉 Time waste'], ['reset', '🔄 Reset & Restore']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { if (t[0] === 'reset') { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; } setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
   secVis('reset') && typeof ResetCenter === 'function' && React.createElement('div', null, React.createElement(ResetCenter, { family: fam, sessions: sessions })),
@@ -8059,7 +8060,7 @@ function App() {
   React.useEffect(() => {
     window._payMode = (settings && settings.payMode) || 'pay';
     window._deductNow = deduct;
-    window._deductFn = function (pid, amt, reason) { if (typeof dqRoute === 'function') return dqRoute(pid, amt, reason); return deduct(pid, amt, reason); };
+    window._deductFn = function (pid, amt, reason, force) { if (!force && typeof window.exIsExcused === 'function' && window.exIsExcused(pid)) return true; if (typeof dqRoute === 'function') return dqRoute(pid, amt, reason); return deduct(pid, amt, reason); };
     window._walletCredit = function (pid, amt, reason, key) { window._payrollBypass = true; try { return credit(pid, amt, reason, key, true); } finally { window._payrollBypass = false; } };
     window._creditFn = function (pid, amount, reason, key, force) {
       if (force && typeof fpEarnRoute === 'function' && fpEarnRoute(pid, amount, reason, key)) return;
@@ -32829,7 +32830,7 @@ function ParentCheckIn(props) {
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
   var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : !isP;
-  var pzS = ktUse('checkin_pause/' + pid, null), pz = pzS[0], paused = !!(pz && pz.until > Date.now()), pcS = React.useState(false), pcOpen = pcS[0], setPcOpen = pcS[1], phS = React.useState(3), pcHrs = phS[0], setPcHrs = phS[1];
+  var pzS = ktUse('checkin_pause/' + pid, null), pz = pzS[0], paused = !!(pz && pz.until > Date.now()), pcS = React.useState(false), pcOpen = pcS[0], setPcOpen = pcS[1], cwS = React.useState(''), cwOpen = cwS[0], setCwOpen = cwS[1], cvS = React.useState(''), cwVal = cvS[0], setCwVal = cvS[1], cmS = React.useState(''), cwMsg = cmS[0], setCwMsg = cmS[1], phS = React.useState(3), pcHrs = phS[0], setPcHrs = phS[1];
   var ciS = ktUse('checkins/' + dayK + '/' + pid, {}), done = Object.values(ciS[0] || {}).filter(function (r) { return !r.missed; });
   var tS = React.useState(0), setT = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
   var fS = React.useState({ status: null, ctx: '', aff: '', mood: null, help: false, who: dflt }), f = fS[0], setF = fS[1];
@@ -32914,6 +32915,13 @@ function ParentCheckIn(props) {
             h('div', { style: { fontSize: 12, color: '#d8d8e8', marginBottom: 6 } }, 'For how long?'),
             h('div', { style: { display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' } }, [1, 2, 3, 4, 6].map(function (n) { return h('button', { key: n, onClick: function () { setPcHrs(n); }, style: { flex: 1, minWidth: 50, padding: 8, borderRadius: 10, border: '2px solid ' + (pcHrs === n ? '#fff' : 'rgba(255,255,255,.25)'), background: pcHrs === n ? '#FF1493' : 'rgba(255,255,255,.08)', color: '#fff', fontWeight: 800, cursor: 'pointer' } }, n + 'h'); })),
             ['I’m out with family', 'I don’t have to check in right now'].map(function (w) { return h('button', { key: w, onClick: function () { pciPause(pid, name, w.replace('I’m ', '').replace('I’m', ''), pcHrs, props.addNotif); setOpen(false); setT(function (x) { return x + 1; }); }, style: { display: 'block', width: '100%', textAlign: 'left', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 6 } }, w); }))),
+        !isP && typeof exRedeem === 'function' && h('div', { style: { marginTop: 6 } },
+          h('button', { onClick: function () { setCwOpen(cwOpen ? '' : '1'); }, style: { width: '100%', background: 'rgba(255,255,255,.08)', color: '#fff', border: '2px dashed rgba(255,255,255,.35)', borderRadius: 14, padding: 11, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🤫 Mom said I’m excused — I have the code word'),
+          cwOpen && h('div', { style: { background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10, marginTop: 6 } },
+            h('div', { style: { fontSize: 12, color: '#d8d8e8', marginBottom: 6 } }, 'Only if Mom said so out loud. Type the code word she gave you:'),
+            h('input', { value: cwVal, onChange: function (e) { setCwVal(e.target.value); setCwMsg(''); }, autoCapitalize: 'none', style: Object.assign({}, big, { marginBottom: 8 }) }),
+            h('button', { onClick: function () { var mode0 = window._payMode || 'pay', a0 = mode0 === 'points' ? (cfg.pts != null && cfg.pts !== '' ? +cfg.pts : 3) : (cfg.cash != null && cfg.cash !== '' ? +cfg.cash : 0.25), r = exRedeem(pid, name, cwVal, a0, props.addNotif); setCwMsg(r.msg); if (r.ok) { try { localStorage.removeItem('fm_pci_due_' + pid + '_' + dayK); } catch (e) {} setTimeout(function () { setOpen(false); setCwOpen(''); setCwVal(''); setT(function (x) { return x + 1; }); }, 2200); } }, disabled: !cwVal.trim(), style: { width: '100%', background: cwVal.trim() ? '#4CAF82' : '#555', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, 'Use code word'),
+            cwMsg && h('div', { style: { marginTop: 6, fontSize: 13, fontWeight: 800, color: cwMsg.indexOf('✅') === 0 ? '#81C784' : '#FF8A80' } }, cwMsg))),
         h('button', { onClick: function () { close(true); }, style: { width: '100%', background: 'transparent', color: '#c8c8d8', border: 'none', padding: 12, fontSize: 13, cursor: 'pointer', marginTop: 4 } }, 'Remind me in 10 minutes'))));
 }
 function pciOpen() { try { window.dispatchEvent(new CustomEvent('fm-checkin-open')); } catch (e) {} }
@@ -40473,7 +40481,7 @@ function DeductionCard(props) {
   function apply(d) {
     if (!kid) { setMsg('Pick a child first.'); return; }
     var raw = mdRaw(d.pts, ppb);
-    try { if (typeof window._deductFn === 'function') window._deductFn(kid.id, raw, '📉 ' + d.label); } catch (e) {}
+    try { if (typeof window._deductFn === 'function') window._deductFn(kid.id, raw, '📉 ' + d.label, true); } catch (e) {}
     try { if (typeof window._addNotifFn === 'function') window._addNotifFn('info', kid.id, '📉 ' + d.label + ' — −' + d.pts + ' pts', 'How to avoid it next time: ' + d.tip, { requiresApproval: false }); } catch (e) {}
     setMsg('Deducted ' + d.pts + ' pts from ' + kid.name + '. They were sent a note on how to avoid it.');
   }
@@ -40501,7 +40509,7 @@ function DeductionCard(props) {
 <script>
 // ═══ ALWAYS-ON-TOP DAY BAR: day running · progress circle · what you are clocked into ═══
 function DayTopBar(props) {
-  var h = React.createElement, pid = props.personId, sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
+  var h = React.createElement, pid = props.personId, sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {}, exS = ktUse('excused/' + todayKey(), null), exc = exS[0] && (exS[0].all || exS[0][pid]);
   var tS = React.useState(0), setT = tS[1], pS = React.useState(window._mdProgress || { done: 0, total: 0 }), pr = pS[0], setPr = pS[1];
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 20000); var f = function () { setPr(window._mdProgress || { done: 0, total: 0 }); }; window.addEventListener('fm-md-progress', f); return function () { clearInterval(iv); window.removeEventListener('fm-md-progress', f); }; }, []);
   var run = []; try { run = clockActiveList((props.sessions || {})[pid] || {}); } catch (e) {}
@@ -40516,14 +40524,80 @@ function DayTopBar(props) {
       h('svg', { width: 50, height: 50, viewBox: '0 0 50 50' }, h('circle', { cx: 25, cy: 25, r: R, fill: 'none', stroke: 'rgba(255,255,255,.15)', strokeWidth: 5 }), h('circle', { cx: 25, cy: 25, r: R, fill: 'none', stroke: col, strokeWidth: 5, strokeLinecap: 'round', strokeDasharray: C, strokeDashoffset: C * (1 - pct), transform: 'rotate(-90 25 25)', style: { transition: 'stroke-dashoffset .4s' } })),
       h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff' } }, pct >= 1 ? '✓' : pr.done + '/' + pr.total)),
     h('div', { style: { flex: 1, minWidth: 0 } },
-      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff' } }, !started ? '⏱ Day not started yet' : ended ? '🎉 Day finished · ' + hm(el) : '⏱ My day is running · ' + hm(el), started && h('span', { style: { fontWeight: 600, color: '#c8c8d8', fontSize: 12 } }, '  since ' + tm(sd.dayStart))),
+      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff' } }, (exc ? '✅ Excused today · ' : '') + (!started ? '⏱ Day not started yet' : ended ? '🎉 Day finished · ' + hm(el) : '⏱ My day is running · ' + hm(el)), started && h('span', { style: { fontWeight: 600, color: '#c8c8d8', fontSize: 12 } }, '  since ' + tm(sd.dayStart))),
       h('div', { style: { fontSize: 13, fontWeight: 800, color: act ? '#81C784' : '#9aa0b4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, act ? '🟢 Clocked into ' + emo + nm + ' · ' + hm(Math.max(0, Math.round((Date.now() - act.startTime) / 60000))) + (run.length > 1 ? ' +' + (run.length - 1) : '') : '⚪ Not clocked into anything')));
 }
 
 </script>
 <script>
+// ═══ EXCUSE FOR THE DAY (admin, very top): one switch per child — no check-ins, no deductions, no penalties today ═══
+window._excused = window._excused || {}; window._exKey = '';
+function exIsExcused(pid) { var m = window._excused || {}; return !!(m.all || m[pid]); }
+window.exIsExcused = exIsExcused;
+function exWatch() {
+  try {
+    var k = todayKey();
+    if (window._exKey === k || typeof syncOn !== 'function') return;
+    if (window._exUnsub) { try { window._exUnsub(); } catch (e) {} }
+    window._exKey = k; window._excused = {};
+    window._exUnsub = syncOn('excused/' + k, function (d) { window._excused = d || {}; try { window.dispatchEvent(new Event('fm-excused')); } catch (e) {} });
+  } catch (e) {}
+}
+exWatch(); setInterval(exWatch, 20000);
+function exApply(pid, name, on, by) {
+  var k = todayKey(), end = new Date(); end.setHours(23, 59, 59, 999);
+  try { syncSet('excused/' + k + '/' + pid, on ? { ts: Date.now(), by: by || 'Mom' } : null); } catch (e) {}
+  if (pid === 'all') return;
+  try { syncSet('checkin_pause/' + pid, on ? { until: end.getTime(), who: 'excused', ts: Date.now() } : null); } catch (e) {}
+  try { localStorage.removeItem('fm_pci_due_' + pid + '_' + k); } catch (e) {}
+  if (on) {
+    try { (function (q) { Object.keys(q || {}).forEach(function (id) { var r = q[id]; if (r && r.pid === pid && r.status === 'pending' && r.day === k) syncSet('deduct_queue/' + id, null); }); })(syncGet('deduct_queue')); } catch (e) {}
+    try { if (typeof window._addNotifFn === 'function') window._addNotifFn('info', pid, '✅ You are excused today', 'Mom knows — no check-ins and no deductions for today. Just keep going with your day!', { requiresApproval: false }); } catch (e) {}
+  }
+}
+var EX_W1 = ['purple','sunny','giant','bouncy','silly','golden','frosty','jolly','lucky','minty','fuzzy','zippy'], EX_W2 = ['giraffe','pancake','rocket','penguin','banana','dolphin','pickle','tiger','waffle','turtle','cactus','muffin'];
+function exNewWord() { return EX_W1[Math.floor(Math.random() * EX_W1.length)] + '-' + EX_W2[Math.floor(Math.random() * EX_W2.length)]; }
+function exSetWord(w) { try { syncSet('codeword/' + todayKey(), { word: w || exNewWord(), ts: Date.now() }); } catch (e) {} }
+// child side: typed the right code word -> excused for the day, and what the deduction would have been becomes a bonus (once a day)
+function exRedeem(pid, name, typed, amt, addNotif) {
+  var cw = null; try { cw = syncGet('codeword/' + todayKey()); } catch (e) {}
+  var w = cw && cw.word ? String(cw.word).toLowerCase().replace(/[^a-z]/g, '') : '';
+  var t = String(typed || '').toLowerCase().replace(/[^a-z]/g, '');
+  if (!w) return { ok: false, msg: 'Mom has not set a code word for today yet.' };
+  if (!t || t !== w) return { ok: false, msg: 'That is not today’s code word. Ask Mom politely.' };
+  var lk = 'fm_exbonus_' + todayKey() + '_' + pid, already = !!(window._excused && window._excused[pid] && window._excused[pid].bonus); try { if (localStorage.getItem(lk)) already = true; else if (!already) localStorage.setItem(lk, '1'); } catch (e) {}
+  exApply(pid, name, true, 'code word');
+  try { syncSet('excused/' + todayKey() + '/' + pid + '/bonus', amt > 0 && !already ? amt : (already ? ((window._excused[pid] && window._excused[pid].bonus) || 0) : 0)); } catch (e) {}
+  if (amt > 0 && !already && typeof window._walletCredit === 'function') { try { window._walletCredit(pid, amt, '🌟 Respectful check-in excuse bonus', 'exbonus_' + todayKey() + '_' + pid); } catch (e) {} }
+  try { if (addNotif) addNotif('info', pid, '🤫 ' + name + ' used today’s code word', 'Excused from check-ins today' + (amt > 0 && !already ? ' — bonus given instead of a deduction.' : '.'), { adminOnly: true }); } catch (e) {}
+  return { ok: true, msg: '✅ Thank you for asking respectfully! No more check-ins today' + (amt > 0 && !already ? ' — and you earned a bonus.' : '.') };
+}
+function ExcuseBar(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.role !== 'parent' && p.id !== 'grandpa' && p.inPaySystem !== false; });
+  var exS = ktUse('excused/' + todayKey(), null), ex = exS[0] || {};
+  var cwS = ktUse('codeword/' + todayKey(), null), cw = cwS[0] && cwS[0].word;
+  React.useEffect(function () { if (cwS[0] === null || cwS[0] === undefined) { var t = setTimeout(function () { try { if (!syncGet('codeword/' + todayKey())) exSetWord(); } catch (e) {} }, 2500); return function () { clearTimeout(t); }; } }, [cwS[0] == null]);
+  var anyOn = !!ex.all || fam.some(function (p) { return ex[p.id]; });
+  function sw(on, label, onClick, key) {
+    return h('button', { key: key, onClick: onClick, 'aria-pressed': on, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 8px', minHeight: 44, borderRadius: 22, cursor: 'pointer', fontWeight: 800, fontSize: 14, color: '#fff', background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.07)', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.22)') } },
+      h('span', { style: { width: 38, height: 22, borderRadius: 11, background: on ? '#4CAF82' : '#555', position: 'relative', flexShrink: 0 } }, h('span', { style: { position: 'absolute', top: 2, left: on ? 18 : 2, width: 18, height: 18, borderRadius: 9, background: '#fff', transition: 'left .15s' } })), label);
+  }
+  return h('div', { style: { margin: '10px 14px 4px', padding: '10px 12px', borderRadius: 16, background: anyOn ? 'rgba(76,175,130,.12)' : 'rgba(255,213,79,.08)', border: '2px solid ' + (anyOn ? '#4CAF82' : 'rgba(255,213,79,.5)') } },
+    h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '🛡 Excuse for the day', anyOn && h('span', { style: { color: '#81C784', marginLeft: 8 } }, '✅ on')),
+    h('div', { style: { fontSize: 12.5, color: '#c8c8d8', marginBottom: 8 } }, 'Flip a switch: no check-ins and no deductions or late penalties today.'),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8, padding: '6px 10px', borderRadius: 12, background: 'rgba(255,255,255,.07)' } },
+      h('span', { style: { fontSize: 12.5, color: '#c8c8d8' } }, '🤫 Today’s code word (tell them only if they ask respectfully):'),
+      h('span', { style: { fontSize: 17, fontWeight: 900, color: '#FFD54F', letterSpacing: .5 } }, cw || '…'),
+      h('button', { onClick: function () { exSetWord(); }, style: { marginLeft: 'auto', minHeight: 36, padding: '4px 10px', borderRadius: 10, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,.35)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 } }, '🔀 New word')),
+    h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+      sw(!!ex.all, 'Everyone', function () { exApply('all', 'Everyone', !ex.all); }, 'all'),
+      fam.map(function (p) { return sw(!!ex[p.id], (p.emoji ? p.emoji + ' ' : '') + (p.name || p.id), function () { exApply(p.id, p.name, !ex[p.id]); }, p.id); })));
+}
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v171';
+var FM_BUILD = 'v173';
 (function () {
   function stamp() {
     try {
