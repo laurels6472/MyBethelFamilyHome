@@ -7671,6 +7671,8 @@ function Dashboard({
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function' && React.createElement(ClockControl, { family: fam, sessions: sessions }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof AdminTaskList === 'function' && React.createElement(AdminTaskList, { schedHook: schedHook, family: fam }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof QuietHoursCard === 'function' && React.createElement(Fold, { id: 'quiethours', title: '🔕 Quiet times — no sounds or notifications' }, React.createElement(QuietHoursCard, null)),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof FixedApptCard === 'function' && React.createElement(FixedApptCard, { schedHook: schedHook, family: fam }),
+  tab === 'admin' && admSec === 'settings' && (isAdmin || isOwner) && typeof AccessCard === 'function' && React.createElement(Fold, { id: 'accesscard', title: '✅ Who gets what (tasks, chores, school, clocks…)' }, React.createElement(AccessCard, { family: fam })),
   secVis('reset') && typeof ResetCenter === 'function' && React.createElement('div', null, React.createElement(ResetCenter, { family: fam, sessions: sessions })),
   (secVis('ops')) && React.createElement(Fold, { id: 'operations', title: '🏠 My Bethel Operations' },
     React.createElement('div', {style:{fontSize:12,color:'rgba(255,255,255,.55)',lineHeight:1.5,padding:'2px 4px 8px'}}, 'Routines, schedule, tasks and chores all live here. Every approved piece of work earns points toward the paycheck.'),
@@ -32868,7 +32870,7 @@ function ParentCheckIn(props) {
   var h = React.createElement, isP = props.role === 'parent', pid = props.personId, dflt = isP ? (props.personId === 'laurel' ? 'Eric' : props.personId === 'eric' ? 'Laurel' : 'Laurel & Eric') : 'Mom & Dad', name = props.name || pid, pFam = (props.family || (typeof FAMILY !== 'undefined' ? FAMILY : [])).filter(function (p) { return p && !p.deleted && p.id !== pid && p.role !== 'elder'; }), kWho = ['Mom & Dad', 'Mom', 'Dad'].concat(pFam.filter(function (p) { return p.role !== 'parent'; }).map(function (p) { return p.name; })), pWho = [dflt, 'Family group'].concat(pFam.filter(function (p) { return p.role !== 'parent' || p.name !== dflt; }).map(function (p) { return p.name; }), ['Nobody \u2014 just post it']), dayK = typeof planDayKey === 'function' ? planDayKey() : todayKey();
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {};
   var cfgS = ktUse('pcheckin_cfg', null), cfg = cfgS[0] || {};
-  var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = ppl[pid] != null ? !!ppl[pid] : !isP;
+  var pplS = ktUse('pcheckin_people', null), ppl = pplS[0] || {}, required = (typeof maHas !== 'function' || maHas(pid, 'checkins')) && (ppl[pid] != null ? !!ppl[pid] : !isP);
   var pzS = ktUse('checkin_pause/' + pid, null), pz = pzS[0], paused = !!(pz && pz.until > Date.now()), pcS = React.useState(false), pcOpen = pcS[0], setPcOpen = pcS[1], cwS = React.useState(''), cwOpen = cwS[0], setCwOpen = cwS[1], cvS = React.useState(''), cwVal = cvS[0], setCwVal = cvS[1], cmS = React.useState(''), cwMsg = cmS[0], setCwMsg = cmS[1], phS = React.useState(3), pcHrs = phS[0], setPcHrs = phS[1];
   var ciS = ktUse('checkins/' + dayK + '/' + pid, {}), done = Object.values(ciS[0] || {}).filter(function (r) { return !r.missed; });
   var tS = React.useState(0), setT = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1];
@@ -33981,6 +33983,7 @@ function MyDayList(props) {
     rows.push({ k: 'c_' + it.id, t: tt + i / 100, kind: 'chore', dueM: dueM, icon: '🧹', label: it.label, color: '#26A69A', on: !!rec && (rec.status === 'approved' || rec.status === 'submitted'), pts: it.pts || 5, mins: it.est || null, it: it, rec: rec, prog: p });
   });
   if (props.flow && rows.some(function (r) { return r.kind === 'habit' && /\bbed\b/i.test(r.label); })) rows = rows.filter(function (r) { return !(r.kind === 'chore' && /beds? made|make (your |the )?beds?/i.test(r.label)); });
+  if (typeof maRowOk === 'function') rows = rows.filter(function (r) { return maRowOk(pid, r); });
   if (props.kinds) rows = rows.filter(function (r) { return props.kinds.indexOf(r.kind) >= 0 && (r.kind !== 'block' || !props.blockAct || r.b.activity === props.blockAct); });
   rows.forEach(function (r) { r.skip = !r.on && !!skips[r.k]; });
   rows.sort(function (a, b) { return a.t - b.t; });
@@ -34445,7 +34448,7 @@ function NtfyCard(props) {
 
 // ═══ MY BETHEL FAMILY — AT A GLANCE: one compact section for everyone (family clock status + each person's day) ═══
 function FamilyGlance(props) {
-  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.id !== 'grandpa' && p.role !== 'elder'; });
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.id !== 'grandpa' && p.role !== 'elder' && (typeof maHas !== 'function' || maHas(p.id, 'clock')); });
   var cS = ktUse('glance_cfg', null), show = (cS[0] || {}).show || null, oS = React.useState(false), setOpen = oS[1], open = oS[0], tS = React.useState(0), setT = tS[1], aS = React.useState(false), tm = aS[0], setTm = aS[1];
   var slS = React.useState(null), selId = slS[0], setSelId = slS[1], fS = React.useState({}), ages = fS[0], setAges = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 10000); return function () { clearInterval(iv); }; }, []);
@@ -34480,6 +34483,7 @@ function FamilyGlance(props) {
         h('div', { style: { fontSize: 17, lineHeight: 1 } }, p.emoji || '👤'), p.name, runN > 0 && h('span', { style: { position: 'absolute', top: 3, right: 4, width: 8, height: 8, borderRadius: 4, background: '#4CAF82' } }));
     })),
     !shut && (function () { var cur = selId === '__none' ? null : shown.filter(function (p) { return p.id === (selId || (shown[0] && shown[0].id)); })[0]; return cur ? h(KidStatRow, { key: cur.id, person: cur, sessions: props.sessions, schedHook: props.schedHook, onUpdate: props.onUpdate, addNotif: props.addNotif, extra: typeof FamilyStatusTop === 'function' ? h(FamilyStatusTop, { sessions: props.sessions, family: [cur], onUpdate: props.onUpdate, setTab: props.setTab, bare: true }) : null }) : null; })(),
+    !shut && (function () { var cur = selId === '__none' ? null : shown.filter(function (p) { return p.id === (selId || (shown[0] && shown[0].id)); })[0]; return cur && typeof MemberClocks === 'function' ? h(MemberClocks, { key: 'mc' + cur.id, person: cur, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook }) : null; })(),
     !shut && h('button', { onClick: function () { setTm(!tm); }, style: { width: '100%', textAlign: 'left', marginTop: 8, background: 'rgba(192,202,51,.12)', border: '1px solid rgba(192,202,51,.4)', borderRadius: 12, padding: 11, color: '#E6EE9C', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '⏱ Admin time management ' + (tm ? '▲' : '▼')),
     !shut && tm && typeof AdminTimeEditor === 'function' && h(AdminTimeEditor, { sessions: props.sessions, family: props.family, onUpdate: props.onUpdate, syncSet: syncSet }));
 }
@@ -38427,7 +38431,7 @@ function CcReset(props) {
 }
 
 function ClockControl(props) {
-  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.id !== 'grandpa'; }), sessions = props.sessions || {};
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.id !== 'grandpa' && (typeof maHas !== 'function' || maHas(p.id, 'clock')); }), sessions = props.sessions || {};
   return h(Fold, { id: 'clockctl', title: '⏱ Start My Day & Clock — control center' },
     h('div', { style: { padding: '0 12px' } },
       h('div', { style: { fontSize: 11, color: '#b8b8c8', margin: '4px 0' } }, 'See who started their day, where they are clocked in, and their attendance. Fix anyone with one tap.'),
@@ -40731,25 +40735,25 @@ function SchoolClockFix(props) {
   var rows = [];
   fam.forEach(function (p) {
     var d = sessions[p.id] || {}, act = clockActiveList(d), today = d.today || [], items = [];
-    act.forEach(function (a, i) { if (a.activity === 'school') items.push({ kind: 'run', idx: i, rec: a }); });
-    today.forEach(function (e, i) { if (e && e.activity === 'school') items.push({ kind: 'done', idx: i, rec: e }); });
-    if (!items.length) { rows.push(h('div', { key: p.id, style: { fontSize: 13, color: '#9aa0b4', padding: '6px 0' } }, (p.emoji ? p.emoji + ' ' : '') + p.name + ' — hasn’t clocked into school today.')); return; }
+    act.forEach(function (a, i) { if (a.activity) items.push({ kind: 'run', idx: i, rec: a }); });
+    today.forEach(function (e, i) { if (e && e.activity) items.push({ kind: 'done', idx: i, rec: e }); });
+    if (!items.length) { rows.push(h('div', { key: p.id, style: { fontSize: 13, color: '#9aa0b4', padding: '6px 0' } }, (p.emoji ? p.emoji + ' ' : '') + p.name + ' — hasn’t clocked into anything today.')); return; }
     rows.push(h('div', { key: p.id, style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.1)' } },
       h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff', marginBottom: 6 } }, (p.emoji ? p.emoji + ' ' : '') + p.name),
       items.map(function (it) {
         var key = p.id + it.kind + it.idx, v = vals[key] || {}, r = it.rec;
         function set(k, val) { var o = Object.assign({}, v); o[k] = val; var n = Object.assign({}, vals); n[key] = o; setVals(n); }
         return h('div', { key: key, style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 } },
-          h('span', { style: { fontSize: 13, color: it.kind === 'run' ? '#81C784' : '#c8c8d8', minWidth: 100 } }, it.kind === 'run' ? '▶ Running' : '✓ Finished', r.label ? ' · ' + r.label : ''),
+          h('span', { style: { fontSize: 13, color: it.kind === 'run' ? '#81C784' : '#c8c8d8', minWidth: 100 } }, (it.kind === 'run' ? '▶ ' : '✓ ') + (typeof planActLabel === 'function' ? planActLabel(r.activity) : r.activity) + (r.label ? ' · ' + r.label : '')),
           h('label', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Clocked in ', h('input', { type: 'time', value: v.s != null ? v.s : scfHM(r.startTime), onChange: function (e) { set('s', e.target.value); }, style: inp })),
           it.kind === 'done' && h('label', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Clocked out ', h('input', { type: 'time', value: v.e != null ? v.e : scfHM(r.endTime || r.startTime), onChange: function (e) { set('e', e.target.value); }, style: inp })),
           h('button', { onClick: function () { save(p.id, it.kind, it.idx, key); }, style: { minHeight: 44, padding: '8px 16px', borderRadius: 12, border: 'none', background: '#4CAF82', color: '#000', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, 'Save time'));
       })));
   });
-  return h(Fold, { id: 'schoolclockfix', title: '🏫 Fix a school clock-in time' },
-    h('div', { style: { padding: '0 12px 10px' } },
-      h('div', { style: { fontSize: 12.5, color: '#b8b8c8', lineHeight: 1.5, marginBottom: 6 } }, 'If a child asked permission or forgot to clock in on time, set the time they should have started. Their 6-hour total and attendance update right away. (A late-start deduction already taken is not undone — use the “Excuse for the day” switch up top before it happens, or add the points back.)'),
-      rows, msg && h('div', { style: { marginTop: 6, fontSize: 13, fontWeight: 800, color: msg.indexOf('✅') === 0 ? '#81C784' : '#FF8A80' } }, msg)));
+  var inner = h('div', { style: { padding: props.bare ? '4px 0 0' : '0 12px 10px' } },
+      h('div', { style: { fontSize: 12.5, color: '#b8b8c8', lineHeight: 1.5, marginBottom: 6 } }, 'Change when any clock started or stopped — school, chores, work, anything. Their 6-hour total and attendance update right away. (A late-start deduction already taken is not undone — use the “Excuse for the day” switch up top before it happens, or add the points back.)'),
+      rows, msg && h('div', { style: { marginTop: 6, fontSize: 13, fontWeight: 800, color: msg.indexOf('✅') === 0 ? '#81C784' : '#FF8A80' } }, msg));
+  return props.bare ? inner : h(Fold, { id: 'schoolclockfix', title: '🕐 Fix any clock-in / clock-out time' }, inner);
 }
 
 </script>
@@ -40826,8 +40830,144 @@ function mdClockUndo(pid, sessions, onUpdate, act) {
 
 </script>
 <script>
+// ═══ WHO GETS WHAT (admin): tick which parts of the app each person is in ═══
+var MA_FEATS = [['clock', '⏱ Clock & day'], ['routines', '🌱 Routines'], ['chores', '🧹 Chores'], ['tasks', '📋 Tasks & schedule'], ['school', '📚 School'], ['checkins', '👋 Check-ins'], ['pay', '💰 Points & pay']];
+window._ma = window._ma || {};
+function maHas(pid, feat) {
+  var m = window._ma && window._ma[pid]; if (m && m[feat] != null) return !!m[feat];
+  return !(pid === 'grandpa' || pid === 'jacob');
+}
+window.maHas = maHas;
+(function () {
+  function start() { try { if (typeof syncOn !== 'function') return false; syncOn('member_access', function (d) { window._ma = d || {}; try { window.dispatchEvent(new Event('fm-access')); } catch (e) {} }); return true; } catch (e) { return false; } }
+  if (!start()) { var n = 0, iv = setInterval(function () { if (start() || ++n > 20) clearInterval(iv); }, 1000); }
+})();
+function maRowOk(pid, r) {
+  if (r.kind === 'chore') return maHas(pid, 'chores');
+  if (r.kind === 'habit') return maHas(pid, 'routines');
+  if (r.schoolDay || /school/i.test(String(r.k))) return maHas(pid, 'school');
+  return maHas(pid, 'tasks');
+}
+function AccessCard(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.role !== 'parent'; }), aS = ktUse('member_access', null), acc = aS[0] || {};
+  function set(pid, f, v) { try { syncSet('member_access/' + pid + '/' + f, v); } catch (e) {} }
+  return h('div', { style: { padding: '0 12px 12px' } },
+    h('div', { style: { fontSize: 12.5, color: '#b8b8c8', lineHeight: 1.5, marginBottom: 8 } }, 'Tick the parts of the app each person is part of. Unticked parts disappear from their screen and from your clock and time lists. Grandpa and Jacob start with everything off.'),
+    fam.map(function (p) {
+      return h('div', { key: p.id, style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.1)' } },
+        h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 6 } }, (p.emoji || '') + ' ' + p.name),
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, MA_FEATS.map(function (f) {
+          var on = maHas(p.id, f[0]); if (acc[p.id] && acc[p.id][f[0]] != null) on = !!acc[p.id][f[0]];
+          return h('button', { key: f[0], onClick: function () { set(p.id, f[0], !on); }, 'aria-pressed': on, style: { minHeight: 40, padding: '6px 10px', borderRadius: 20, border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.22)'), background: on ? 'rgba(76,175,130,.25)' : 'rgba(255,255,255,.06)', color: '#fff', fontWeight: 800, fontSize: 12.5, cursor: 'pointer' } }, (on ? '✅ ' : '⬜ ') + f[1]);
+        })));
+    }));
+}
+// ═══ ADMIN: full control of one person's clocks ═══
+function MemberClocks(props) {
+  var h = React.createElement, p = props.person, pid = p.id, sessions = (window._clockApi && window._clockApi.sessions) || props.sessions || {}, up = (window._clockApi && window._clockApi.onUpdate) || props.onUpdate;
+  var mS = React.useState(''), msg = mS[0], setMsg = mS[1], oS = React.useState(false), more = oS[0], setMore = oS[1];
+  var acts = typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : [], run = []; try { run = clockActiveList(sessions[pid] || {}); } catch (e) {}
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3000); }
+  function into(id) { try { clockInActivity(pid, sessions, up, id, { stack: true }); say('▶ ' + p.name + ' is clocked into ' + (typeof planActLabel === 'function' ? planActLabel(id) : id)); } catch (e) {} }
+  function out(id) { try { clockOutActivity(pid, sessions, up, id); say('⏹ Clocked out.'); } catch (e) {} }
+  function outAll() { try { clockOutAll(pid, sessions, up); say('⏹ Clocked out of everything.'); } catch (e) {} }
+  function sched() {
+    try {
+      var bl = typeof planBlocksFor === 'function' ? planBlocksFor(props.schedHook, pid, planDayKey()) : [], d = new Date(), nm = d.getHours() * 60 + d.getMinutes(), cur = null;
+      bl.forEach(function (b) { if (b._t != null && b._t <= nm && b.activity) cur = b; });
+      if (!cur) { say('Nothing on the schedule right now has a clock attached.'); return; }
+      into(cur.activity);
+    } catch (e) {}
+  }
+  var btn = function (bg, fg, fn, t, k) { return h('button', { key: k, onClick: fn, style: { minHeight: 46, padding: '8px 12px', borderRadius: 12, border: 'none', background: bg, color: fg, fontWeight: 800, fontSize: 13.5, cursor: 'pointer' } }, t); };
+  return h('div', { style: { marginTop: 8, padding: 10, borderRadius: 14, background: 'rgba(3,155,229,.1)', border: '1px solid rgba(3,155,229,.4)' } },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#81D4FA', letterSpacing: 1, marginBottom: 6 } }, '⏱ ' + p.name.toUpperCase() + '’S CLOCKS'),
+    run.length ? run.map(function (r) { return h('div', { key: r.activity + r.startTime, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', flexWrap: 'wrap' } }, h('div', { style: { flex: 1, fontSize: 14, color: '#fff', fontWeight: 800 } }, '▶ ' + (r.label || (typeof planActLabel === 'function' ? planActLabel(r.activity) : r.activity)) + ' · since ' + new Date(r.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })), btn('#EF5350', '#fff', function () { out(r.activity); }, '⏹ Clock out', 'o' + r.activity)); }) : h('div', { style: { fontSize: 13, color: '#9aa0b4', marginBottom: 4 } }, 'Not clocked into anything right now.'),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' } }, btn('#4CAF82', '#000', sched, '▶ Clock into what is scheduled now', 'sc'), run.length > 0 && btn('rgba(239,83,80,.25)', '#FF8A80', outAll, '⏹ Clock out of everything', 'oa'), btn('rgba(255,255,255,.12)', '#fff', function () { setMore(!more); }, more ? '▲ Hide list' : '▼ Clock into something else', 'mo')),
+    more && h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, acts.map(function (a) { return btn('rgba(255,255,255,.1)', '#fff', function () { into(a.id); }, a.label, a.id); })),
+    msg && h('div', { style: { fontSize: 13, fontWeight: 800, color: '#81C784', marginBottom: 6 } }, msg),
+    typeof SchoolClockFix === 'function' && h(SchoolClockFix, { family: [p], sessions: sessions, onUpdate: up, bare: true }));
+}
+
+</script>
+<script>
+// ═══ AUTO-ADJUST THE DAY: a late start slides the schedule; a fixed appointment (doctor, dentist…) is planned around ═══
+function rfFmt(m) { m = Math.max(0, Math.round(m)); var hh = Math.floor(m / 60) % 24, mm = m % 60; return (hh % 12 || 12) + ':' + ('0' + mm).slice(-2) + ' ' + (hh < 12 ? 'AM' : 'PM'); }
+var RF_ORIG = planBlocksFor;
+function rfReflow(bl, pid) {
+  var movable = bl.filter(function (b) { return !b.fixed && b._t != null; }), fixed = bl.filter(function (b) { return b.fixed && b._t != null; }), free = bl.filter(function (b) { return b._t == null; });
+  var sd = null; try { sd = syncGet('startday/' + todayKey() + '/' + pid); } catch (e) {}
+  var floor = 0, dsM = null; if (sd && sd.dayStart) { var dd = new Date(sd.dayStart); dsM = dd.getHours() * 60 + dd.getMinutes(); }
+  if (!fixed.length && !(dsM != null && movable.length && dsM > movable[0]._t + 2)) return bl;
+  if (dsM != null && movable.length && dsM > movable[0]._t + 2) floor = dsM;
+  var wins = [], extra = [];
+  fixed.forEach(function (b) {
+    var dur = +b.dur || 60, tr = b.travel != null ? +b.travel : 20, pr = b.prep != null ? +b.prep : 20, s = b._t - tr - pr, e = b._t + dur + tr;
+    wins.push({ s: s, e: e });
+    extra.push({ id: 'rf_prep_' + b.id, title: 'Get ready for ' + b.title, time: rfFmt(s), _t: s, emoji: '👔', own: true, color: '#FFB74D', _auto: true, kids: b.kids },
+      { id: 'rf_go_' + b.id, title: 'Leave for ' + b.title, time: rfFmt(b._t - tr), _t: b._t - tr, emoji: '🚗', own: true, color: '#FFB74D', _auto: true, kids: b.kids },
+      { id: 'rf_back_' + b.id, title: 'Back home — pick up where you left off', time: rfFmt(e), _t: e, emoji: '🏠', own: true, color: '#FFB74D', _auto: true, kids: b.kids });
+  });
+  wins.sort(function (a, b) { return a.s - b.s; });
+  var all = bl.filter(function (b) { return b._t != null; }).sort(function (a, b) { return a._t - b._t; }), cur = floor, out = [];
+  movable.forEach(function (b) {
+    var idx = all.indexOf(b), nx = all[idx + 1], dur = nx ? Math.max(5, nx._t - b._t) : 30, s = Math.max(b._t, cur), rem = dur, first = null, pauseAt = null, resumeAt = null, guard = 0;
+    while (rem > 0 && guard++ < 12) {
+      var w = wins.filter(function (x) { return x.e > s; })[0];
+      if (!w) { if (first == null) first = s; s += rem; rem = 0; break; }
+      if (s >= w.s) { s = w.e; if (first != null && resumeAt == null) resumeAt = s; continue; }
+      var avail = w.s - s;
+      if (rem <= avail) { if (first == null) first = s; s += rem; rem = 0; break; }
+      if (first == null) first = s; pauseAt = w.s; rem -= avail; s = w.e; resumeAt = s;
+    }
+    cur = s;
+    var nb = Object.assign({}, b, { _t: first == null ? b._t : first, time: rfFmt(first == null ? b._t : first), _planned: b._t });
+    if (pauseAt != null) nb.title = b.title + ' — until ' + rfFmt(pauseAt) + ', then finish at ' + rfFmt(resumeAt);
+    out.push(nb);
+  });
+  return out.concat(fixed, extra, free).sort(function (a, b) { if (a._t == null && b._t == null) return (a._i || 0) - (b._i || 0); if (a._t == null) return 1; if (b._t == null) return -1; return a._t - b._t || (a._i || 0) - (b._i || 0); });
+}
+planBlocksFor = function (schedHook, pid, dayKey) {
+  var bl = RF_ORIG(schedHook, pid, dayKey);
+  try { if (dayKey === planDayKey()) return rfReflow(bl, pid); } catch (e) {}
+  return bl;
+};
+// ── admin: add / see fixed appointments ──
+function FixedApptCard(props) {
+  var h = React.createElement, hk = props.schedHook, kids = (props.family || []).filter(function (p) { return !p.deleted && p.role === 'child' && typeof maHas === 'function' && maHas(p.id, 'tasks'); });
+  var dS = React.useState(planDayKey()), day = dS[0], setDay = dS[1], fS = React.useState({ title: '', time: '', dur: 60, travel: 20, prep: 20, who: [], fixed: true }), f = fS[0], setF = fS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var blocks = hk && hk.getDay ? (hk.getDay(day).blocks || []).filter(function (b) { return b.fixed; }) : [];
+  function upd(k, v) { var o = Object.assign({}, f); o[k] = v; setF(o); }
+  function add() {
+    if (!hk || !f.title.trim() || !f.time) { setMsg('Add a name and a time.'); return; }
+    var p = f.time.split(':'), hh = +p[0], mm = +p[1], t = (hh % 12 || 12) + ':' + ('0' + mm).slice(-2) + ' ' + (hh < 12 ? 'AM' : 'PM');
+    hk.addBlock(day, { id: 'blk_' + Date.now(), title: f.title.trim(), time: t, color: '#FFB74D', emoji: '📌', activity: '', kids: f.who.length ? f.who : null, fixed: f.fixed ? true : null, dur: +f.dur || 60, travel: +f.travel || 0, prep: +f.prep || 0 });
+    setF({ title: '', time: '', dur: f.dur, travel: f.travel, prep: f.prep, who: [], fixed: true }); setMsg('✅ Added. The rest of that day will be planned around it.'); setTimeout(function () { setMsg(''); }, 3500);
+  }
+  var inp = { background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 10, color: '#fff', padding: '8px 10px', fontSize: 15, minHeight: 44, fontFamily: 'inherit', boxSizing: 'border-box' };
+  var lab = function (t, el) { return h('label', { style: { fontSize: 12, color: '#c8c8d8', display: 'block' } }, t, el); };
+  return h(Fold, { id: 'fixedappts', title: '📌 Appointments & fixed times' },
+    h('div', { style: { padding: '0 12px 12px' } },
+      h('div', { style: { fontSize: 12.5, color: '#b8b8c8', lineHeight: 1.5, marginBottom: 8 } }, 'Doctor, dentist, anything that cannot move. Tick “fixed” and the app plans getting ready, leaving, school and everything else around it — school pauses when it is time to leave and finishes when you are back. If someone clocks in late, their whole day slides to start when they clock in.'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
+        lab('What', h('input', { value: f.title, onChange: function (e) { upd('title', e.target.value); }, placeholder: 'Dentist', style: Object.assign({}, inp, { width: '100%' }) })),
+        lab('Date', h('input', { type: 'date', value: day, onChange: function (e) { setDay(e.target.value); }, style: Object.assign({}, inp, { width: '100%' }) })),
+        lab('Appointment time', h('input', { type: 'time', value: f.time, onChange: function (e) { upd('time', e.target.value); }, style: Object.assign({}, inp, { width: '100%' }) })),
+        lab('Lasts (min)', h('input', { type: 'number', value: f.dur, onChange: function (e) { upd('dur', e.target.value); }, style: Object.assign({}, inp, { width: '100%' }) })),
+        lab('Drive each way (min)', h('input', { type: 'number', value: f.travel, onChange: function (e) { upd('travel', e.target.value); }, style: Object.assign({}, inp, { width: '100%' }) })),
+        lab('Get ready before (min)', h('input', { type: 'number', value: f.prep, onChange: function (e) { upd('prep', e.target.value); }, style: Object.assign({}, inp, { width: '100%' }) }))),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8', margin: '8px 0 4px' } }, 'Who is going (none picked = everyone)'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, kids.map(function (k) { var on = f.who.indexOf(k.id) >= 0; return h('button', { key: k.id, onClick: function () { upd('who', on ? f.who.filter(function (x) { return x !== k.id; }) : f.who.concat([k.id])); }, style: { minHeight: 40, padding: '6px 12px', borderRadius: 20, border: '2px solid ' + (on ? '#FFB74D' : 'rgba(255,255,255,.22)'), background: on ? 'rgba(255,183,77,.25)' : 'rgba(255,255,255,.06)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
+      h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: '#fff', fontWeight: 800, margin: '10px 0' } }, h('input', { type: 'checkbox', checked: f.fixed, onChange: function (e) { upd('fixed', e.target.checked); }, style: { width: 24, height: 24 } }), '📌 Fixed at this time — plan everything else around it'),
+      h('button', { onClick: add, style: { width: '100%', minHeight: 50, borderRadius: 14, border: 'none', background: '#FFB74D', color: '#000', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '＋ Add to the schedule'),
+      msg && h('div', { style: { marginTop: 8, fontSize: 13, fontWeight: 800, color: msg.indexOf('✅') === 0 ? '#81C784' : '#FF8A80' } }, msg),
+      blocks.length > 0 && h('div', { style: { marginTop: 10 } }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 4 } }, 'FIXED ON ' + day), blocks.map(function (b) { return h('div', { key: b.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.1)' } }, h('div', { style: { flex: 1, fontSize: 14, color: '#fff' } }, '📌 ' + b.time + ' · ' + b.title), h('button', { onClick: function () { try { hk.deleteBlock(day, b.id); } catch (e) {} }, style: { minHeight: 40, minWidth: 40, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'transparent', color: '#FF8A80', cursor: 'pointer' } }, '✕')); }))));
+}
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v180';
+var FM_BUILD = 'v181';
 (function () {
   function stamp() {
     try {
