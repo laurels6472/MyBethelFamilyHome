@@ -756,7 +756,7 @@ const MYKAH_ASSIST = {
 };
 
 // ── DAILY CHORES ──────────────────────────────────────────────────────────────
-const CHORES_DAILY = ["Beds made — all six beds made before school", "Common areas picked up — nothing on the floor", "After breakfast — dishes done, table wiped, kitchen clean", "After lunch — dishes done, table wiped", "After dinner — dishes done, kitchen reset, stove wiped", "Dogs — 4 potty walks completed (6:30 AM, 10 AM, 2 PM, 6 PM)", "Dogs — water bowls checked and refilled", "Dogs — evening meal fed (1 meal per day)", "S'mores'e — checked, fed, and watered", "Quick 5-minute tidy of living area before bed", "All laundry off floors and in baskets", "Trash bags checked — full bags tied and moved to door"];
+const CHORES_DAILY = ["Beds made — all six beds made before school", "Common areas picked up — nothing on the floor", "After breakfast — dishes done, table wiped, kitchen clean", "After lunch — dishes done, table wiped", "After dinner — dishes done, kitchen reset, stove wiped", "Dogs — potty walk 6:30 AM", "Dogs — potty walk 10:00 AM", "Dogs — potty walk 2:00 PM", "Dogs — potty walk 6:00 PM", "Dogs — water bowls checked and refilled", "Dogs — evening meal fed (1 meal per day)", "S'mores'e — checked, fed, and watered", "Quick 5-minute tidy of living area before bed", "All laundry off floors and in baskets", "Trash bags checked — full bags tied and moved to door"];
 
 // ── WEEKLY CHORES ─────────────────────────────────────────────────────────────
 const CHORES_WEEKLY = {
@@ -3534,7 +3534,7 @@ function useNotifications() {
   const notifs = React.useMemo(() => Object.values(_nraw || {}).filter(n => n && typeof n === 'object' && n.timestamp).map(n => n.approved === undefined ? Object.assign({}, n, { approved: null }) : n).sort((a, b) => b.timestamp - a.timestamp), [_nraw]);
   const addNotif = useCallback((type, personId, title, msg, extra = {}) => {
     const id = 'n' + Date.now() + Math.random().toString(36).slice(2, 5);
-    if (type === 'clock_in' || type === 'clock_out') extra = Object.assign({}, extra, { adminOnly: true });
+    if (type === 'clock_in' || type === 'clock_out' || type === 'paycheck' || type === 'overdue') extra = Object.assign({}, extra, { adminOnly: true });
     const n = {
       id,
       type,
@@ -7206,6 +7206,10 @@ function Dashboard({
   schedHook
 }) {
   const [tab, setTab] = useState(() => { var home = role === 'child' ? 'start' : role === 'elder' ? 'schedule' : 'clock', fresh = true; try { fresh = !sessionStorage.getItem('fm_alive'); sessionStorage.setItem('fm_alive', '1'); } catch (e) {} return (!fresh && typeof nvGet === 'function' && nvGet('tab_' + role, null)) || home; });
+  const [admSec, setAdmSecRaw] = useState(() => { try { return (typeof nvGet === 'function' && nvGet('admsec')) || 'overview'; } catch (e) { return 'overview'; } });
+  const setAdmSec = (v) => { setAdmSecRaw(v); try { if (typeof nvSet === 'function') nvSet('admsec', v); } catch (e) {} };
+  const secVis = (id) => (isAdmin || isOwner) ? (tab === 'admin' && admSec === id) : tab === 'clock';
+  React.useEffect(() => { window._admSecGo = (v) => { setAdmSecRaw(v); try { if (typeof nvSet === 'function') nvSet('admsec', v); } catch (e) {} }; });
   React.useEffect(() => { if (typeof nvSet === 'function') nvSet('tab_' + role, tab); }, [tab]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMsgs, setShowMsgs] = useState(false);
@@ -7596,7 +7600,7 @@ function Dashboard({
     onClick: () => setTab(t.id),
     style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, lineHeight: 1.15, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', wordBreak: 'break-word',
       background: on ? effectivePerson.color : 'rgba(255,255,255,.07)', color: on ? '#fff' : '#cfd3e0', border: `1px solid ${on ? effectivePerson.color : 'rgba(255,255,255,.12)'}` }
-  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); }).concat([/*#__PURE__*/React.createElement("button", { key: '__arrange', onClick: () => setShowArrange(true), style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', background: 'transparent', color: '#9aa', border: '1px dashed rgba(255,255,255,.25)' } }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, '⇅'), /*#__PURE__*/React.createElement("span", null, 'Arrange'))])), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof LateWatch === 'function') ? /*#__PURE__*/React.createElement(LateWatch, { personId: personId, name: (person && person.name) || personId, sessions: sessions, schedHook: schedHook, addNotif: addNotif }) : null, (!viewingAs && typeof PresenceBeat === 'function') ? /*#__PURE__*/React.createElement(PresenceBeat, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === 'admin' && !viewingAs && (isAdmin || isOwner) && typeof AdminTaskList === 'function') ? /*#__PURE__*/React.createElement(AdminTaskList, { schedHook: schedHook, family: fam }) : null, (tab === 'admin' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function') ? React.createElement(ClockControl, { family: fam, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof LiveWhoIn === 'function') ? /*#__PURE__*/React.createElement(LiveWhoIn, { sessions: sessions, family: fam }) : null, (tab === homeNow && typeof AffirmationBoard === 'function') ? /*#__PURE__*/React.createElement(AffirmationBoard, { family: fam }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && !(isAdmin || isOwner) && effectiveRole !== 'elder' && typeof PciParentsNow === 'function') ? React.createElement(PciParentsNow, { key: 'pcinow' }) : null, false ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { family: fam, personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, emo), /*#__PURE__*/React.createElement("span", null, txt)); }).concat([/*#__PURE__*/React.createElement("button", { key: '__arrange', onClick: () => setShowArrange(true), style: { minHeight: 54, padding: '6px 3px', borderRadius: 12, fontSize: 10.5, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', background: 'transparent', color: '#9aa', border: '1px dashed rgba(255,255,255,.25)' } }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 18 } }, '⇅'), /*#__PURE__*/React.createElement("span", null, 'Arrange'))])), (typeof VolumeGuard === 'function' ? React.createElement(VolumeGuard, { personId: personId, isChild: !(isAdmin || isOwner), schoolKid: isChild }) : null), (typeof PayrollEngine === 'function' ? React.createElement(PayrollEngine, { family: fam, isAdmin: !!(isAdmin || isOwner) && !viewingAs }) : null), (!viewingAs && effectiveRole === 'child' && typeof AttendanceAuto === 'function') ? /*#__PURE__*/React.createElement(AttendanceAuto, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof LateWatch === 'function') ? /*#__PURE__*/React.createElement(LateWatch, { personId: personId, name: (person && person.name) || personId, sessions: sessions, schedHook: schedHook, addNotif: addNotif }) : null, (!viewingAs && typeof PresenceBeat === 'function') ? /*#__PURE__*/React.createElement(PresenceBeat, { personId: personId, sessions: sessions }) : null, (!viewingAs && effectiveRole === 'child' && typeof ClockPayEngine === 'function') ? /*#__PURE__*/React.createElement(ClockPayEngine, { personId: personId, sessions: sessions }) : null, (tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof AdminTaskList === 'function') ? /*#__PURE__*/React.createElement(AdminTaskList, { schedHook: schedHook, family: fam }) : null, (tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof ClockControl === 'function') ? React.createElement(ClockControl, { family: fam, sessions: sessions }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof LiveWhoIn === 'function') ? /*#__PURE__*/React.createElement(LiveWhoIn, { sessions: sessions, family: fam }) : null, (tab === homeNow && typeof AffirmationBoard === 'function') ? /*#__PURE__*/React.createElement(AffirmationBoard, { family: fam }) : null, (tab === homeNow && !viewingAs && (isAdmin || isOwner) && typeof FamilyGlance === 'function') ? /*#__PURE__*/React.createElement(FamilyGlance, { sessions: sessions, family: fam, onUpdate: onUpdate, setTab: setTab, schedHook: schedHook, addNotif: addNotif }) : null, (isAdmin || isOwner) && typeof PinRequestBanner === 'function' ? /*#__PURE__*/React.createElement(PinRequestBanner, { personId: personId, notifs: notifs, family: fam, onOpen: () => setTab('family') }) : null, ((isAdmin || isOwner) && typeof AlertsSetup === 'function' && !viewingAs) ? React.createElement(AlertsSetup, { personId: personId, isAdmin: isAdmin || isOwner, family: fam }) : null, (!(isAdmin || isOwner) && !viewingAs && effectiveRole !== 'elder' && typeof KidsTour === 'function') ? React.createElement(KidsTour, { personId: personId, key: 'kidstour' }) : null, (!(isAdmin || isOwner) && !viewingAs && typeof SetupBanner === 'function') ? React.createElement(SetupBanner, { personId: personId, name: person && person.name, isAdmin: false, family: fam, onVol: (i) => updateSetting('alarmVol', i), key: 'setupb' }) : null, (tab === homeNow && personId === 'laurel' && !viewingAs && typeof BillsStartNotices === 'function') ? /*#__PURE__*/React.createElement(BillsStartNotices, { family: fam, addNotif: addNotif }) : null, (tab === homeNow && !(isAdmin || isOwner) && effectiveRole !== 'elder' && typeof PciParentsNow === 'function') ? React.createElement(PciParentsNow, { key: 'pcinow' }) : null, false ? /*#__PURE__*/React.createElement(ComingUp, { personId: effectiveId, isAdmin: !viewingAs && (isAdmin || isOwner), family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }) : null, (tab === homeNow && typeof MedSchedule === 'function') ? /*#__PURE__*/React.createElement(MedSchedule, { personId: effectiveId, compact: true, key: 'md' + effectiveId }) : null, typeof IncomingAlerts === 'function' ? /*#__PURE__*/React.createElement(IncomingAlerts, { personId: personId, isAdmin: isAdmin || isOwner, notifs: notifs, onOpen: () => setShowNotifs(true) }) : null, (typeof ParentCheckIn === 'function') ? /*#__PURE__*/React.createElement(ParentCheckIn, { family: fam, personId: effectiveId, name: (effectivePerson && effectivePerson.name) || (person && person.name), sessions: sessions, addNotif: addNotif, role: effectiveRole, manualOnly: !!viewingAs, key: 'pci' + effectiveId }) : null, (tab === homeNow && typeof PciButton === 'function') ? React.createElement(PciButton, { key: 'pcib' }) : null, (typeof CheckInReminders === 'function' && role !== 'elder') ? /*#__PURE__*/React.createElement(CheckInReminders, { personId: personId, onGo: () => setTab('health') }) : null, isAdmin && /*#__PURE__*/React.createElement(AccountSwitcherRow, {
     family: fam,
     sessions: sessions,
     currentPersonId: personId,
@@ -7658,8 +7662,10 @@ function Dashboard({
     isAdmin: isAdmin || isLaurel,
     isTeacher: isLaurel,
     syncSet: syncSet
-  }), tab === 'clock' && /*#__PURE__*/React.createElement("div", null,
-  React.createElement(Fold, { id: 'operations', title: '🏠 My Bethel Operations' },
+  }), (tab === 'clock' || tab === 'admin') && /*#__PURE__*/React.createElement("div", null,
+  tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Overview'], ['ops', '🏠 Operations'], ['settings', '⚙️ Settings & tools'], ['budget', '💵 Budget'], ['live', '🔴 Live now'], ['links', '🏫 Classroom'], ['waste', '📉 Time waste']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
+  tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
+  (secVis('ops')) && React.createElement(Fold, { id: 'operations', title: '🏠 My Bethel Operations' },
     React.createElement('div', {style:{fontSize:12,color:'rgba(255,255,255,.55)',lineHeight:1.5,padding:'2px 4px 8px'}}, 'Routines, schedule, tasks and chores all live here. Every approved piece of work earns points toward the paycheck.'),
     React.createElement(Fold, { id: 'clockinout', title: '🕐 Clock In / Out — ' + (effectivePerson && effectivePerson.name) },
   typeof MorningRoutine !== 'undefined' && /*#__PURE__*/React.createElement(MorningRoutine, {
@@ -7732,7 +7738,7 @@ function Dashboard({
     isOwner && typeof OpsApprovals === 'function' && /*#__PURE__*/React.createElement(OpsApprovals, {family: fam}),
     isOwner && typeof RoutinesAdmin === 'function' && React.createElement(Fold, { id: 'routines', title: '🧹 Set up habits & chores' }, React.createElement(RoutinesAdmin, {family: fam})),
     isOwner && typeof PlanApprovals === 'function' && /*#__PURE__*/React.createElement(PlanApprovals, {family: fam})),
-    (isAdmin || isOwner) && typeof Fold === 'function' && React.createElement(Fold, { id: 'adminsettings', title: '⚙️ Admin settings & tools' },
+    secVis('settings') && typeof Fold === 'function' && React.createElement(Fold, { id: 'adminsettings', title: '⚙️ Admin settings & tools' },
     typeof ScheduleToCalendar === 'function' && React.createElement(ScheduleToCalendar, { family: fam }),
     typeof NotifyRouting === 'function' && React.createElement(NotifyRouting, { family: fam }),
     typeof FamilyFreshStart === 'function' && React.createElement(FamilyFreshStart, { family: fam, sessions: sessions, onUpdate: onUpdate }),
@@ -7743,16 +7749,18 @@ function Dashboard({
     typeof CheckInSettings === 'function' && React.createElement(CheckInSettings, null),
     typeof PointsSettings === 'function' && React.createElement(PointsSettings, null),
     typeof ReadyTimerSettings === 'function' && React.createElement(ReadyTimerSettings, null)),
-  isAdmin && typeof BudgetHomeCard !== 'undefined' && React.createElement(Fold, { id: 'budget', title: '💵 Budget snapshot' }, React.createElement(BudgetHomeCard, {isAdmin: true, onOpen: () => setTab('bills')})),
-  isOwner && typeof LiveNow === 'function' && React.createElement(Fold, { id: 'livenow', title: '🔴 Live now' }, React.createElement(LiveNow, {family: fam})),
-  typeof SchoolLinks !== 'undefined' && React.createElement(Fold, { id: 'schoollinks', title: '🏫 Google Classroom & school links' }, React.createElement(SchoolLinks, {personId: effectiveId, isAdmin: isOwner, family: fam})),
-  typeof WasteReport !== 'undefined' && isAdmin && React.createElement(Fold, { id: 'waste', title: '📉 Time waste report' }, React.createElement(WasteReport, {sessions: sessions, family: fam, wallets: wallets, payMode: payMode}))), tab === 'menu' && (typeof KitchenModule !== 'undefined' ? /*#__PURE__*/React.createElement(KitchenModule, { isAdmin: isAdmin || isOwner, personId: effectiveId, family: fam }) : (typeof WeeklyMenuReview !== 'undefined' && /*#__PURE__*/React.createElement(WeeklyMenuReview, {isAdmin:isAdmin||isOwner}))),
-  tab === 'admin' && (isAdmin || isOwner) && typeof ComingUp === 'function' && React.createElement(ComingUp, { personId: effectiveId, isAdmin: true, family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }),
-  tab === 'admin' && (isAdmin || isOwner) && typeof FlowAdminCard === 'function' && React.createElement(FlowAdminCard, null),
-  tab === 'admin' && (isAdmin || isOwner) && typeof ApprovalCenter === 'function' && React.createElement(ApprovalCenter, { personId: effectiveId, family: fam, pendingNotifs: pending, onOpenNotifs: () => setShowNotifs(true) }),
-  tab === 'admin' && (isAdmin || isOwner) && typeof AlertTimes === 'function' && React.createElement(Fold, { id: 'alerttimes', title: '⏰ Journal & affirmation alert times' }, React.createElement(AlertTimes, null)),
-  tab === 'admin' && (isAdmin || isOwner) && typeof AdminContent === 'function' && React.createElement(Fold, { id: 'admincontent', title: '🛠 Content Manager (edit everything)' }, React.createElement(AdminContent, { onSwitchTab: setTab })),
-  tab === 'admin' && (isAdmin || isOwner) && typeof MyAccounts !== 'undefined' && typeof Fold === 'function' && React.createElement(Fold, { id: 'adminaccounts', title: '🔗 Accounts' }, React.createElement(MyAccounts, { personId: effectiveId, isAdmin: isAdmin || isOwner, family: fam })),
+  secVis('budget') && isAdmin && typeof BudgetHomeCard !== 'undefined' && React.createElement(Fold, { id: 'budget', title: '💵 Budget snapshot' }, React.createElement(BudgetHomeCard, {isAdmin: true, onOpen: () => setTab('bills')})),
+  secVis('live') && isOwner && typeof LiveNow === 'function' && React.createElement(Fold, { id: 'livenow', title: '🔴 Live now' }, React.createElement(LiveNow, {family: fam})),
+  secVis('links') && typeof SchoolLinks !== 'undefined' && React.createElement(Fold, { id: 'schoollinks', title: '🏫 Google Classroom & school links' }, React.createElement(SchoolLinks, {personId: effectiveId, isAdmin: isOwner, family: fam})),
+  secVis('waste') && typeof WasteReport !== 'undefined' && isAdmin && React.createElement(Fold, { id: 'waste', title: '📉 Time waste report' }, React.createElement(WasteReport, {sessions: sessions, family: fam, wallets: wallets, payMode: payMode}))), tab === 'menu' && (typeof KitchenModule !== 'undefined' ? /*#__PURE__*/React.createElement(KitchenModule, { isAdmin: isAdmin || isOwner, personId: effectiveId, family: fam }) : (typeof WeeklyMenuReview !== 'undefined' && /*#__PURE__*/React.createElement(WeeklyMenuReview, {isAdmin:isAdmin||isOwner}))),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof ComingUp === 'function' && React.createElement(ComingUp, { personId: effectiveId, isAdmin: true, family: fam, addNotif: addNotif, onGo: () => setTab('store'), onGoTo: (t) => { try { if (t.tab === 'work' && t.sub) window._workStart = t.sub; setTab(t.tab === 'day' ? (effectiveRole === 'child' ? 'start' : effectiveRole === 'elder' ? 'schedule' : 'clock') : t.tab); setTimeout(() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} }, 150); } catch (e) {} }, onGoStart: () => { setTab(effectiveRole === 'child' ? 'start' : 'clock'); setTimeout(() => { try { window.dispatchEvent(new Event('fm-go-ready')); } catch (e) {} }, 250); } }),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof FlowAdminCard === 'function' && React.createElement(FlowAdminCard, null),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof PayScaleCard === 'function' && React.createElement(PayScaleCard, null),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof DeductionCard === 'function' && React.createElement(DeductionCard, { family: fam }),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof ApprovalCenter === 'function' && React.createElement(ApprovalCenter, { personId: effectiveId, family: fam, pendingNotifs: pending, onOpenNotifs: () => setShowNotifs(true) }),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof AlertTimes === 'function' && React.createElement(Fold, { id: 'alerttimes', title: '⏰ Journal & affirmation alert times' }, React.createElement(AlertTimes, null)),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof AdminContent === 'function' && React.createElement(Fold, { id: 'admincontent', title: '🛠 Content Manager (edit everything)' }, React.createElement(AdminContent, { onSwitchTab: setTab })),
+  tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof MyAccounts !== 'undefined' && typeof Fold === 'function' && React.createElement(Fold, { id: 'adminaccounts', title: '🔗 Accounts' }, React.createElement(MyAccounts, { personId: effectiveId, isAdmin: isAdmin || isOwner, family: fam })),
   tab === 'accounts' && typeof MyAccounts !== 'undefined' && /*#__PURE__*/React.createElement(MyAccounts, { personId: effectiveId, isAdmin: isAdmin || isOwner, family: fam }),
   tab === 'safety' && typeof SafetyCenter !== 'undefined' && /*#__PURE__*/React.createElement(SafetyCenter, { isAdmin: isAdmin || isOwner, family: fam }),
   tab === 'money' && hs('money', 'bank') === 'bills' && typeof BillHub !== 'undefined' && /*#__PURE__*/React.createElement(BillHub, { isAdmin: isAdmin || isOwner, isOwner: personId === 'laurel', personId: personId, family: fam }),
@@ -7867,7 +7875,7 @@ function Dashboard({
     family: fam,
     savePerson: savePerson,
     deletePerson: deletePerson
-  }))), tab === 'admin' && isAdmin && typeof SOPModule !== 'undefined' && /*#__PURE__*/React.createElement("div", {style:{marginTop:12}},
+  }))), tab === 'admin' && admSec === 'overview' && isAdmin && typeof SOPModule !== 'undefined' && /*#__PURE__*/React.createElement("div", {style:{marginTop:12}},
     /*#__PURE__*/React.createElement("div", {style:{display:'flex',alignItems:'center',gap:8,padding:'0 4px 8px'}},
       /*#__PURE__*/React.createElement("div", {style:{fontSize:9,fontWeight:800,color:'rgba(255,255,255,.4)',letterSpacing:1}}, "INSPECTING SOPs FOR:"),
       /*#__PURE__*/React.createElement("select", {
@@ -7885,7 +7893,7 @@ function Dashboard({
       ? /*#__PURE__*/React.createElement(SOPModule, {personId:sopInspectPerson, isAdmin:true, family:fam})
       : /*#__PURE__*/React.createElement("div", {style:{padding:14,color:'rgba(255,255,255,.35)',fontSize:11,textAlign:'center'}}, "Pick who you're inspecting above — this shows THEIR steps and awards points to THEM. (Fastest way to approve day-to-day: tap the 🔔 notification bell instead — it lists everyone's pending SOP and chore approvals in one place.)")
   ),
-  tab === 'admin' && isAdmin && typeof ScheduleRequestsPanel !== 'undefined' && /*#__PURE__*/React.createElement("div", {
+  tab === 'admin' && admSec === 'overview' && isAdmin && typeof ScheduleRequestsPanel !== 'undefined' && /*#__PURE__*/React.createElement("div", {
     'data-fold': 'schedreq', style:{margin:'16px 0',background:'rgba(255,152,0,.04)',
       border:'1px solid rgba(255,152,0,.15)',borderRadius:14,overflow:'hidden'}},
     /*#__PURE__*/React.createElement("div", {
@@ -7898,7 +7906,7 @@ function Dashboard({
       notifs: notifs, approveNotif: approveNotif, addNotif: addNotif
     })
   ),
-  tab === 'admin' && isAdmin && effectiveRole !== 'elder' && typeof AdminJournalViewer !== 'undefined' && /*#__PURE__*/React.createElement("div", {style:{marginTop:20}}, /*#__PURE__*/React.createElement(AdminJournalViewer, {family: fam})), tab === 'admin' && isAdmin && effectiveRole !== 'elder' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(AdminControl, {
+  tab === 'admin' && admSec === 'overview' && isAdmin && effectiveRole !== 'elder' && typeof AdminJournalViewer !== 'undefined' && /*#__PURE__*/React.createElement("div", {style:{marginTop:20}}, /*#__PURE__*/React.createElement(AdminJournalViewer, {family: fam})), tab === 'admin' && isAdmin && effectiveRole !== 'elder' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(AdminControl, {
     sessions: sessions,
     setSessions: setSessions,
     notifs: notifs,
@@ -28175,6 +28183,7 @@ function FamilyCalendar(props) {
         React.createElement("div",{style:{flex:1,fontSize:13,fontWeight:800,color:"#fff"}},viewDay),
         isAdmin && React.createElement("button",{onClick:function(){setShowAdd(!showAdd);},style:{background:"#1A73E8",color:"#fff",border:"none",borderRadius:20,padding:"6px 14px",fontSize:10,fontWeight:800,cursor:"pointer"}},showAdd?"Cancel":"+ Add")
       ),
+      typeof CalMeals === "function" && React.createElement(CalMeals,{key:"cm"+viewDay,date:viewDay}),
       dayEvs.length===0&&!showAdd&&React.createElement("div",{style:{padding:24,textAlign:"center",color:"rgba(255,255,255,.3)",fontSize:11}},"No events. Tap + Add to create one."),
       dayEvs.map(function(ev,i){
         return React.createElement("div",{key:i,style:{margin:"8px 14px",background:(ev.color||"#1A73E8")+"18",border:"1px solid "+(ev.color||"#1A73E8")+"44",borderLeft:"4px solid "+(ev.color||"#1A73E8"),borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}},
@@ -31838,7 +31847,6 @@ function StartMyDay(props) {
     h('div', { id: 'fm-step-2' }, box(s2, h('div', null,
       secHead(true, '✅', '2. My day — check things off', !clocked ? 'Start your day first' : ready ? 'Clock in to what you are doing, then check it off' : 'Get ready first, then Work and Household Work unlock', s2, null),
       clocked && h('div', { style: { marginTop: 10 } },
-        !ready && countdown,
         (function () {
           var mornFoot = h('div', null,
         !ready && mornDone && h('div', { style: { background: 'rgba(76,175,130,.2)', border: '2px solid #4CAF82', borderRadius: 14, padding: 12, marginBottom: 10, color: '#fff', fontWeight: 900, fontSize: 16, textAlign: 'center' } }, '✅ Every morning step is checked off!'),
@@ -31852,8 +31860,13 @@ function StartMyDay(props) {
             var dkA = typeof rtDay === 'function' ? rtDay() : todayKey();
             var afterFoot = bdone.afternoon ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 8, borderRadius: 12, background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', color: '#fff', fontSize: 14 } }, h('div', { style: { flex: 1 } }, '✅ Afternoon done'), h('button', { onClick: function () { try { syncSet('blockdone/' + dkA + '/' + pid + '/afternoon', null); } catch (e) {} }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, '↩ undo'))
               : big('rgba(255,255,255,.14)', '#fff', function () { try { syncSet('blockdone/' + dkA + '/' + pid + '/afternoon', Date.now()); } catch (e) {} }, '✅ I’m done with my afternoon');
-            return h('div', null, typeof TimerModePick === 'function' && h(TimerModePick, { pid: pid }), typeof BreakTimer === 'function' && h(BreakTimer, { sid: pid, sessions: props.sessions, onUpdate: props.onUpdate }),
-              h(MyDayList, { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, flow: true, groupHide: { morning: ready, afternoon: !!bdone.afternoon }, groupFoot: { morning: mornFoot, afternoon: afterFoot, evening: eveFoot } }));
+            var gotEl = (mornToday || ready) ? h('div', { style: { background: 'rgba(76,175,130,.12)', border: '2px solid rgba(76,175,130,.5)', borderRadius: 16, padding: 14, marginBottom: 10 } },
+              h('div', { style: { fontSize: 12, fontWeight: 900, color: '#9be3bd', letterSpacing: 1 } }, '☀️ GETTING READY'),
+              mornToday ? h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', margin: '4px 0' } }, 'Took ' + fm(mornToday.actual) + ' · should take ' + fm(mornToday.planned)) : h('div', { style: { fontSize: 18, fontWeight: 800, color: '#fff', margin: '4px 0' } }, ready ? 'Ready at ' + tm(sd.readyAt) : ''),
+              mornToday && h('div', { style: { fontSize: 16, fontWeight: 800, color: mornToday.planned - mornToday.actual >= 0 ? '#81C784' : '#FF8A80', marginBottom: 8 } }, mornToday.planned - mornToday.actual >= 0 ? '⚡ Saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over'),
+              !submitted && h(DcConfirm, { onConfirm: function () { try { var dkR = typeof rtDay === 'function' ? rtDay() : todayKey(); ['habitsdone', 'habitstart', 'habitsrun'].forEach(function (b) { var all = syncGet(b + '/' + dkR + '/' + pid) || {}; Object.keys(all).forEach(function (k) { if (/^morning/.test(k)) syncSet(b + '/' + dkR + '/' + pid + '/' + k, null); }); }); syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null, lateAt: null })); } catch (e) {} }, label: '↺ Start getting ready over', sure: 'Tap again — clears this morning’s checkmarks', style: { display: 'block', width: '100%', minHeight: 56, background: 'rgba(255,255,255,.12)', color: '#fff', border: '2px solid rgba(255,255,255,.35)', borderRadius: 14, fontWeight: 900, fontSize: 17, cursor: 'pointer' } })) : null;
+            return h('div', null,
+              h(MyDayList, { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, flow: true, preEl: [gotEl && h('div', { key: 'got' }, gotEl), !ready && countdown && h('div', { key: 'cd' }, countdown)], postEl: [typeof TimerModePick === 'function' && h(TimerModePick, { key: 'tm', pid: pid }), typeof BreakTimer === 'function' && h(BreakTimer, { key: 'bt', sid: pid, sessions: props.sessions, onUpdate: props.onUpdate })], groupHide: { morning: ready, afternoon: !!bdone.afternoon }, groupFoot: { morning: mornFoot, afternoon: afterFoot, evening: eveFoot } }));
           }
           return typeof HabitsStack === 'function' ? h(HabitsStack, { personId: pid, name: nm, ready: ready, morningFoot: mornFoot, eveningFoot: eveFoot }) : h('div', null, props.habitsAllEl, mornFoot);
         })(),
@@ -32166,7 +32179,9 @@ function rtItems(custom, pid, name, over) {
   var base = { daily: 5, weekly: 10, monthly: 25, yearly: 40 };
   var add = function (freq, label, extra) {
     var lib = rtLibFor(label, over), pts = lib ? lib.pts : base[freq];
-    out[freq].push(Object.assign({ id: freq + '_' + rtHash(label), label: label, freq: freq, steps: lib ? lib.steps : null, pts: pts, cash: lib ? lib.cash : Math.round(pts * 0.1 * 4) / 4, est: lib ? lib.mins : null }, extra || {}));
+    var split = /potty walk/i.test(label) ? 4 : 1; if (split > 1) { pts = Math.max(1, Math.round((lib ? lib.pts : base[freq]) / split)); lib = Object.assign({}, lib || { steps: null, mins: null }, { pts: pts, cash: Math.round((lib ? lib.cash : Math.round(base[freq] * 0.1 * 4) / 4) / split * 100) / 100, mins: (lib && lib.mins) ? Math.min(lib.mins, 15) : 10 }); }
+    var pm = typeof psMult === 'function' ? psMult() : 1, rr = function (n) { return Math.round(n * 100) / 100; };
+    out[freq].push(Object.assign({ id: freq + '_' + rtHash(label), label: label, freq: freq, steps: lib ? lib.steps : null, pts: rr(pts * pm), cash: rr((lib ? lib.cash : Math.round(pts * 0.1 * 4) / 4) * pm), est: lib ? lib.mins : null }, extra || {}));
   };
   (typeof CHORES_DAILY !== 'undefined' ? CHORES_DAILY : []).forEach(function (l) { add('daily', l); });
   ((typeof CHORES_WEEKLY !== 'undefined' && CHORES_WEEKLY[dn]) || []).forEach(function (l) { add('weekly', l); });
@@ -32733,7 +32748,7 @@ function IncomingAlerts(props) {
   Object.keys(msgs).forEach(function (tid) { var arr = msgs[tid]; arr = Array.isArray(arr) ? arr : Object.values(arr || {}); arr.forEach(function (m) { if (m && m.to === pid && !m.read && m.ts > t0.current - 60000) found.push({ id: 'm_' + (m.id || m.ts), title: '💬 Message from ' + (m.from || ''), body: m.text }); }); });
   (props.notifs || []).forEach(function (n) {
     if (!n || n.read || n.timestamp < t0.current - 60000 || n.type === 'pin_reset_request' || n.type === 'clock_in') return;
-    var mine = n.personId === pid || n.personId === 'all';
+    var mine = (n.personId === pid || n.personId === 'all') && !n.adminOnly && n.type !== 'paycheck' && n.type !== 'overdue';
     if (mine || (isAdmin && n.personId !== pid && (typeof ncWants !== 'function' || ncWants(pid, n, ncfg)))) found.push({ id: 'n_' + n.id, title: n.title || 'Notification', body: n.message || '', link: n.link, goto: n.goto, nid: n.id });
   });
   React.useEffect(function () {
@@ -33570,7 +33585,7 @@ function ncOwner(pid) { return pid === 'laurel'; }
 function ncKind(n) { var t = n && n.type; return NC_TYPES.some(function (x) { return x[0] === t; }) ? t : 'other'; }
 function ncWants(viewerId, n, cfg) {
   if (!n) return false;
-  if (n.adminOnly || n.type === 'clock_in' || n.type === 'clock_out') return viewerId === 'laurel' || viewerId === 'eric';
+  if (n.adminOnly || n.type === 'clock_in' || n.type === 'clock_out' || n.type === 'paycheck' || n.type === 'overdue') return viewerId === 'laurel' || (viewerId === 'eric' && !!(cfg && cfg.shareAdmin));
   if (n.type === 'message') return n.personId === viewerId;
   if (n.personId === viewerId || n.personId === 'all') return true;
   if (ncOwner(viewerId)) return true;
@@ -33585,6 +33600,7 @@ function NotifyRouting(props) {
     h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'rgba(255,152,0,.12)', border: '1px solid rgba(255,152,0,.45)', borderRadius: 14, padding: 12, color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, '🔔 Who gets notified ' + (open ? '▾' : '▸')),
     open && h('div', { style: { marginTop: 8, padding: 12, background: 'rgba(255,255,255,.05)', borderRadius: 14 } },
       h('div', { style: { fontSize: 12, color: '#c8c8d8', lineHeight: 1.6, marginBottom: 8 } }, 'You (Laurel) get every alert from the kids. ' + (others.map(function (p) { return p.name; }).join(', ') || 'The other parent') + ' only gets alerts sent to them directly, plus the kinds you tick here.'),
+      h('button', { type: 'button', onClick: function () { var v = !cfg.shareAdmin; try { syncSet('notify_cfg', Object.assign({}, cfg, { shareAdmin: v })); } catch (e) {} }, style: { display: 'flex', width: '100%', gap: 12, alignItems: 'center', justifyContent: 'space-between', padding: '14px 12px', marginBottom: 8, borderRadius: 14, border: '2px solid ' + (cfg.shareAdmin ? '#4CAF82' : 'rgba(255,255,255,.2)'), background: cfg.shareAdmin ? 'rgba(76,175,130,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'left' } }, h('span', null, '💼 Also show clock-in/out, payroll & paycheck alerts to the other parent'), h('span', { style: { fontWeight: 900, color: cfg.shareAdmin ? '#4CAF82' : '#999', minWidth: 52, textAlign: 'right' } }, cfg.shareAdmin ? '✅ ON' : 'OFF')),
       NC_TYPES.map(function (t) { var on = (loc[t[0]] != null) ? !!loc[t[0]] : ((cfg.types && cfg.types[t[0]] != null) ? !!cfg.types[t[0]] : t[2]); return h('button', { key: t[0], type: 'button', onClick: function () { set(t[0], !on); }, style: { display: 'flex', width: '100%', gap: 12, alignItems: 'center', justifyContent: 'space-between', padding: '14px 12px', marginBottom: 8, borderRadius: 14, border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), background: on ? 'rgba(76,175,130,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'left' } }, h('span', null, t[1]), h('span', { style: { fontWeight: 900, color: on ? '#4CAF82' : '#999', minWidth: 52, textAlign: 'right' } }, on ? '✅ ON' : 'OFF')); })));
 }
 
@@ -33842,7 +33858,7 @@ function TeacherManual(props) {
 function playOnce(t) { try { var n = Date.now(); window._po = window._po || {}; if (window._po[t] && n - window._po[t] < 900) return; window._po[t] = n; if (typeof playSound === 'function') playSound(t); } catch (e) {} }
 // keep the screen where it is after a tap (lists re-draw when something is checked off)
 function keepScroll() { try { var y = window.pageYOffset || document.documentElement.scrollTop || 0; [0, 40, 120, 300, 700].forEach(function (t) { setTimeout(function () { var c = window.pageYOffset || document.documentElement.scrollTop || 0; if (Math.abs(c - y) > 3) window.scrollTo(0, y); }, t); }); } catch (e) {} }
-function mdCfgDefaults(c) { c = c || {}; return { habitPts: c.habitPts != null && c.habitPts !== '' ? +c.habitPts : 1, blockPts: c.blockPts != null && c.blockPts !== '' ? +c.blockPts : 2, bonusPerMin: c.bonusPerMin != null && c.bonusPerMin !== '' ? +c.bonusPerMin : 0.5, clockMult: c.clockMult != null && c.clockMult !== '' ? +c.clockMult : 1, clockPay: c.clockPay === false ? false : true }; }
+function mdCfgDefaults(c) { c = c || {}; var pm = typeof psMult === 'function' ? psMult() : 1; return { habitPts: Math.round((c.habitPts != null && c.habitPts !== '' ? +c.habitPts : 1) * pm * 100) / 100, blockPts: Math.round((c.blockPts != null && c.blockPts !== '' ? +c.blockPts : 2) * pm * 100) / 100, bonusPerMin: c.bonusPerMin != null && c.bonusPerMin !== '' ? +c.bonusPerMin : 0.5, clockMult: c.clockMult != null && c.clockMult !== '' ? +c.clockMult : 1, clockPay: c.clockPay === false ? false : true }; }
 function mdPtsPerB(sc) { return sc && +sc.ptsPerB > 0 ? +sc.ptsPerB : 20; }
 function mdRaw(pts, ptsPerB) { return (window._payMode || 'pay') === 'points' ? Math.round(pts * 100) / 100 : Math.round((pts / ptsPerB) * 100) / 100; }
 function mdFmtB(pts, ptsPerB) { return 'B$' + (Math.round((pts / ptsPerB) * 100) / 100).toFixed(2); }
@@ -33869,7 +33885,7 @@ function MyDayList(props) {
   var cfg = mdCfgDefaults(ktUse('points_cfg', null)[0]), sc = ktUse('store/cfg', null)[0] || {}, ppb = mdPtsPerB(sc);
   var pdS = ktUse('plansdone/' + day + '/' + pid, {}), pdone = pdS[0] || {}, hdS = ktUse('habitsdone/' + rdy + '/' + pid, {}), hdone = hdS[0] || {}, hrS = ktUse('habitsrun/' + rdy + '/' + pid, {}), hruns = hrS[0] || {};
   var sdS = ktUse('startday/' + todayKey() + '/' + pid, null), sd = sdS[0] || {}, ohS = ktUse('habits/' + pid, null), haS = ktUse('habits/__all', null);
-  var odS = ktUse('opsdone', {}), odone = odS[0] || {}, opS = ktUse('opsprog', {}), oprog = opS[0] || {}, ocS = ktUse('ops/custom', null), olS = ktUse('ops/lib', {});
+  var psS0 = ktUse('payscale/cfg', null), odS = ktUse('opsdone', {}), odone = odS[0] || {}, opS = ktUse('opsprog', {}), oprog = opS[0] || {}, ocS = ktUse('ops/custom', null), olS = ktUse('ops/lib', {});
   var awS = ktUse('awards/' + rdy + '/' + pid, {}), awards = awS[0] || {};
   var hsS = ktUse('habitstart/' + rdy + '/' + pid, {}), hst = hsS[0] || {}, skS = ktUse('skips/' + rdy + '/' + pid, {}), skips = skS[0] || {}, cfS = ktUse('startday_cfg', null), fmD = typeof flowMode === 'function' ? flowMode(pid) : { auto: false }, autoT = props.flow ? fmD.auto : !!(cfS[0] || {}).autoTimers;
   var twS = React.useState(null), twOpen = twS[0], setTwOpen = twS[1], twmS = React.useState({}), twSel = twmS[0], setTwSel = twmS[1], trS = ktUse('teamwork_req', {}), treq = trS[0] || {};
@@ -33883,7 +33899,7 @@ function MyDayList(props) {
   var blocks = (typeof planBlocksFor === 'function') ? planBlocksFor(props.schedHook, pid, day) : [];
   var rows = [], wdN = new Date().getDay(), schoolOn = !!props.flow && wdN > 0 && wdN < 6 && typeof DKA_BLOCKS !== 'undefined' && typeof btParse === 'function' && !!(typeof ssKid === 'function' && ssKid(pid));
   if (schoolOn) blocks = blocks.filter(function (b) { return !(/worship|bible|lesson|school|reading|handwrit|music class|reconvene|puzzle|academ|assignment/i.test(b.title || '') && (!b.activity || b.activity === 'school' || b.activity === 'spiritual')); });
-  if (schoolOn) { var sdn = pdone.schoolday; rows.push({ k: 'b_schoolday', t: 465, kind: 'block', icon: '📚', label: 'School day (about 6 hours)', time: btFmt(465), color: '#7986CB', on: !!sdn && (sdn.status === 'approved' || sdn.status === 'submitted'), pts: 0, mins: 360, startM: 465, endM: 825, schoolDay: true, b: { id: 'schoolday', title: 'School day', activity: 'school', own: true, _label: '📚 School day', _t: 465 } }); }
+  if (schoolOn) { var sdn = pdone.schoolday; rows.push({ k: 'b_schoolday', t: 465, kind: 'block', icon: '📚', label: 'School session — 6 hours', time: btFmt(465), color: '#7986CB', on: !!sdn && (sdn.status === 'approved' || sdn.status === 'submitted'), pts: (typeof psCfg === 'function' ? Math.round(6 * psCfg(psS0[0]).rate) : 0), mins: 360, startM: 465, endM: 825, schoolDay: true, b: { id: 'schoolday', title: 'School day', activity: 'school', own: true, _label: '📚 School day', _t: 465 } }); }
 
   blocks.forEach(function (b, i) {
     var nx = blocks[i + 1], endM = nx && nx._t != null ? nx._t : (b._t != null ? b._t + 30 : null), dn = pdone[b.id];
@@ -33902,7 +33918,8 @@ function MyDayList(props) {
   chores.forEach(function (it, i) {
     var r = odone[it.id], rec = r && r.period === rtPeriod(it.freq) ? r : null, p = oprog[it.id] && oprog[it.id].period === rtPeriod(it.freq) ? oprog[it.id] : null;
     var tt = /before school|morning|wake|breakfast|\bbeds?\b/i.test(it.label) ? 405 : /dinner|evening|bed ?time|night/i.test(it.label) ? 1110 : 930;
-    rows.push({ k: 'c_' + it.id, t: tt + i / 100, kind: 'chore', icon: '🧹', label: it.label, color: '#26A69A', on: !!rec && (rec.status === 'approved' || rec.status === 'submitted'), pts: it.pts || 5, mins: it.est || null, it: it, rec: rec, prog: p });
+    var tm = /(\d{1,2})(?::(\d\d))? ?(AM|PM)\b/i.exec(it.label), dueM = null; if (tm) { dueM = ((+tm[1] % 12) + (/pm/i.test(tm[3]) ? 12 : 0)) * 60 + (+tm[2] || 0); tt = dueM; }
+    rows.push({ k: 'c_' + it.id, t: tt + i / 100, kind: 'chore', dueM: dueM, icon: '🧹', label: it.label, color: '#26A69A', on: !!rec && (rec.status === 'approved' || rec.status === 'submitted'), pts: it.pts || 5, mins: it.est || null, it: it, rec: rec, prog: p });
   });
   if (props.flow && rows.some(function (r) { return r.kind === 'habit' && /\bbed\b/i.test(r.label); })) rows = rows.filter(function (r) { return !(r.kind === 'chore' && /beds? made|make (your |the )?beds?/i.test(r.label)); });
   if (props.kinds) rows = rows.filter(function (r) { return props.kinds.indexOf(r.kind) >= 0 && (r.kind !== 'block' || !props.blockAct || r.b.activity === props.blockAct); });
@@ -33940,15 +33957,16 @@ function MyDayList(props) {
       if (r.b.activity) tcLink(pid, r.b.activity, '', false);
       if (r.schI != null) { try { syncSet('blocklog/' + todayKey() + '/' + pid + '/b' + r.schI + '/out', Date.now()); if (typeof btStop === 'function') btStop(pid, props.sessions || {}, props.onUpdate, r.b._label); } catch (e) {} }
       try { syncSet('plansdone/' + day + '/' + pid + '/' + r.b.id, { status: 'approved', auto: true, ts: Date.now(), title: r.label, pts: r.pts }); } catch (e) {}
+      if (r.schoolDay && typeof psSchoolPay === 'function') { var sp = psSchoolPay(pid, props.sessions, psCfg(psS0[0])); finish(r, sp.pts, null, '🏫 School session — ' + psHM(sp.mins) + (sp.factor < 1 ? ' · ' + Math.round(sp.factor * 100) + '% of lessons done' : ''), 0); return; }
       finish(r, r.pts, null, '✅ ' + r.label, saved2);
     } else {
       var it = r.it, per = rtPeriod(it.freq);
       if (r.on) { try { syncSet('opsdone/' + it.id, null); } catch (e) {} mdRevoke(pid, r.k, r.label); return; }
       tcLink(pid, 'chores', '', false);
       var cst = (r.prog && r.prog.start) || hst[r.k] || 0; if (hst[r.k] && typeof otCheck === 'function') otCheck(pid, r.label, hst[r.k], r.mins);
-      var mins = r.prog && r.prog.start ? Math.max(1, Math.round((Date.now() - r.prog.start) / 60000)) : null, saved3 = (cst && (it.est || r.mins)) ? (it.est || r.mins) - (Date.now() - cst) / 60000 : 0;
+      var mins = r.prog && r.prog.start ? Math.max(1, Math.round((Date.now() - r.prog.start) / 60000)) : (hst[r.k] ? Math.max(1, Math.round((Date.now() - hst[r.k]) / 60000)) : null), saved3 = (cst && (it.est || r.mins)) ? (it.est || r.mins) - (Date.now() - cst) / 60000 : 0;
       var rawC = Math.round(((window._payMode || 'pay') === 'points' ? (it.pts || 0) : (+it.cash || 0)) * frac * 100) / 100, ptsC = Math.round((it.pts || 0) * frac * 10) / 10;
-      try { syncSet('opsdone/' + it.id, { status: 'approved', auto: true, by: pid, byName: name, ts: Date.now(), period: per, label: it.label, freq: it.freq, mins: mins, pts: ptsC, quick: frac < 1 ? true : null, cash: Math.round((+it.cash || 0) * frac * 100) / 100, credited: { amt: rawC, mode: window._payMode || 'pay', ts: Date.now() } }); } catch (e) {}
+      try { syncSet('opsdone/' + it.id, { status: 'approved', auto: true, by: pid, byName: name, ts: Date.now(), period: per, label: it.label, freq: it.freq, mins: mins, start: cst || null, due: r.dueM != null ? r.dueM : null, pts: ptsC, quick: frac < 1 ? true : null, cash: Math.round((+it.cash || 0) * frac * 100) / 100, credited: { amt: rawC, mode: window._payMode || 'pay', ts: Date.now() } }); } catch (e) {}
       finish(r, ptsC, rawC, '🧹 ' + (frac < 1 ? '(quick version) ' : '') + it.label.slice(0, 60), saved3);
     }
   }
@@ -33965,11 +33983,11 @@ function MyDayList(props) {
     if (st[i]) delete st[i]; else st[i] = true;
     try { syncSet('opsprog/' + it.id, Object.assign({}, p, { steps: st })); } catch (e) {}
   }
-  function grpOf(r) { if (r.kind === 'habit') return r.per; if (r.t < 465) return r.kind === 'chore' ? 'day' : 'morning'; if (r.t < 900) return 'day'; if (r.t < 1140) return 'afternoon'; return 'evening'; }
+  function grpOf(r) { if (r.schoolDay) return 'school'; if (r.kind === 'habit') return r.per; if (r.t < 465) return r.kind === 'chore' ? 'day' : 'morning'; if (r.t < 900) return 'day'; if (r.t < 1140) return 'afternoon'; return 'evening'; }
   var schoolRow = rows.filter(function (r) { return r.schoolDay; })[0], afterLocked = !!schoolRow && !schoolRow.on;
   var rowsR = rows;
   if (props.flow) rowsR = (function () {
-    var ORDER = ['morning', 'day', 'afternoon', 'evening'], TT = { morning: '☀️ Getting ready', day: '📚 My day', afternoon: '🌤 After school', evening: '🌙 Evening' };
+    var ORDER = ['morning', 'school', 'day', 'afternoon', 'evening'], TT = { morning: '☀️ Getting ready', school: '🏫 School · 6-hour timer', day: '📚 My day', afternoon: '🌤 After school', evening: '🌙 Evening' };
     var grp = grpOf;
     function grpX(r) { if (r.kind === 'habit') return r.per; if (r.t < 465) return r.kind === 'chore' ? 'day' : 'morning'; if (r.t < 900) return 'day'; if (r.t < 1140) return 'afternoon'; return 'evening'; }
     function dts(r) { return r.kind === 'habit' ? (r.ts || 0) : r.kind === 'block' ? ((pdone[r.b.id] || {}).ts || 0) : ((r.rec || {}).ts || 0); }
@@ -33977,11 +33995,12 @@ function MyDayList(props) {
     var by = {}, out = [], hide = props.groupHide || {}, foot = props.groupFoot || {}; ORDER.forEach(function (g) { by[g] = []; });
     rows.forEach(function (r) { by[grp(r)].push(r); });
     ORDER.forEach(function (g) {
-      var L = by[g]; if (!L.length && !foot[g]) return;
+      var L = by[g].filter(function (r) { return !(r.on || r.skip); }).concat(by[g].filter(function (r) { return r.on || r.skip; })); if (!L.length && !foot[g]) return;
       if (g === 'afternoon' && afterLocked) { out.push({ sep: true, k: 'gl' + g, el: h('div', { key: 'gl' + g, style: { margin: '14px 2px 8px', padding: 14, borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px dashed rgba(255,255,255,.3)', color: '#d8d8e8', fontSize: 15, fontWeight: 800, textAlign: 'center' } }, '🔒 🌤 After school opens when your school day is done') }); return; }
       var dn = L.filter(function (r) { return r.on || r.skip; }).length, plan = L.reduce(function (n, r) { return n + (r.mins || 0); }, 0), took = 0, should = 0, prev = (g === 'morning' && sd.dayStart) ? sd.dayStart : 0;
       L.filter(function (r) { return r.on && dts(r); }).sort(function (a, b) { return dts(a) - dts(b); }).forEach(function (r) { var t = dts(r), st = hst[r.hid || r.k] || (autoT ? prev : 0); if (st && t > st) { took += t - st; should += (r.mins || 0) * 60000; } prev = t; });
       if (L.length) out.push({ sep: true, k: 'gh' + g, el: h('div', { key: 'gh' + g, style: { display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 2px 6px' } }, h('div', { style: { flex: 1, fontSize: 17, fontWeight: 900, color: '#fff' } }, TT[g]), h('div', { style: { fontSize: 13, fontWeight: 800, color: dn === L.length ? '#81C784' : '#c8c8d8' } }, hide[g] ? '✅ done' : dn + ' of ' + L.length + (plan ? ' · ' + plan + ' min' : ''))) });
+      if (g === 'school' && L.length && typeof SchoolSessionBar === 'function') out.push({ sep: true, k: 'gsb', el: h(SchoolSessionBar, { key: 'gsb', sid: pid, sessions: props.sessions }) });
       if (!hide[g]) L.forEach(function (r) { out.push(r); });
       out.push({ sep: true, k: 'gf' + g, el: h('div', { key: 'gf' + g }, should > 0 && h('div', { style: { margin: '2px 0 8px', padding: '10px 12px', borderRadius: 12, background: took <= should ? 'rgba(76,175,130,.14)' : 'rgba(239,83,80,.14)', border: '1px solid ' + (took <= should ? 'rgba(76,175,130,.5)' : 'rgba(239,83,80,.5)'), color: '#fff', fontSize: 14, fontWeight: 800 } }, '⏱ Took ' + mmss(took) + ' · should take ' + mmss(should) + (took <= should ? ' · ⚡ saved ' + mmss(should - took) : ' · ' + mmss(took - should) + ' over')), foot[g] || null) });
     });
@@ -33995,26 +34014,28 @@ function MyDayList(props) {
   function flowStrip() {
     if (!nowR) return props.flow ? h('div', { style: { background: 'rgba(76,175,130,.14)', border: '2px solid #4CAF82', borderRadius: 16, padding: 14, marginBottom: 10, color: '#fff', fontWeight: 900, fontSize: 16, textAlign: 'center' } }, '🎉 Everything on your list is checked off!') : null;
     var key = nowR.hid || nowR.k, stt = hst[key], el = stt ? Date.now() - stt : 0, left = nowR.mins ? nowR.mins * 60 - el / 1000 : null, a = left == null ? 0 : Math.abs(Math.round(left));
-    return h('div', { style: { background: 'rgba(255,213,79,.1)', border: '2px solid #FFD54F', borderRadius: 18, padding: 14, marginBottom: 10 } },
-      h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, 'NEXT UP' + (autoT ? ' · 🤖 auto timer' : '')),
-      h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', margin: '2px 0' } }, nowR.icon + ' ' + nowR.label),
-      nowR.mins && h('div', { style: { fontSize: stt ? 40 : 18, fontWeight: 900, color: left != null && left < 0 ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, stt ? (left < 0 ? '+' : '') + Math.floor(a / 60) + ':' + ('0' + (a % 60)).slice(-2) : nowR.mins + ' min'),
+    return h('div', { style: { background: 'rgba(255,213,79,.12)', border: '3px solid #FFD54F', borderRadius: 20, padding: 18, marginBottom: 12 } },
+      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, 'NEXT UP' + (autoT ? ' · 🤖 auto timer' : '')),
+      h('div', { style: { fontSize: 26, fontWeight: 900, color: '#fff', margin: '4px 0' } }, nowR.icon + ' ' + nowR.label),
+      nowR.mins && h('div', { style: { fontSize: stt ? 56 : 22, fontWeight: 900, color: left != null && left < 0 ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace' } }, stt ? (left < 0 ? '+' : '') + Math.floor(a / 60) + ':' + ('0' + (a % 60)).slice(-2) : nowR.mins + ' min'),
       h('div', { style: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } },
-        !autoT && !stt && h('button', { onClick: function () { startHabit(nowR); if (nowR.kind === 'block' && nowR.b.activity) { if (nowR.schI != null && typeof btStart === 'function') btStart(pid, props.sessions || {}, props.onUpdate, nowR.b._label); else clockInFor(nowR.b); } }, style: { flex: 1, minWidth: 130, minHeight: 54, background: '#039BE5', color: '#fff', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 17, cursor: 'pointer' } }, '▶ Start'),
-        h('button', { onClick: function () { toggle(nowR); }, style: { flex: 1, minWidth: 130, minHeight: 54, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 17, cursor: 'pointer' } }, '✓ Done')));
+        !autoT && !stt && h('button', { onClick: function () { startHabit(nowR); if (nowR.kind === 'block' && nowR.b.activity) { if (nowR.schI != null && typeof btStart === 'function') btStart(pid, props.sessions || {}, props.onUpdate, nowR.b._label); else clockInFor(nowR.b); } }, style: { flex: 1, minWidth: 130, minHeight: 62, background: '#039BE5', color: '#fff', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 19, cursor: 'pointer' } }, '▶ Start'),
+        h('button', { onClick: function () { toggle(nowR); }, style: { flex: 1, minWidth: 130, minHeight: 62, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 19, cursor: 'pointer' } }, '✓ Done')));
   }
   function clockInFor(b) { if (b.activity && typeof clockInActivity === 'function') clockInActivity(pid, props.sessions || {}, props.onUpdate, b.activity); }
   var running = (typeof clockActiveList === 'function') ? clockActiveList((props.sessions || {})[pid] || {}).map(function (x) { return x.activity; }) : [];
   function tl(m) { if (m >= 9000) return ''; var hh = Math.floor(m / 60), mm = Math.floor(m % 60); return (hh % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + (hh < 12 ? 'a' : 'p'); }
   return h('div', { style: { padding: '0 0 10px' } },
     !props.compact && !props.flow && typeof WaterTimes === 'function' && h(WaterTimes, { personId: pid }),
-    props.flow && flowStrip(),
     !props.compact && !props.flow && typeof PlanRightNow === 'function' && h(PlanRightNow, { schedHook: props.schedHook, personId: pid, sessions: props.sessions, onUpdate: props.onUpdate }),
     props.compact ? h('div', { style: { fontSize: 13, fontWeight: 900, color: '#7be3ae', marginBottom: 6 } }, doneN + '/' + rows.length + ' checked off · ⭐ ' + (Math.round(todayPts * 10) / 10) + ' pts earned today') : h('div', { style: { background: 'rgba(76,175,130,.12)', border: '1px solid rgba(76,175,130,.45)', borderRadius: 14, padding: 12, margin: '4px 0 10px' } },
-      h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' } }, h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', flex: 1 } }, '✅ My day, in order'), h('div', { style: { fontSize: 14, fontWeight: 900, color: '#7be3ae' } }, doneN + '/' + rows.length + ' done')),
+      h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' } }, h('div', { style: { fontSize: props.flow ? 22 : 18, fontWeight: 900, color: '#fff', flex: 1 } }, '✅ My day, in order'), h('div', { style: { fontSize: 14, fontWeight: 900, color: '#7be3ae' } }, doneN + '/' + rows.length + ' done')),
       h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', margin: '8px 0' } }, h('div', { style: { height: '100%', width: (rows.length ? doneN / rows.length * 100 : 0) + '%', background: '#4CAF82', transition: 'width .3s' } })),
-      h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 800 } }, '⭐ Earned today: ' + (Math.round(todayPts * 10) / 10) + ' pts  =  ' + mdFmtB(todayPts, ppb) + ' Bethel Cash'),
+      h('div', { style: { fontSize: props.flow ? 22 : 14, color: '#fff', fontWeight: 900 } }, '⭐ Earned today: ' + (Math.round(todayPts * 10) / 10) + ' pts  =  ' + mdFmtB(todayPts, ppb) + ' Bethel Cash'),
       h('div', { style: { fontSize: 12, color: '#c8d8c8', marginTop: 3, lineHeight: 1.5 } }, 'Check things off in order. Finish before the time is up and the minutes left over are added as bonus points. School and clock time pay on their own. ' + ppb + ' points = B$1, so points pay your bills.')),
+    props.flow && props.preEl,
+    props.flow && flowStrip(),
+    props.flow && props.postEl,
     msg && h('div', { style: { background: '#4CAF82', color: '#000', borderRadius: 10, padding: 9, fontWeight: 800, fontSize: 14, marginBottom: 8 } }, msg),
     rows.length === 0 && h('div', { style: { fontSize: 14, color: '#b8b8c8', padding: 10 } }, props.compact ? 'Nothing is scheduled here today. Ask a parent if something should be added.' : 'Nothing is set for today. Ask a parent.'),
     rowsR.map(function (r) {
@@ -34025,7 +34046,7 @@ function MyDayList(props) {
           h('button', { onClick: function () { toggle(r); }, 'aria-label': 'check off', style: { width: 40, height: 40, borderRadius: '50%', flexShrink: 0, border: '3px solid ' + (r.on ? '#4CAF82' : 'rgba(255,255,255,.55)'), background: r.on ? '#4CAF82' : 'transparent', color: '#000', fontWeight: 900, fontSize: 20, cursor: 'pointer' } }, r.on ? '✓' : ''),
           h('div', { onClick: function () { if (nS || r.schoolDay) setEx(open ? null : r.k); }, style: { flex: 1, minWidth: 0, cursor: (nS || r.schoolDay) ? 'pointer' : 'default' } },
             h('div', { style: { fontSize: 15, fontWeight: 800, color: '#fff', textDecoration: r.on ? 'line-through' : 'none', opacity: r.on ? .7 : 1, lineHeight: 1.35 } }, r.icon + ' ' + r.label),
-            h('div', { style: { fontSize: 12, color: '#b8c0d0', marginTop: 2 } }, (r.time || tl(r.t)) + (r.time || tl(r.t) ? ' · ' : '') + (r.mins ? r.mins + ' min · ' : '') + '+' + r.pts + ' pts' + (nS ? ' · ' + nS + ' steps' + (dn ? ' (' + dn + ' done)' : '') : '') + (aw ? ' · ✅ paid' : '') + (isNow ? ' · ⏱ NOW' : ''))),
+            h('div', { style: { fontSize: 12, color: '#b8c0d0', marginTop: 2 } }, (r.time || tl(r.t)) + (r.time || tl(r.t) ? ' · ' : '') + (r.mins ? r.mins + ' min · ' : '') + '+' + r.pts + ' pts' + (nS ? ' · ' + nS + ' steps' + (dn ? ' (' + dn + ' done)' : '') : '') + (aw ? ' · ✅ paid' : '') + (isNow ? ' · ⏱ NOW' : '') + (r.kind === 'chore' && r.dueM != null ? (function () { if (r.on && r.rec && r.rec.ts) { var d0 = new Date(r.rec.ts), am = d0.getHours() * 60 + d0.getMinutes(), late = am - r.dueM; return ' · done ' + tl(am) + (late > 5 ? ' (' + late + ' min late)' : ' (on time)') + (r.rec.mins ? ' · took ' + r.rec.mins + ' min' : ''); } if (!r.on) { var nm0 = new Date(); var nmin = nm0.getHours() * 60 + nm0.getMinutes(); if (nmin > r.dueM + 5) return ' · ⏰ ' + (nmin - r.dueM) + ' min late'; } return ''; })() : ''))),
           r.kind === 'block' && r.b.activity && !r.on && !props.compact && h('button', { onClick: function () { if (running.indexOf(r.b.activity) === -1 && typeof clockInActivity === 'function') (r.schI != null && typeof btStart === 'function') ? btStart(pid, props.sessions || {}, props.onUpdate, r.b._label) : clockInActivity(pid, props.sessions || {}, props.onUpdate, r.b.activity, { stack: true, label: r.label }); }, style: { background: running.indexOf(r.b.activity) !== -1 ? 'rgba(76,175,130,.3)' : '#039BE5', color: '#fff', border: 'none', borderRadius: 14, padding: '10px 11px', fontWeight: 800, fontSize: 12, cursor: 'pointer', flexShrink: 0 } }, running.indexOf(r.b.activity) !== -1 ? '⏱ Clocked in' : '▶ Clock in')),
         !r.on && (r.skip ? h('div', { style: { padding: '0 12px 10px 62px', fontSize: 12, color: '#b8c0d0' } }, 'Skipped today. ', h('button', { onClick: function () { skipRow(r, false); }, style: { background: 'transparent', border: 'none', color: '#FFD54F', fontWeight: 800, cursor: 'pointer', fontSize: 12 } }, '↩ undo'))
           : h('div', { style: { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '0 12px 10px 62px' } },
@@ -40020,16 +40041,16 @@ function BreakTimer(props) {
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
   var active = br.start && !br.end, left = active ? br.mins - (Date.now() - br.start) / 60000 : 0, over = active && left <= 0;
   React.useEffect(function () { if (over && !br.buzzed) { try { put('buzzed', true); if (navigator.vibrate) navigator.vibrate([300, 150, 300]); if (typeof playOnce === 'function') playOnce('clockOut'); } catch (e) {} } }, [over]);
-  function begin(m) { try { syncSet('breaks/' + day + '/' + sid, { start: Date.now(), mins: m }); } catch (e) {} try { clockInActivity(sid, props.sessions || {}, props.onUpdate, 'free', { label: 'Break' }); } catch (e) {} }
+  function begin(m) { try { syncSet('breaks/' + day + '/' + sid, { start: Date.now(), mins: m, n: (br.n || 0) + 1 }); } catch (e) {} try { clockInActivity(sid, props.sessions || {}, props.onUpdate, 'free', { label: 'Break' }); } catch (e) {} }
   function end() { try { syncSet('breaks/' + day + '/' + sid + '/end', Date.now()); } catch (e) {} try { clockOutActivity(sid, props.sessions || {}, props.onUpdate, 'free'); } catch (e) {} }
-  var pill = function (m) { return h('button', { key: m, onClick: function () { begin(m); }, style: { flex: 1, minHeight: 54, background: 'rgba(255,255,255,.12)', color: '#fff', border: '2px solid rgba(255,255,255,.25)', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, m + ' min'); };
-  return h('div', { style: { background: over ? 'rgba(239,83,80,.2)' : 'rgba(239,83,80,.1)', border: '2px solid ' + (over ? '#EF5350' : 'rgba(239,83,80,.5)'), borderRadius: 16, padding: 12, marginBottom: 12 } },
-    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFAB91', letterSpacing: 1 } }, '☕ BREAK TIMER'),
+  var pill = function (m) { return h('button', { key: m, onClick: function () { begin(m); }, style: { minHeight: 40, padding: '6px 14px', background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, m + ' min'); }, used = br.n || 0, MAXB = 3;
+  return h('div', { style: { background: over ? 'rgba(239,83,80,.2)' : 'rgba(239,83,80,.06)', border: '1px solid ' + (over ? '#EF5350' : 'rgba(239,83,80,.35)'), borderRadius: 12, padding: active ? 12 : '6px 10px', marginBottom: 10 } },
+    h('div', { style: { fontSize: active ? 13 : 11, fontWeight: 900, color: '#FFAB91', letterSpacing: 1 } }, '☕ BREAK'),
     active ? h('div', null,
       h('div', { style: { fontSize: 40, fontWeight: 900, color: over ? '#FF8A80' : '#fff', fontFamily: 'ui-monospace,Menlo,monospace', margin: '4px 0' } }, (over ? '+' : '') + btLeft(over ? -left : left)),
       h('div', { style: { fontSize: 15, color: '#f2f2f8', marginBottom: 8, fontWeight: 700 } }, over ? '⏰ Break is over — time to get back to work!' : 'Enjoy your break. The clock is paused for school.'),
       h('button', { onClick: end, style: { width: '100%', minHeight: 52, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '▶ Break done — back to work'))
-      : h('div', null, h('div', { style: { fontSize: 14, color: '#f2f2f8', margin: '4px 0 8px' } }, 'Need a break? Pick how long. It counts down and tells you when to come back.'), h('div', { style: { display: 'flex', gap: 8 } }, [5, 10, 15].map(pill))));
+      : h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 } }, used >= MAXB ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'You used your ' + MAXB + ' breaks today. Great focus — keep going! 💪') : [h('div', { key: 'q', style: { flex: 1, fontSize: 12, color: '#c8c8d8', minWidth: 90 } }, 'Short break (' + (MAXB - used) + ' left today)'), [5, 10].map(pill)]));
 }
 
 function SchoolTimeline(props) {
@@ -40065,6 +40086,7 @@ function SchoolTimeline(props) {
         !admin && !props.teacher && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
           !(log['b' + curI] && log['b' + curI].in && !log['b' + curI].out) ? btn('#4CAF82', '#000', function () { clockIn(curB); }, '▶ Clock in') : btn('#7E57C2', '#fff', function () { clockOut(curB); }, '⏹ Clock out')))
         : h('div', { style: { fontSize: 16, fontWeight: 800, color: '#fff' } }, nextB ? 'Next: ' + nextB.l + ' at ' + btFmt(nextB.st) + ' (in ' + Math.max(1, Math.round(nextB.st - now)) + ' min)' : 'The school schedule is finished for today. 🎉')),
+    !admin && !props.teacher && typeof SchoolSessionBar === 'function' && h(SchoolSessionBar, { sid: sid, sessions: sessions }),
     !admin && !props.teacher && !props.noBreak && h(BreakTimer, { sid: sid, sessions: sessions, onUpdate: onUpdate }),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, '📅 TODAY’S SCHEDULE — tap a block'),
     blocks.map(function (b) {
@@ -40078,6 +40100,7 @@ function SchoolTimeline(props) {
         (open || (openI == null && isNow)) && h('div', { style: { padding: '0 12px 12px' } },
           h('div', { style: { fontSize: 14, color: '#d8d8e8', lineHeight: 1.5, marginBottom: 6 } }, b.s),
           h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 8 } }, '⏱ ' + btFmt(b.st) + ' – ' + btFmt(b.en) + ' · ' + plan + ' min planned' + (e.in ? ' · ' + act + ' min clocked' : '')),
+          typeof BlockExtras === 'function' && h(BlockExtras, { key: 'bx' + b.i, label: b.l }),
           props.teacher && typeof AdminBlockBody === 'function' && h(AdminBlockBody, { key: 'ab' + b.i + props.schoolDay, label: b.l, day: props.schoolDay }),
           !admin && !props.teacher && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, going ? btn('#7E57C2', '#fff', function () { clockOut(b); }, '⏹ Clock out') : btn('#4CAF82', '#000', function () { clockIn(b); }, done ? '▶ Clock in again' : '▶ Clock in'))));
     }));
@@ -40281,11 +40304,13 @@ function ntDest(n) {
   if (!n) return null;
   if (n.goto) return { go: n.goto, label: n.gotoLabel || '🛒 Open the flyers & menu →' };
   var t = String(n.type || ''), s = String(n.title || '') + ' ' + String(n.message || '');
-  if (t === 'message' || t === 'checkin' || t === 'payment' || t === 'paycheck') return null;
+  if (t === 'message' || t === 'checkin' || t === 'payment') return null;
   if (t === 'pin_reset_request' || /passcode|\bpin\b/i.test(s)) return { go: 'admin:adminsettings', label: '🔑 Go change the passcode →' };
   if (/was late|late request|excus|absen/i.test(s)) return { go: 'admin:clockctl', label: '⏰ Excuse or deny →' };
   if (/needs your OK|wants to add to their schedule/i.test(s)) return { go: 'admin:schedreq', label: '📅 Approve the schedule request →' };
   if (t === 'overdue' || /forgotten to clock|overdue/i.test(s)) return { go: 'admin:clockctl', label: '⏱ Fix their clock →' };
+  if (t === 'paycheck') return { go: 'admin:payroll', label: '💼 Open Payroll ›' };
+  if (t === 'clock_in' || t === 'clock_out') return { go: 'admin:clockctl', label: '🕐 Open clock control ›' };
   if (/clocked into school/i.test(s)) return { go: 'work:school', label: '📚 Open School →' };
   if (/new grade/i.test(s)) return { go: 'work:grades', label: '📒 Open grades →' };
   if (/flyers|menu/i.test(s)) return { go: 'kitchen:menu', label: '🛒 Open the flyers & menu →' };
@@ -40299,7 +40324,8 @@ window._ntGo = function (d, nid, setTab, closeNotifs) {
   try { closeNotifs && closeNotifs(); } catch (e) {}
   if (k === 'admin') {
     setTab('admin');
-    var ids = v === 'adminsettings' ? ['adminsettings'] : v === 'clockctl' ? ['clockctl'] : v === 'schedreq' || v === 'top' ? [] : [v];
+    var secMap = { adminsettings: 'settings', clockctl: 'overview', schedreq: 'overview', top: 'overview', payroll: 'ops', ops: 'ops' }; try { if (window._admSecGo) window._admSecGo(secMap[v] || 'overview'); } catch (e) {}
+    var ids = v === 'adminsettings' ? ['adminsettings'] : v === 'clockctl' ? ['clockctl'] : v === 'schedreq' || v === 'top' || v === 'payroll' || v === 'ops' ? [] : [v];
     window._foldMem = window._foldMem || {}; ids.forEach(function (i) { window._foldMem[i] = true; });
     setTimeout(function () { try { ids.forEach(function (i) { window.dispatchEvent(new CustomEvent('fm-fold-open', { detail: i })); }); } catch (e) {} }, 120);
     setTimeout(function () { try { var el = v === 'top' ? null : document.querySelector('[data-fold="' + (ids[0] || v) + '"]'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo(0, 0); } catch (e) {} }, 500);
@@ -40309,8 +40335,161 @@ window._ntGo = function (d, nid, setTab, closeNotifs) {
 
 </script>
 <script>
+// ═══ MEAL PLAN LINKS: school-day blocks show today's snack / lunch from the meal plan; the family calendar shows each day's meals ═══
+var MS_NAMES = { breakfast: '🌅 Breakfast', lunch: '🥪 Lunch', dinner: '🍽 Dinner', snack: '🍎 Snack' };
+function msWeekDay(iso) { var d = iso ? new Date(iso + 'T12:00:00') : new Date(); return { ws: ktWeekStart(d), di: d.getDay() }; }
+function MealToday(props) {
+  var h = React.createElement, wd = msWeekDay(props.date), mS = ktUse('kitchen_menu/' + wd.ws, {}), days = (mS[0] || {}).days || {}, e = (days[wd.di] || {})[props.meal];
+  var go = function (t) { try { window._gotoDest('kitchen:' + t); } catch (x) {} };
+  return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: 'rgba(255,183,77,.1)', border: '1px solid rgba(255,183,77,.4)', borderRadius: 12, padding: '10px 12px', marginBottom: 8 } },
+    h('div', { style: { flex: 1, minWidth: 150 } }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFB74D', letterSpacing: 1 } }, (MS_NAMES[props.meal] || props.meal).toUpperCase() + ' TODAY'),
+      h('div', { style: { fontSize: 16, fontWeight: 800, color: e ? '#fff' : '#c8c8d8' } }, e ? (e.title || 'Planned') : 'Not planned yet')),
+    h('button', { onClick: function () { go(e ? 'menu' : 'kids'); }, style: { minHeight: 44, background: '#FFB74D', color: '#000', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, e ? '🗓 Meal plan ›' : '📝 Plan it ›'));
+}
+// inside a schedule block's drop-down
+function BlockExtras(props) {
+  var h = React.createElement, l = String(props.label || ''), fri = new Date().getDay() === 5, nx = false;
+  if (/snack/i.test(l)) return h(MealToday, { meal: 'snack' });
+  if (/wrap-up|meal plan/i.test(l)) return h('div', null, h(MealToday, { meal: 'lunch' }),
+    h('button', { onClick: function () { try { window._gotoDest('kitchen:kids'); } catch (x) {} }, style: { width: '100%', minHeight: 48, textAlign: 'left', background: fri ? '#4CAF82' : 'rgba(255,255,255,.08)', color: fri ? '#000' : '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer', marginBottom: 8 } }, (fri ? '📝 Friday: plan next week’s snacks & lunches ›' : '📝 Plan next week’s snacks & lunches ›')));
+  return null;
+}
+// family calendar: the day's planned meals, automatically
+function CalMeals(props) {
+  var h = React.createElement, wd = msWeekDay(props.date), mS = ktUse('kitchen_menu/' + wd.ws, {}), days = (mS[0] || {}).days || {}, d = days[wd.di] || {};
+  var rows = ['breakfast', 'lunch', 'snack', 'dinner'].filter(function (m) { return d[m]; });
+  if (!rows.length) return null;
+  return h('div', null, rows.map(function (m) {
+    return h('div', { key: m, style: { margin: '8px 14px', background: '#FFB74D18', border: '1px solid #FFB74D44', borderLeft: '4px solid #FFB74D', borderRadius: 10, padding: '10px 12px' } },
+      h('div', { style: { fontSize: 12, fontWeight: 800, color: '#fff' } }, (MS_NAMES[m] || m) + ' — ' + (d[m].title || 'Planned')), h('div', { style: { fontSize: 9, color: 'rgba(255,255,255,.4)' } }, 'From the Meal Plan'));
+  }));
+}
+
+</script>
+<script>
+// ═══ PAY SCALE, SCHOOL PAY & DEDUCTIONS ═══
+// School session = up to 6 hours; paid per hour clocked × how much of the day's work was done. Admin sees whether a month of points covers the bills + the real $ goal.
+var PS_DED = [
+  { id: 'latebill', label: '🧾 Bill paid late', pts: 10, tip: 'Pay each bill on its due date from the Store & Envelopes — set a reminder the day before.' },
+  { id: 'nopts', label: '💸 Not enough points for a bill', pts: 10, tip: 'Check the bills at the start of the week and earn ahead — a little each day beats a scramble.' },
+  { id: 'cleanup', label: '🧹 After-school clean-up not done', pts: 5, tip: 'Do the 10-minute reset right when school ends, before anything fun.' },
+  { id: 'tablet', label: '🔌 Tablet not charged / not plugged in', pts: 5, tip: 'Plug it in the minute you finish. Make it your last school step.' },
+  { id: 'homework', label: '📝 Homework not done properly', pts: 10, tip: 'Re-read the assignment, check each part, then turn it in. Ask for help early.' },
+  { id: 'late', label: '⏰ Late to school start', pts: 3, tip: 'Finish getting ready on time — the morning timer is there to help.' },
+  { id: 'mess', label: '🏠 Left a mess in a shared area', pts: 4, tip: 'Leave every room better than you found it. Pick up as you go.' },
+  { id: 'bedcheck', label: '🛏 Bedtime chores not finished', pts: 5, tip: 'Start your evening list 30 minutes earlier.' },
+  { id: 'clockout', label: '⏹ Forgot to clock out', pts: 3, tip: 'Clock out as the very last thing before you switch jobs.' },
+  { id: 'screen', label: '🎮 Screen time over the limit', pts: 5, tip: 'Use the game timer. Stop when it rings.' },
+  { id: 'directions', label: '🗣 Not following directions', pts: 5, tip: 'Say “yes, ma’am / sir” and do it right away, the first time.' },
+  { id: 'supplies', label: '✏️ Lost or left out school supplies', pts: 3, tip: 'Put supplies back in the school bin when you finish.' }
+];
+function psCfg(raw) {
+  var c = raw || {}, ded = {}; PS_DED.forEach(function (d) { var o = (c.ded || {})[d.id]; ded[d.id] = o != null && o !== '' ? +o : d.pts; });
+  return { mult: c.mult != null && c.mult !== '' ? +c.mult : 0.25, rate: c.rate != null && c.rate !== '' ? +c.rate : 6, days: c.days != null && c.days !== '' ? +c.days : 21, cash: c.cash != null && c.cash !== '' ? +c.cash : 5, ded: ded, custom: c.custom || {} };
+}
+function psMult() { try { return psCfg(syncGet('payscale/cfg')).mult; } catch (e) { return 0.25; } }
+function psTodayDay() { try { return cuTodayDay(); } catch (e) { return null; } }
+function psMinsToday(pid, sessions) {
+  var d = (sessions || {})[pid] || {}, m = 0;
+  (d.today || []).forEach(function (e) { if (e && e.activity === 'school') m += (+e.duration || 0); });
+  try { clockActiveList(d).forEach(function (a) { if (a.activity === 'school') m += Math.max(0, (Date.now() - a.startTime) / 60000); }); } catch (e) {}
+  return Math.round(m);
+}
+function psFactor(pid) {
+  try { var day = psTodayDay(); if (!day) return 1; var ls = ssLessons(pid, day), prog = syncGet('school/progress') || {}; if (!ls.length) return 1; return ls.filter(function (r) { return cuDone(prog[r.key]); }).length / ls.length; } catch (e) { return 1; }
+}
+function psSchoolPay(pid, sessions, cfg) {
+  var c = cfg || psCfg(null), mins = Math.min(360, psMinsToday(pid, sessions)), f = psFactor(pid);
+  return { mins: mins, factor: f, full: Math.round(6 * c.rate), pts: Math.round(mins / 60 * c.rate * f * 10) / 10 };
+}
+function psHM(m) { return Math.floor(m / 60) + 'h ' + ('0' + (m % 60)).slice(-2) + 'm'; }
+// the live 6-hour bar — shown in My Day's school group and at the top of the School schedule
+function SchoolSessionBar(props) {
+  var h = React.createElement, tS = React.useState(0), setT = tS[1], cS = ktUse('payscale/cfg', null), cfg = psCfg(cS[0]);
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 15000); return function () { clearInterval(iv); }; }, []);
+  var p = psSchoolPay(props.sid, props.sessions, cfg), run = false; try { run = clockActiveList((props.sessions || {})[props.sid] || {}).some(function (a) { return a.activity === 'school'; }); } catch (e) {}
+  var pct = Math.min(100, Math.round(p.mins / 360 * 100));
+  return h('div', { style: { background: 'rgba(121,134,203,.16)', border: '2px solid ' + (run ? '#7986CB' : 'rgba(255,255,255,.18)'), borderRadius: 16, padding: '12px 14px', marginBottom: 10 } },
+    h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } }, h('div', { style: { flex: 1, fontSize: 12, fontWeight: 900, color: '#C5CAE9', letterSpacing: 1 } }, '🏫 SCHOOL SESSION · 6 HOURS' + (run ? ' · ▶ RUNNING' : '')), h('div', { style: { fontSize: 13, fontWeight: 800, color: '#fff' } }, psHM(p.mins) + ' of 6h')),
+    h('div', { style: { height: 10, background: 'rgba(255,255,255,.12)', borderRadius: 5, overflow: 'hidden', margin: '8px 0 6px' } }, h('div', { style: { height: '100%', width: pct + '%', background: '#7986CB', transition: 'width .4s' } })),
+    h('div', { style: { fontSize: 13, color: '#d8d8e8' } }, 'Earning so far: +' + p.pts + ' pts of ' + p.full + (p.factor < 1 ? ' · full pay needs all your lessons done (' + Math.round(p.factor * 100) + '% done)' : ' · all lessons counted ✓')));
+}
+// ── admin: the pay scale ──
+function PayScaleCard(props) {
+  var h = React.createElement, cS = ktUse('payscale/cfg', null), cfg = psCfg(cS[0]), scS = ktUse('store/cfg', null), ppb = mdPtsPerB(scS[0]), bS = ktUse('store/bills', null), pcS = ktUse('points_cfg', null), pc = mdCfgDefaults(pcS[0]);
+  var bills = (typeof stList === 'function' && typeof ST_DEFAULT_BILLS !== 'undefined') ? stList(bS[0], ST_DEFAULT_BILLS) : [];
+  var billB = bills.reduce(function (n, b) { return n + (+b.cost || +b.amount || 0); }, 0);
+  var other = 0; try {
+    ['morning', 'afternoon', 'evening'].forEach(function (p) { other += (rtHabits('Kid', 'mykah', p, null, null) || []).length * pc.habitPts; });
+    var it = rtItems(null, 'mykah', 'Kid', null); other += it.daily.reduce(function (n, i) { return n + (i.pts || 0); }, 0);
+  } catch (e) {}
+  other = Math.round(other);
+  var unscaled = other / Math.max(0.01, cfg.mult), perDay = Math.round(6 * cfg.rate) + other, month = perDay * cfg.days, need = Math.round((billB + cfg.cash) * ppb), ok = month >= need;
+  var fitMult = Math.min(1, Math.max(0.05, Math.ceil(((need / cfg.days - 6 * cfg.rate) / Math.max(1, unscaled)) * 20) / 20));
+  function set(k, v) { try { syncSet('payscale/cfg/' + k, v); } catch (e) {} }
+  var st = function (label, val, step, key, fmt) { return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' } }, h('div', { style: { flex: 1, fontSize: 14, color: '#fff', fontWeight: 700 } }, label),
+    h('button', { onClick: function () { set(key, Math.max(0, Math.round((val - step) * 100) / 100)); }, style: { width: 44, height: 44, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 22, cursor: 'pointer' } }, '−'),
+    h('div', { style: { minWidth: 62, textAlign: 'center', fontSize: 16, fontWeight: 900, color: '#FFD54F' } }, fmt ? fmt(val) : val),
+    h('button', { onClick: function () { set(key, Math.round((val + step) * 100) / 100); }, style: { width: 44, height: 44, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 22, cursor: 'pointer' } }, '+')); };
+  var row = function (a, b, col) { return h('div', { style: { display: 'flex', fontSize: 14, padding: '4px 0', color: col || '#e8e8f4' } }, h('div', { style: { flex: 1 } }, a), h('div', { style: { fontWeight: 800 } }, b)); };
+  return h(Fold, { id: 'payscale', title: '💰 Pay scale & monthly goal' },
+    h('div', { style: { padding: '0 12px 10px' } },
+      h('div', { style: { fontSize: 12, color: '#b8b8c8', lineHeight: 1.5 } }, 'Set what an hour of school pays. The page below checks that a good month of points pays every bill AND leaves the real-cash goal for you to deposit.'),
+      st('School pay per hour (points)', cfg.rate, 0.5, 'rate', function (v) { return v + ' pts'; }),
+      h('div', { style: { fontSize: 12, color: '#9aa0b4', marginTop: -4 } }, '= B$' + (cfg.rate / ppb).toFixed(2) + ' an hour · ' + ppb + ' points = B$1'),
+      st('Chores & habits count for', cfg.mult, 0.05, 'mult', function (v) { return Math.round(v * 100) + '%'; }),
+      st('School days per month', cfg.days, 1, 'days'),
+      st('Real cash goal each month ($)', cfg.cash, 1, 'cash', function (v) { return '$' + v; }),
+      h('div', { style: { marginTop: 10, padding: 12, borderRadius: 12, background: 'rgba(0,0,0,.22)' } },
+        row('School, 6 h × ' + cfg.rate + ' pts', Math.round(6 * cfg.rate) + ' pts/day'),
+        row('Habits + chores (estimate)', other + ' pts/day'),
+        row('A full good day', perDay + ' pts', '#FFD54F'),
+        row('× ' + cfg.days + ' school days', month + ' pts/month'),
+        h('div', { style: { borderTop: '1px solid rgba(255,255,255,.15)', margin: '6px 0' } }),
+        row('Bills each month', 'B$' + billB.toFixed(2) + ' = ' + Math.round(billB * ppb) + ' pts'),
+        row('Real cash goal', '$' + cfg.cash + ' = ' + Math.round(cfg.cash * ppb) + ' pts'),
+        row('Points needed', need + ' pts', '#FFD54F'),
+        h('div', { style: { marginTop: 8, fontSize: 14, fontWeight: 900, color: ok ? '#81C784' : '#FF8A80' } }, ok ? '✅ A full month covers every bill and the $' + cfg.cash + ' (spare: ' + (month - need) + ' pts)' : '⚠️ Short by ' + (need - month) + ' pts a month')),
+      Math.abs(fitMult - cfg.mult) > 0.001 ? h('button', { onClick: function () { set('mult', fitMult); }, style: { display: 'block', width: '100%', minHeight: 48, marginTop: 10, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, 'Fit chores & habits to ' + Math.round(fitMult * 100) + '% so the month just covers the goal') : null,
+      h('div', { style: { fontSize: 12, color: '#9aa0b4', marginTop: 10, lineHeight: 1.5 } }, 'Full school pay needs the whole 6 hours clocked AND the lessons done properly; fewer lessons done means proportionally less. At month end, whatever is left after the bills becomes the real cash you deposit by hand.')));
+}
+// ── admin: deductions menu ──
+function DeductionCard(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.inPaySystem !== false && p.role !== 'parent' && p.id !== 'grandpa'; }), cS = ktUse('payscale/cfg', null), cfg = psCfg(cS[0]), scS = ktUse('store/cfg', null), ppb = mdPtsPerB(scS[0]);
+  var pS = React.useState(''), pick = pS[0], setPick = pS[1], eS = React.useState(false), edit = eS[0], setEdit = eS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], nS = React.useState(''), nm = nS[0], setNm = nS[1], aS = React.useState(5), na = aS[0], setNa = aS[1];
+  var kid = fam.filter(function (x) { return x.id === pick; })[0];
+  var items = PS_DED.map(function (d) { return { id: d.id, label: d.label, pts: cfg.ded[d.id], tip: d.tip }; }).concat(Object.keys(cfg.custom).map(function (k) { var c = cfg.custom[k]; return c ? { id: k, label: c.label, pts: +c.pts || 0, tip: c.tip || 'Ask Mom how to do this better next time.', custom: true } : null; }).filter(Boolean));
+  function apply(d) {
+    if (!kid) { setMsg('Pick a child first.'); return; }
+    var raw = mdRaw(d.pts, ppb);
+    try { if (typeof window._deductFn === 'function') window._deductFn(kid.id, raw, '📉 ' + d.label); } catch (e) {}
+    try { if (typeof window._addNotifFn === 'function') window._addNotifFn('info', kid.id, '📉 ' + d.label + ' — −' + d.pts + ' pts', 'How to avoid it next time: ' + d.tip, { requiresApproval: false }); } catch (e) {}
+    setMsg('Deducted ' + d.pts + ' pts from ' + kid.name + '. They were sent a note on how to avoid it.');
+  }
+  function setPts(d, v) { try { if (d.custom) syncSet('payscale/cfg/custom/' + d.id + '/pts', v); else syncSet('payscale/cfg/ded/' + d.id, v); } catch (e) {} }
+  function addCustom() { if (!nm.trim()) return; var id = 'c' + Date.now().toString(36); try { syncSet('payscale/cfg/custom/' + id, { label: '⚠️ ' + nm.trim(), pts: na, tip: 'Ask Mom how to do this better next time.' }); } catch (e) {} setNm(''); }
+  var b = { display: 'block', width: '100%', textAlign: 'left', minHeight: 48, borderRadius: 12, padding: '10px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 8, background: 'rgba(255,255,255,.07)', color: '#fff', border: '1px solid rgba(255,255,255,.25)' };
+  return h(Fold, { id: 'deductions', title: '📉 Deductions (to teach, not to punish)' },
+    h('div', { style: { padding: '0 12px 10px' } },
+      h('div', { style: { fontSize: 12, color: '#b8b8c8', lineHeight: 1.5 } }, 'Pick the child, then tap what happened. The points come off and they get a note saying how to avoid it. The goal is a month with none.'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 } }, fam.map(function (p) { var on = pick === p.id; return h('button', { key: p.id, onClick: function () { setPick(p.id); }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: '#fff', background: on ? 'rgba(255,213,79,.2)' : 'rgba(255,255,255,.06)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.15)') } }, (p.emoji || '') + ' ' + p.name); })),
+      items.map(function (d) {
+        return h('div', { key: d.id }, edit ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 } }, h('div', { style: { flex: 1, fontSize: 13, color: '#fff' } }, d.label),
+          h('button', { onClick: function () { setPts(d, Math.max(0, d.pts - 1)); }, style: { width: 40, height: 40, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 20 } }, '−'),
+          h('div', { style: { minWidth: 48, textAlign: 'center', fontWeight: 900, color: '#FFD54F' } }, d.pts), h('button', { onClick: function () { setPts(d, d.pts + 1); }, style: { width: 40, height: 40, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 20 } }, '+'))
+          : h(DcConfirm, { onConfirm: function () { apply(d); }, label: d.label + '  ·  −' + d.pts + ' pts', sure: 'Tap again — take ' + d.pts + ' pts' + (kid ? ' from ' + kid.name : ''), style: b }));
+      }),
+      edit && h('div', { style: { marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' } }, h('input', { value: nm, onChange: function (e) { setNm(e.target.value); }, placeholder: 'Add your own…', style: { flex: 1, minWidth: 140, padding: 10, fontSize: 15, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff' } }),
+        h('button', { onClick: function () { setNa(Math.max(1, na - 1)); }, style: { width: 40, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 20 } }, '−'), h('div', { style: { alignSelf: 'center', fontWeight: 900, color: '#FFD54F' } }, na), h('button', { onClick: function () { setNa(na + 1); }, style: { width: 40, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff', fontSize: 20 } }, '+'),
+        h('button', { onClick: addCustom, style: { padding: '10px 14px', borderRadius: 10, border: 'none', background: '#4CAF82', color: '#000', fontWeight: 900 } }, 'Add')),
+      h('button', { onClick: function () { setEdit(!edit); }, style: Object.assign({}, b, { textAlign: 'center', color: '#90CAF9' }) }, edit ? '✓ Done changing amounts' : '✏️ Change amounts / add your own'),
+      msg && h('div', { style: { fontSize: 13, color: '#81C784', marginTop: 10, lineHeight: 1.5 } }, msg)));
+}
+
+</script>
+<script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v164';
+var FM_BUILD = 'v169';
 (function () {
   function stamp() {
     try {
