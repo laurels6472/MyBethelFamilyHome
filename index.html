@@ -38431,7 +38431,7 @@ function ClockControl(props) {
 function lkBackup(o) {
   var ts = Date.now(), by = window._currentPersonName || 'admin';
   function put(items) {
-    var rec = { ts: ts, title: o.title, by: by, n: items.length, items: items, full: o.backupAll ? true : null, keep: o.keep ? true : null };
+    var rec = { ts: ts, title: o.title, by: by, n: items.length, items: items, full: o.backupAll ? true : null, keep: o.keep ? true : null, base: o.base ? true : null };
     syncSet('erase_backup/' + ts, rec);
     try { var all = syncGet('erase_backup') || {}, ks = Object.keys(all).sort().filter(function (k) { return !(all[k] && all[k].keep); }); while (ks.length > 20) { syncSet('erase_backup/' + ks.shift(), null); } } catch (e) {}
     return ts;
@@ -40248,7 +40248,7 @@ function rcClearClockUi(pids) { try { var up = window._clockApi && window._clock
 function rcSnapshotItems(rec) { var o = {}; (rec.items || []).forEach(function (it) { o[it.p] = it.v; }); return o; }
 function ResetCenter(props) {
   var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted && p.id !== 'grandpa'; });
-  var mS = React.useState(''), msg = mS[0], setMsg = mS[1], pS = React.useState(''), pick = pS[0], setPick = pS[1], nS = React.useState(''), nm = nS[0], setNm = nS[1], sS = React.useState({}), sel = sS[0], setSel = sS[1], oS = React.useState(false), showAll = oS[0], setShowAll = oS[1];
+  var mS = React.useState(''), msg = mS[0], setMsg = mS[1], pS = React.useState(''), pick = pS[0], setPick = pS[1], nS = React.useState(''), nm = nS[0], setNm = nS[1], sS = React.useState({}), sel = sS[0], setSel = sS[1], oS = React.useState(false), showAll = oS[0], setShowAll = oS[1], rpS = React.useState(true), repl = rpS[0], setRepl = rpS[1];
   var bS = ktUse('erase_backup', {}), b = bS[0] || {};
   var list = Object.keys(b).map(function (k) { return b[k]; }).filter(function (x) { return x && x.ts; }).sort(function (a, c) { return c.ts - a.ts; });
   var shown = showAll ? list : list.slice(0, 5), chosen = Object.keys(sel).filter(function (k) { return sel[k]; });
@@ -40296,10 +40296,19 @@ function ResetCenter(props) {
     var paths = (x.items || []).map(function (it) { return it.p; });
     guard('Before restoring: ' + x.title, paths, function () { (x.items || []).forEach(function (it) { try { syncSet(it.p, it.v); } catch (e) {} }); }, '↩ Restored “' + x.title + '”.');
   }
+  function dropOlder(newTs) { var n = 0; Object.keys(b).forEach(function (k) { var x = b[k]; if (x && +x.ts < newTs && !x.base) { try { syncSet('erase_backup/' + x.ts, null); n++; } catch (e) {} } }); return n; }
   function saveNow() {
     var t = '💾 ' + (nm.trim() || 'Restore point'); say('Saving…');
-    lkBackup({ title: t, backupAll: true, keep: true }).then(function () { setNm(''); say('✅ Saved “' + t + '”. It is kept until you delete it.'); }).catch(function (e) { say('Could not save: ' + (e && e.message || e)); });
+    lkBackup({ title: t, backupAll: true, keep: true }).then(function (ts) { setNm(''); var n = repl ? dropOlder(ts) : 0; say('✅ Saved “' + t + '”.' + (n ? ' ' + n + ' older restore point(s) were deleted to save space (your fresh-start point is always kept).' : ' It is kept until you delete it.')); }).catch(function (e) { say('Could not save: ' + (e && e.message || e)); });
   }
+  function saveBase() {
+    say('Saving your fresh start…');
+    lkBackup({ title: '🌱 Fresh start — ' + new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }), backupAll: true, keep: true, base: true }).then(function (ts) {
+      Object.keys(b).forEach(function (k) { var x = b[k]; if (x && x.base && +x.ts !== ts) { try { syncSet('erase_backup/' + x.ts, null); } catch (e) {} } });
+      var n = dropOlder(ts); say('✅ Saved as your fresh-start point' + (n ? ' and deleted ' + n + ' older restore point(s)' : '') + '. You can reset back to it any time.');
+    }).catch(function (e) { say('Could not save: ' + (e && e.message || e)); });
+  }
+  var baseRec = list.filter(function (x) { return x.base; })[0];
   function delSel() { chosen.forEach(function (k) { try { syncSet('erase_backup/' + k, null); } catch (e) {} }); setSel({}); say('🗑 Deleted ' + chosen.length + ' restore point(s).'); }
   var btn = function (bg, fg, on, t) { return h('button', { onClick: on, style: { display: 'block', width: '100%', textAlign: 'left', background: bg, color: fg, border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, padding: '13px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 8, minHeight: 48 } }, t); };
   var dc = function (on, label, sure, extra) { return h(DcConfirm, { onConfirm: on, label: label, sure: sure, style: Object.assign({ display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,.07)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 12, padding: '13px 14px', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginTop: 8, minHeight: 48 }, extra || {}) }); };
@@ -40314,7 +40323,14 @@ function ResetCenter(props) {
       hd('RESET THE DAY'),
       dc(resetDay, '☀️ Reset today for everyone (timers, checklists, attendance)', 'Tap again — everyone starts today over'),
       h('div', { style: sm }, 'Money, members, schedules and passwords are not touched.'),
+      hd('🌱 FRESH-START POINT'),
+      h('div', { style: sm }, 'Reset the app the way you want it, then tap the green button. That moment becomes your fresh start — it stays saved (and keeps working) until you save a new one. Saving a new one deletes the older restore points so storage stays small.'),
+      btn('#4CAF82', '#000', saveBase, '🌱 Save the app as it is right now as my fresh start'),
+      baseRec && h('div', { style: { padding: '8px 0' } },
+        h('div', { style: { fontSize: 13, fontWeight: 800, color: '#9be3bd', marginBottom: 6 } }, '🌱 Saved: ' + new Date(baseRec.ts).toLocaleString()),
+        dc(function () { restoreRec(baseRec); }, '↩ Reset the whole app back to my fresh start', 'Tap again — go back to the fresh start')),
       hd('SAVE & RESTORE POINTS'),
+      h('label', { style: { display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, color: '#fff', marginTop: 6 } }, h('input', { type: 'checkbox', checked: repl, onChange: function (e) { setRepl(e.target.checked); }, style: { width: 22, height: 22 } }), 'When I save, delete the older restore points (saves storage)'),
       h('input', { value: nm, onChange: function (e) { setNm(e.target.value); }, placeholder: 'Name it (e.g. “Working great – Oct 26”)', style: { width: '100%', boxSizing: 'border-box', marginTop: 6, padding: 12, fontSize: 15, borderRadius: 12, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.08)', color: '#fff' } }),
       btn('#4CAF82', '#000', saveNow, '💾 Save a restore point of the whole app now'),
       list.length > 0 && btn('rgba(255,213,79,.15)', '#FFD54F', function () { restoreRec(list[0]); }, '↩ Go back to the newest restore point (' + new Date(list[0].ts).toLocaleString() + ')'),
@@ -40725,7 +40741,7 @@ function QuietHoursCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v176';
+var FM_BUILD = 'v177';
 (function () {
   function stamp() {
     try {
