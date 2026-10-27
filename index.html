@@ -37791,7 +37791,7 @@ function bcKidize(t, grade) {
   return String(t || '').replace(/tell (a )?(grown-up|adult|parent|Mom or Dad)( one thing)?/gi, function (m, a, b, c) { return 'type (or speak) ' + (c ? 'one thing' : 'it'); }).replace(/then talk about/gi, 'then type or speak');
 }
 function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} var legacy = c && (c.date === '2026-10-26' || c.date === '2026-10-21') && (+c.day || 12) === 12; return { date: (c && !legacy && c.date) || '2026-11-02', day: (c && !legacy && +c.day) || 20 }; }
-function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = Math.min(ssRestartCfg().day - 1, (typeof cuTodayDay === 'function' ? cuTodayDay() : 11) || 11); return { on: true, through: (c && +c.through) || t }; }
+function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = ssRestartCfg().day - 1; return { on: true, through: (c && +c.through) || t }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
 function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
 function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
@@ -37862,6 +37862,13 @@ function BigCatchSetup(props) {
     bmsg && h('div', { style: { fontSize: 13, color: /⚠/.test(bmsg) ? '#FF8A80' : '#9be3bd', marginTop: 6, fontWeight: 800 } }, bmsg),
     cfg.on && h('div', { style: { fontSize: 12, color: '#9be3bd', marginTop: 6 } }, '✅ On — covers Day 1 through Day ' + cfg.through + '. The daily homework for those days now says it is covered by this assignment.'));
 }
+function bcClassText(st, qs, day) {
+  var by = {}; qs.forEach(function (q) { (by[q.day] = by[q.day] || []).push(q); });
+  var days = Object.keys(by).map(Number).sort(function (a, b) { return a - b; }).filter(function (d) { return day == null || d === day; });
+  return days.map(function (d) { var lab = ''; try { lab = typeof schoolDayLabel === 'function' ? ' · ' + schoolDayLabel(d) : ''; } catch (e) {} return st.name + ' — Lessons Quiz, Day ' + d + lab + '\n' + by[d].map(function (q, i) { return (i + 1) + '. ' + q.text.replace(/\s+Be detailed:.*$/, '').replace(/\s+Tell one or two things you remember\.$/, ''); }).join('\n') + '\n(You can type your answer or add a picture of your drawing.)'; }).join('\n\n');
+}
+function bcCopy(txt, say, ok) { try { navigator.clipboard.writeText(txt).then(function () { say('📋 ' + ok + '. Paste it into Google Classroom.'); }, function () { say('Copy is blocked on this device — use “Save as text file”.'); }); } catch (e) { say('Copy is blocked on this device — use “Save as text file”.'); } }
+function bcDownload(st, qs) { try { var b = new Blob([bcClassText(st, qs, null)], { type: 'text/plain' }), a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = st.name + '-lessons-quiz.txt'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); } catch (e) {} }
 function BigCatchCard(props) {
   var h = React.createElement, s = props.student, sid = s.id, admin = !!props.isAdmin;
   var cfg = bcUse(), subS = ktUse('school/bigcatch_sub/' + sid, null), sub = subS[0] || null;
@@ -37902,6 +37909,14 @@ function BigCatchCard(props) {
     }),
     !admin && !locked && h('div', { style: { display: 'flex', gap: 8 } }, btn('rgba(255,255,255,.14)', '#fff', function () { save(status || 'draft'); }, '💾 Save for later', true), btn('#4CAF82', '#000', function () { if (answered < qs.length) { if (!window.confirm((qs.length - answered) + ' questions are still empty. Turn it in anyway?')) return; } save('submitted'); }, '📤 Turn it in', true)),
     !admin && status === 'submitted' && h('div', { style: { background: 'rgba(255,213,79,.15)', borderRadius: 10, padding: 10, color: '#FFD54F', fontWeight: 800, fontSize: 14 } }, '🕓 Turned in — waiting for Mom or Dad to check it.'),
+    admin && h('div', { style: { margin: '8px 0', padding: 10, borderRadius: 12, background: 'rgba(26,115,232,.14)', border: '1px solid #1A73E8' } },
+      h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '🎓 Put ' + s.name + '’s quiz in Google Classroom'),
+      h('div', { style: { fontSize: 12, color: '#c8d8ff', marginBottom: 6, lineHeight: 1.5 } }, 'In Classroom choose Create → Question (or Assignment), then paste. One day at a time works best: 2 questions each, worded for ' + s.name + '.'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } },
+        btn('#1A73E8', '#fff', function () { bcCopy(bcClassText(s, qs, null), say, 'Whole quiz copied'); }, '📋 Copy whole quiz'),
+        btn('rgba(255,255,255,.14)', '#fff', function () { bcDownload(s, qs); }, '⬇ Save as text file'),
+        btn('rgba(255,255,255,.14)', '#fff', function () { try { var cl = syncGet('school/classroom') || {}; window.open(((cl.kids || {})[sid]) || cl.main || 'https://classroom.google.com', '_blank', 'noopener'); } catch (e) {} }, '↗ Open Classroom')),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; }).map(function (d) { return h('button', { key: d, onClick: function () { bcCopy(bcClassText(s, qs, d), say, 'Day ' + d + ' copied'); }, style: { minHeight: 38, padding: '0 10px', borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'transparent', color: '#fff', fontWeight: 800, fontSize: 12.5, cursor: 'pointer' } }, 'Day ' + d); }))),
     admin && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 } },
       status === 'submitted' && btn('#4CAF82', '#000', approve, '✓ Approve — mark everything caught up', true),
       status === 'submitted' && btn('rgba(239,83,80,.3)', '#FF8A80', redo, '🔁 Send back'),
@@ -41284,7 +41299,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v193';
+var FM_BUILD = 'v194';
 (function () {
   function stamp() {
     try {
