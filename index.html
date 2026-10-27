@@ -37721,7 +37721,7 @@ function CatchUpBanner(props) {
     if (bsub.status === 'approved') return null;
     return h('div', { onClick: props.onOpen, style: { cursor: 'pointer', margin: '0 0 10px', padding: 14, borderRadius: 14, background: 'rgba(255,152,0,.16)', border: '2px solid #FFB74D' } },
       h('div', { style: { fontSize: 15, fontWeight: 900, color: '#FFB74D' } }, bsub.status === 'submitted' ? '🕓 Lessons Quiz turned in — waiting for Mom or Dad' : '📝 Do your Lessons Quiz'),
-      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'Two questions for each of Days 1–' + bc.through + ', from the real lessons. Tap here.'));
+      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'One question per class for each of Days 1–' + bc.through + ', from the real lessons. Tap here.'));
   }
   var P = cuPlanFor(sid, prog, cfg, props.todayDay);
   if (!P.today.length) return null;
@@ -37802,15 +37802,14 @@ function bcWrite(path, val, onErr) {
   try { syncSet(path, val); } catch (e) {}
   try { if (typeof db !== 'undefined' && db) db.ref('argilan/' + path).set(val === undefined ? null : val).catch(function (err) { if (onErr) onErr(err && err.message ? err.message : 'not allowed'); }); } catch (e) {}
 }
-// 2 real questions for every missed school day, pulled from that day's actual lessons
+// one real question for every class on every missed school day (hand-written for Bible plus one more class, the rest pulled from that day's actual lessons)
 function bcQuestions(sid, through) {
   var st = bcStudent(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
   for (var d = 1; d <= through; d++) {
     if (typeof bcTailored === 'function' && bcTailored(d)) {
       bcTailored(d).forEach(function (q, qi) { out.push({ id: 'd' + d + '_' + q.sub, day: d, sub: q.sub, label: q.label, text: (st.grade <= 5 ? q.y + ' Tell one or two things you remember.' : q.o + ' Be detailed: include at least two things you remember from that day’s lesson.'), key: q.key || '' }); });
-      continue;
     }
-    var picks = [BC_ROT[(d - 1) % 6], BC_ROT[(d + 2) % 6]];
+    var have = (typeof bcTailored === 'function' && bcTailored(d)) ? bcTailored(d).map(function (q) { return q.sub; }) : [], picks = BC_ROT.filter(function (x) { return have.indexOf(x) < 0; });
     picks.forEach(function (sub) {
       var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, L = null, text = '', key = '', en = null;
       try { L = getLessonForDay(sub, d, st.grade); } catch (e) {}
@@ -37890,7 +37889,7 @@ function BigCatchCard(props) {
   var btn = function (bg, fg, fn, t, grow) { return h('button', { onClick: fn, style: { flex: grow ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
   return h('div', { style: card },
     h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Lessons Quiz' + (admin ? ' — ' + s.name : '')),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day 1 to Day ' + through + ' (2 questions for each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day 1 to Day ' + through + ' (one question for each class, each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, answered + ' of ' + qs.length + ' answered'),
     h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 } }, h('div', { style: { height: '100%', width: (qs.length ? answered / qs.length * 100 : 0) + '%', background: '#4CAF82' } })),
     status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
@@ -37911,7 +37910,7 @@ function BigCatchCard(props) {
     !admin && status === 'submitted' && h('div', { style: { background: 'rgba(255,213,79,.15)', borderRadius: 10, padding: 10, color: '#FFD54F', fontWeight: 800, fontSize: 14 } }, '🕓 Turned in — waiting for Mom or Dad to check it.'),
     admin && h('div', { style: { margin: '8px 0', padding: 10, borderRadius: 12, background: 'rgba(26,115,232,.14)', border: '1px solid #1A73E8' } },
       h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '🎓 Put ' + s.name + '’s quiz in Google Classroom'),
-      h('div', { style: { fontSize: 12, color: '#c8d8ff', marginBottom: 6, lineHeight: 1.5 } }, 'In Classroom choose Create → Question (or Assignment), then paste. One day at a time works best: 2 questions each, worded for ' + s.name + '.'),
+      h('div', { style: { fontSize: 12, color: '#c8d8ff', marginBottom: 6, lineHeight: 1.5 } }, 'In Classroom choose Create → Question (or Assignment), then paste. One day at a time works best: one question per class, worded for ' + s.name + '.'),
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } },
         btn('#1A73E8', '#fff', function () { bcCopy(bcClassText(s, qs, null), say, 'Whole quiz copied'); }, '📋 Copy whole quiz'),
         btn('rgba(255,255,255,.14)', '#fff', function () { bcDownload(s, qs); }, '⬇ Save as text file'),
@@ -37935,7 +37934,7 @@ function BigCatchPrompt(props) {
     return null;
   }
   if (!cfg.on || !isKid || sub.status === 'approved') return null;
-  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Lessons Quiz turned in — waiting for Mom or Dad' : '📝 Do your Lessons Quiz', 'Two questions for each missed day. Tap here.');
+  return btn('rgba(255,152,0,.2)', '#fff', '#FFB74D', sub.status === 'submitted' ? '🕓 Lessons Quiz turned in — waiting for Mom or Dad' : '📝 Do your Lessons Quiz', 'One question for each class, each missed day. Tap here.');
 }
 
 // ═══ BULK ASSIGN (teacher only, lives under Assignments): pick days + students, swap in a shorter assignment, undo ═══
@@ -39539,7 +39538,7 @@ function SchoolCatchCard(props) {
   var qs = bcQuestions(sid, through), ans = sub.answers || {}, answered = qs.filter(function (x) { return (ans[x.id] || '').trim().length > 2 || !!ans[x.id + '_img']; }).length;
   return h('div', { style: card },
     h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff' } }, '📝 Review quiz — ' + ssDayLabelShort(1) + ' to ' + ssDayLabelShort(through) + ' (Days 1–' + through + ')'),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.5, marginTop: 2 } }, 'We missed school, so there are no old assignments. Read the review, then answer 2 questions for each school day. Tell what you learned about Jehovah and his creation.'),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.5, marginTop: 2 } }, 'We missed school, so there are no old assignments. Read the review, then answer one question for each class on each school day. Tell what you learned about Jehovah and his creation.'),
     step('read', 'Read the catch-up lesson', readDone ? 'Done' : 'One page with the big ideas', readDone, open === 'read', h('div', { style: { marginTop: 8 } },
       typeof ListenBar === 'function' && h(ListenBar, { text: ssCatchText(groups), title: 'Catch-up lesson' }),
       groups.map(function (g) { return h('div', { key: g.id, style: { marginTop: 8, paddingLeft: 10, borderLeft: '4px solid ' + g.color } }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#fff' } }, g.label), g.items.map(function (i) { return h('div', { key: i.day, style: { fontSize: 13, color: '#e8e8f4', lineHeight: 1.5, margin: '3px 0' } }, h('b', null, 'Day ' + i.day + ': ' + ssClean(i.topic, 80)), i.idea ? ' — ' + i.idea : ''); })); }),
@@ -41299,7 +41298,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v194';
+var FM_BUILD = 'v195';
 (function () {
   function stamp() {
     try {
