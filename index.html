@@ -22691,13 +22691,13 @@ var DKA_UNITS = {
 var DKA_BLOCKS = [
   {t:'7:45-8:00',  l:'🧩 Morning Puzzle Time',   s:'Puzzle book · Word search · Crossword · Sudoku — settle in at the table while waiting for school to start', c:'#9C8DC4'},
   {t:'8:00-8:20',  l:'🌅 Morning Worship',       s:'Daily Text · Song · Prayer · Dig Deeper discussion', c:'#F6BF26'},
-  {t:'8:20-9:00',  l:'📖 Bible Lecture',         s:'All together · One room · 4 layers',                  c:'#7986CB'},
-  {t:'9:00-9:30',  l:'✏️ Level Assignments',     s:'Independent work · 30 min',                           c:'#4CAF82'},
-  {t:'9:30-9:45',  l:'🔄 Reconvene',             s:"What I found · Where · How I'll apply it",            c:'#1A73E8'},
+  {t:'8:20-9:00',  l:'📖 Bible Lecture',         s:'📖 Bible class · all together · lesson + 2 questions (Bible)',                  c:'#7986CB'},
+  {t:'9:00-9:30',  l:'✏️ Level Assignments',     s:'🔬 Science · ➗ Math · 📝 Language Arts · 🏛 History · ✍️ Writing — a lesson and 2 questions in each class (about 5 min each) · 30 min',                           c:'#4CAF82'},
+  {t:'9:30-9:45',  l:'🔄 Reconvene',             s:"Share answers from every class: Bible · Science · Math · Language Arts · History · Writing",            c:'#1A73E8'},
   {t:'9:45-10:00', l:'🍎 Snack + Movement',      s:'Water · Snack · Stretch · 15 min',                    c:'#EF5350'},
   {t:'10:00-10:25',l:'✏️ Reading & Handwriting', s:'All children · 25 min every day',                     c:'#33B679'},
   {t:'10:25-12:10',l:'📚 Independent Academics', s:'Ryan & Kayla: Penn Foster · Ashelyn: Khan · Mykah: Khan + Reading', c:'#9E69AF'},
-  {t:'12:10-12:40',l:'🎵 Music Class',           s:'Instrument lesson · Chords · Rhythm · 30 min',        c:'#E91E63'},
+  {t:'12:10-12:40',l:'🎵 Music Class',           s:'🎵 Music class · pick your instrument & lesson · 30 min',        c:'#E91E63'},
   {t:'12:40-1:00', l:'🗓 Wrap-Up + Meal Plan',   s:"Organize materials · Plan tomorrow's dinner",          c:'#9E9E9E'},
   {t:'1:00-1:30',  l:'🎸 Music Practice',         s:'After school · 30 min · Continue where you left off', c:'#AD1457'},
   {t:'1:30 PM+',   l:'🏡 Chores & Life Skills',  s:'Science Kitchen + Home management',                   c:'#795548'},
@@ -37807,32 +37807,10 @@ function bcWrite(path, val, onErr) {
 function bcQuestions(sid, through) {
   var st = bcStudent(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
   for (var d = 1; d <= through; d++) {
-    if (typeof bcTailored === 'function' && bcTailored(d)) {
-      bcTailored(d).forEach(function (q, qi) { out.push({ id: 'd' + d + '_' + q.sub, day: d, sub: q.sub, label: q.label, text: (st.grade <= 5 ? q.y + ' Tell one or two things you remember.' : q.o + ' Be detailed: include at least two things you remember from that day’s lesson.'), key: q.key || '' }); });
-    }
-    var have = (typeof bcTailored === 'function' && bcTailored(d)) ? bcTailored(d).map(function (q) { return q.sub; }) : [], picks = BC_ROT.filter(function (x) { return have.indexOf(x) < 0; });
-    picks.forEach(function (sub) {
-      var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, L = null, text = '', key = '', en = null;
-      try { L = getLessonForDay(sub, d, st.grade); } catch (e) {}
-      try { en = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM[d - 1] : null; } catch (e) {}
-      var topic = bcTopic(L); try { key = (L && L.answerKey && L.answerKey.short) ? String(L.answerKey.short) : ''; } catch (e) {}
-      if (sub === 'bible') {
-        var title = en ? String(en[3] || '') : '', scr = en ? String(en[4] || '') : '', theme = en ? String(en[6] || '') : '';
-        text = 'Bible lesson' + (title ? ' — “' + title + '”' : '') + (scr ? ' (' + scr + ')' : '') + '. ' + (scr ? 'Read the scripture again. ' : '') + 'What is this lesson mainly teaching us about Jehovah' + (theme ? ' (the theme was “' + theme + '”)' : '') + ', and what is one thing from the account that shows it?';
-        key = theme ? 'Theme: ' + theme + (scr ? ' — ' + scr : '') : key;
-      } else if (!topic) {
-        text = meta.l + ': explain the main idea of the lesson you did on this day and give one example.';
-      } else if (sub === 'science') text = 'Science — “' + topic + '”. Explain the main idea of this lesson, and describe one example or step that shows how it works.';
-      else if (sub === 'lang') text = 'Language arts — “' + topic + '”. What does this mean, and write one sentence of your own that uses it correctly.';
-      else if (sub === 'history') text = 'History — “' + topic + '”. Tell who, where and when (or what happened), and explain why it matters.';
-      else if (sub === 'comp') text = 'Writing — “' + topic + '”. What is the main idea of this lesson? Then write two sentences that show you can use it.';
-      else if (sub === 'math') {
-        var act = String((L && L.activity) || ''), pm = act.match(/^\s*1[.)]\s*(.+)$/m), mk = key.match(/1\.\s*(\S[^]*?)(?=\s+2\.|$)/);
-        if (pm) { text = 'Math (' + topic + ') — solve this problem and show your steps: ' + pm[1].trim(); key = mk ? 'Answer: ' + mk[1].trim() : key; }
-        else text = 'Math — “' + topic + '”. Explain the rule or idea in your own words and show one example with the answer.';
-      } else text = meta.l + ' — “' + topic + '”. Explain the main idea and give one example.';
-      text += ' Be detailed: include at least two things you remember from that day’s lesson.';
-      out.push({ id: 'd' + d + '_' + sub, day: d, sub: sub, label: meta.l || sub, text: text, key: key });
+    BC_ROT.forEach(function (sub) {
+      var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, qs = [];
+      try { qs = qaFor(sub, d, st.grade); } catch (e) {}
+      qs.forEach(function (q, qi) { out.push({ id: 'd' + d + '_' + sub + (qi ? '_b' : ''), day: d, sub: sub, label: meta.l || sub, text: q.q, key: q.a }); });
     });
   }
   return out;
@@ -39500,6 +39478,7 @@ function SchoolLessonRows(props) {
   var btn = function (bg, fg, fn, t, flex) { return h('button', { onClick: fn, style: { flex: flex ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 14, padding: '13px 16px', fontWeight: 900, fontSize: 15, cursor: 'pointer', minWidth: 110 } }, t); };
   return h('div', null,
     rows.length === 0 && h('div', { style: { color: '#c8c8d8', fontSize: 14, padding: 8 } }, 'No lessons are set for today.'),
+    typeof MusicTile === 'function' && h(MusicTile, { sid: sid, day: day }),
     rows.map(function (r, i) {
       var done = cuDone(prog[r.key]), going = run && run.label === r.label, isNext = i === nextIdx && !done, open = openId === r.id || (isNext && openId === '');
       return h('div', { key: r.id, style: { marginBottom: 8, borderRadius: 16, border: '2px solid ' + (going ? '#4CAF82' : isNext ? '#FFD54F' : 'rgba(255,255,255,.12)'), background: done ? 'rgba(76,175,130,.1)' : isNext ? 'rgba(255,213,79,.08)' : 'rgba(255,255,255,.04)', opacity: done ? .7 : 1, overflow: 'hidden' } },
@@ -39842,6 +39821,7 @@ function TeacherHome(props) {
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, 'FOR WHICH CHILD?'),
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, [{ id: 'all', name: 'All kids', emoji: '👨‍👩‍👧‍👦' }].concat(kids).map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
     h(DailyTextCard, { day: tday }),
+    typeof MusicOverview === 'function' && h(MusicOverview, { day: tday }),
     h(Fold, { id: 'tg-all', title: '🧰 Every lesson, script & answer key' },
     teacherSubjects(groups).map(function (sb) { return h(TeacherSubjectColumns, { key: sb.id + tday, sb: sb, day: tday, posted: postedK, putP: putPK }); }),
     rows.map(function (r) {
@@ -40029,7 +40009,7 @@ function AdminBlockBody(props) {
   var box = { marginTop: 4 };
   if (isW) return h('div', { style: box }, h(DailyTextCard, { day: day }), h(ClassScriptPost, { key: 'cs' + day, day: day }));
   if (isB) return h('div', { style: box }, h(TeacherLessonCard, { day: day, onAdv: null }), pick(function (id) { return id === 'bible'; }));
-  if (isM) return h('div', { style: box }, pick(function (id) { return id === 'music'; }));
+  if (isM) return h('div', { style: box }, typeof MusicOverview === 'function' && h(MusicOverview, { day: day }), pick(function (id) { return id === 'music'; }));
   if (isL) return h('div', { style: box }, pick(function (id) { return id !== 'bible' && id !== 'music'; }), typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + day, isAdmin: true, personId: 'laurel', startDay: day, startOpen: false }));
   return null;
 }
@@ -41385,6 +41365,92 @@ function YesterdayFix(props) {
 
 </script>
 <script>
+// ═══ ONE SOURCE FOR LESSON QUESTIONS + ANSWERS: two per class, every day (1–180). The lesson screen, the review quiz, the read-aloud book and the Google Form all use these. ═══
+var QA_LESSON = typeof getLessonForDay === 'function' ? getLessonForDay : null;
+function qaCore(L) {
+  var k = L && L.answerKey ? String(L.answerKey.long || L.answerKey.short || '') : '', m = k.match(/(?:Core|Key) idea:\s*([^\n]+)/);
+  return m ? m[1].trim() : (L && L.answerKey && L.answerKey.short ? String(L.answerKey.short).split('\n')[0] : '');
+}
+function qaWhy(L) { var l = L && L.script ? String(L.script).split('\n')[0] : '', m = l.match(/—\s*(.+)$/); return m ? m[1].replace(/\.$/, '').trim() : ''; }
+function qaPairs(L) {
+  var act = String((L && L.activity) || ''), key = L && L.answerKey ? String(L.answerKey.long || '') : '', ps = [], ans = {};
+  act.split('\n').forEach(function (l) { var m = l.match(/^\s*(\d+)[.)]\s*(.+)$/); if (m) ps.push({ n: +m[1], q: m[2].trim() }); });
+  key.split('\n').forEach(function (l) { var m = l.match(/^\s*(\d+)\.\s*(.+?)\s*→\s*(.+)$/); if (m) ans[m[1]] = m[3].trim(); });
+  return ps.filter(function (p) { return ans[p.n]; }).map(function (p) { return { q: p.q, a: ans[p.n] }; });
+}
+// returns [{q, a}, {q, a}] for one class on one school day (grade picks the wording: 5 and under is younger)
+function qaFor(sub, d, grade) {
+  var out = [], young = (grade || 8) <= 5, L = null, topic = '';
+  try { L = QA_LESSON ? QA_LESSON(sub, d, grade || 8) : null; } catch (e) {}
+  try { topic = typeof bcTopic === 'function' ? bcTopic(L) : ''; } catch (e) {}
+  var core = qaCore(L), why = qaWhy(L), tail = (typeof bcTailored === 'function' && bcTailored(d)) || [], hand = tail.filter(function (x) { return x.sub === sub; })[0];
+  if (sub === 'bible') {
+    var e = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[d - 1]) || [], title = String(e[3] || ''), scr = String(e[4] || ''), theme = String(e[6] || '');
+    if (hand) out.push({ q: young ? hand.y : hand.o, a: hand.key || '' });
+    else out.push({ q: 'Bible lesson — “' + title + '”' + (scr ? ' (' + scr + ')' : '') + '. Retell the main part of the account in your own words, and tell what it teaches about Jehovah.', a: 'The main events of ' + (scr || 'the account') + ' told in order, and what they show about Jehovah' + (theme ? ' (theme: “' + theme + '”)' : '') + '.' });
+    out.push({ q: young ? 'What quality of Jehovah do you see in this lesson' + (theme ? ' (“' + theme + '”)' : '') + '? How can you copy it this week?' : 'Which quality of Jehovah does this lesson show' + (theme ? ' (theme: “' + theme + '”)' : '') + '? Give one detail from the account and one way you can imitate him this week.', a: 'A quality such as love, justice, patience, faithfulness or wisdom' + (theme ? ' — the lesson theme is “' + theme + '”' : '') + ', backed by one detail from ' + (scr || 'the scripture') + ', and one specific way to imitate Jehovah.' });
+    return out;
+  }
+  if (hand && sub !== 'math') out.push({ q: young ? hand.y : hand.o, a: hand.key || '' });
+  if (sub === 'math') {
+    var prs = qaPairs(L);
+    if (hand) out.push({ q: young ? hand.y : hand.o, a: hand.key || '' });
+    prs.forEach(function (p) { if (out.length < 2) out.push({ q: 'Math (' + topic + ') — solve and show your steps: ' + p.q, a: p.a }); });
+  }
+  var nm = { science: 'Science', math: 'Math', lang: 'Language arts', history: 'History', comp: 'Writing' }[sub] || sub;
+  var t = topic || 'this lesson';
+  if (out.length < 2) out.push({ q: young ? nm + ' — “' + t + '”. In your own words, tell what you learned.' : nm + ' — “' + t + '”. Explain the main idea in your own words.', a: core || 'The main idea of the lesson, stated correctly in the student’s own words.' });
+  if (out.length < 2) out.push({ q: young ? nm + ': tell one example of “' + t + '”.' : nm + ' — “' + t + '”. Give one example (from Scripture, the lesson, or daily life) and explain why it matters.', a: 'Any accurate example that fits the idea' + (core ? ' (' + core + ')' : '') + (why ? '; why it matters: ' + why + '.' : '.') });
+  return out.slice(0, 2);
+}
+// the lesson screen shows the same two questions and answers
+if (QA_LESSON) {
+  getLessonForDay = function (sub, d, grade) {
+    var L = QA_LESSON(sub, d, grade); if (!L || L._qa) return L;
+    var qs = []; try { qs = qaFor(sub, d, grade); } catch (e) {}
+    if (!qs.length) return L;
+    var c = Object.assign({}, L, { _qa: true });
+    c.script = String(L.script || '') + '\n\nQUIZ QUESTIONS — these are the same two questions in the review quiz and Google Form:\n' + qs.map(function (x, i) { return (i + 1) + '. ' + x.q; }).join('\n');
+    c.answerKey = Object.assign({}, L.answerKey || {}, { long: String((L.answerKey && L.answerKey.long) || '') + '\n\nQuiz answers (match the quiz):\n' + qs.map(function (x, i) { return (i + 1) + '. ' + x.a; }).join('\n') });
+    return c;
+  };
+}
+
+</script>
+<script>
+// ═══ Music: easy for kids to open and pick an instrument; teacher sees each student's pick and place ═══
+function mpUse(pid) {
+  var s = React.useState(null), v = s[0], set = s[1];
+  React.useEffect(function () { var un = null; try { un = syncOn('music_progress/' + pid, function (d) { set(d || {}); }); } catch (e) { set({}); } return function () { try { un && un(); } catch (e) {} }; }, [pid]);
+  return v;
+}
+function mpInstName(id) { return id ? id.charAt(0).toUpperCase() + id.slice(1) : ''; }
+function MusicTile(props) {
+  var h = React.createElement, sid = props.sid, day = props.day || 1, o = React.useState(false), open = o[0], setOpen = o[1], pr = mpUse(sid) || {};
+  var ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(sid)) || ['guitar'], cur = pr.instrument || ins[0], ml = null;
+  try { ml = getMusicLesson(cur, pr.lessonDay || day); } catch (e) {}
+  return h('div', { style: { marginBottom: 10, borderRadius: 16, border: '2px solid #E91E63', background: 'rgba(233,30,99,.1)', padding: 12 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', minHeight: 52, textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0, fontWeight: 900, fontSize: 18 } }, (open ? '▲ ' : '▼ ') + '🎵 Music class — ' + mpInstName(cur) + (ml ? ' · ' + ml.title : '')),
+    !open && ins.length > 1 && h('div', { style: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } }, ins.map(function (id) { return h('button', { key: id, onClick: function () { try { syncSet('music_progress/' + sid, Object.assign({}, pr, { instrument: id, lessonDay: pr.lessonDay || 1, updatedAt: Date.now() })); } catch (e) {} }, style: { minHeight: 44, padding: '0 16px', borderRadius: 14, border: '2px solid #E91E63', background: id === cur ? '#E91E63' : 'transparent', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (id === 'guitar' ? '🎸 ' : id === 'drums' ? '🥁 ' : id === 'piano' ? '🎹 ' : '🎵 ') + mpInstName(id)); })),
+    open && typeof MusicClassPanel === 'function' && h('div', { style: { marginTop: 8 } }, h(MusicClassPanel, { key: sid, personId: sid, isTeacher: false, dayNum: day })));
+}
+function MusicOverview(props) {
+  var h = React.createElement, kids = (typeof ssKids === 'function' ? ssKids() : []), day = props.day || 1;
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid #E91E63', background: 'rgba(233,30,99,.08)', padding: 12 } },
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '🎵 Music — what each student picked and where they are'),
+    kids.map(function (k) { return h(MusicRow, { key: k.id, k: k, day: day }); }));
+}
+function MusicRow(props) {
+  var h = React.createElement, k = props.k, pr = mpUse(k.id) || {}, ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(k.id)) || ['guitar'];
+  var cur = pr.instrument || ins[0], ld = pr.lessonDay || 1, ml = null; try { ml = getMusicLesson(cur, ld); } catch (e) {}
+  var when = pr.updatedAt ? new Date(pr.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'not started';
+  return h('div', { style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.12)', fontSize: 14, color: '#e8e8f2', lineHeight: 1.5 } },
+    h('b', { style: { color: '#fff' } }, k.name), ' — ', mpInstName(cur) + (ins.length > 1 ? ' (also: ' + ins.filter(function (x) { return x !== cur; }).map(mpInstName).join(', ') + ')' : ''),
+    h('div', null, 'Lesson ' + ld + (ml ? ': ' + ml.title : '') + ' · last updated ' + when), pr.notes && h('div', { style: { color: '#c8c8d8' } }, 'Note: ' + pr.notes));
+}
+
+</script>
+<script>
 // ═══ WALL CLOCK (top right of the day card): current time + date, digital or analog; admin picks the style and whether kids may switch ═══
 function WallClock(props) {
   var h = React.createElement, tS = React.useState(Date.now()), now = tS[0], setNow = tS[1];
@@ -41419,7 +41485,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v198';
+var FM_BUILD = 'v199';
 (function () {
   function stamp() {
     try {
