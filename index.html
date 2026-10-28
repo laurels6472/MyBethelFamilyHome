@@ -21592,7 +21592,7 @@ function WorkPanel({
       color: subTab === t.id ? '#C0CA33' : 'rgba(255,255,255,.3)',
       borderBottom: subTab === t.id ? '2px solid #C0CA33' : '2px solid transparent'
     }
-  }, t.l))), (isAdmin || isOwner) && (subTab === 'va' || subTab === 'el' || subTab === 'detailing' || subTab === 'consulting') && typeof AdminQuickTiles === 'function' && React.createElement(AdminQuickTiles, { onSwitchTab: onSwitchTab || function(){} }), subTab === 'school' && !advOn && React.createElement(SchoolSimple, { personId: personId, isAdmin: isAdmin || isOwner, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, onAdv: (isAdmin || isOwner) ? (v) => { try { if (v) window._dkaGo = v; } catch (e) {} setSchoolAdv(true); setDkaKey(k => k + 1); try { window.scrollTo(0, 0); } catch (e) {} } : null }), subTab === 'school' && advOn && (isAdmin || isOwner) && typeof SchoolSimple === 'function' && React.createElement('button', { onClick: () => setSchoolAdv(false), style: { display: 'block', width: 'calc(100% - 28px)', margin: '10px 14px', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '← Back to simple school'), subTab === 'school' && advOn && (isAdmin || isOwner) && typeof ClassroomDaily === 'function' && React.createElement(ClassroomDaily, { personId: personId, isAdmin: isAdmin || isOwner }), subTab === 'jobs' && typeof ChoresJob === 'function' && React.createElement(ChoresJob, { personId: personId, name: personId, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'school' && advOn && (isAdmin || isOwner) && React.createElement('button', { onClick: () => setSchoolMore(m => !m), style: { display: 'block', width: 'calc(100% - 28px)', margin: '6px 14px', background: 'rgba(255,255,255,.07)', color: '#c8c8d8', border: '1px solid rgba(255,255,255,.15)', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 14, cursor: 'pointer', textAlign: 'left' } }, (schoolMore ? '▲ Hide' : '▼ Show') + ' class at a glance, school money & kitchen'), subTab === 'school' && advOn && schoolMore && typeof ClassGlance === 'function' && React.createElement(ClassGlance, { isAdmin: isAdmin || isOwner, personId: personId, sessions: sessions }), subTab === 'school' && advOn && schoolMore && typeof SchoolMoneyStrip === 'function' && React.createElement(SchoolMoneyStrip, { personId: personId, isAdmin: isAdmin || isOwner, onSwitchTab: onSwitchTab, sessions: sessions, onUpdate: onUpdate }), subTab === 'school' && advOn && schoolMore && typeof MoneyLessonDaily === 'function' && ['mykah', 'ashelyn', 'kayla', 'ryan'].indexOf(personId) >= 0 && React.createElement(MoneyLessonDaily, { pid: personId, admin: false }), subTab === 'school' && advOn && schoolMore && typeof SchoolKitchenFold === 'function' && React.createElement(SchoolKitchenFold, { personId: personId, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'el' && (isParent || isOwner) && typeof ElSales === 'function' && React.createElement(ElSales, { isAdmin: isAdmin || isOwner }), subTab === 'school' && advOn && typeof DKAModule !== 'undefined' && React.createElement(DKAModule, { key: 'dka' + dkaKey,
+  }, t.l))), (isAdmin || isOwner) && (subTab === 'va' || subTab === 'el' || subTab === 'detailing' || subTab === 'consulting') && typeof AdminQuickTiles === 'function' && React.createElement(AdminQuickTiles, { onSwitchTab: onSwitchTab || function(){} }), subTab === 'school' && !advOn && React.createElement(SchoolSimple, { personId: personId, isAdmin: isAdmin || isOwner, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, onAdv: (isAdmin || isOwner) ? (v) => { try { if (v) window._dkaGo = v; } catch (e) {} setSchoolAdv(true); setDkaKey(k => k + 1); try { window.scrollTo(0, 0); } catch (e) {} } : null }), subTab === 'school' && advOn && (isAdmin || isOwner) && typeof SchoolSimple === 'function' && React.createElement('button', { onClick: () => setSchoolAdv(false), style: { display: 'block', width: 'calc(100% - 28px)', margin: '10px 14px', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, padding: 12, fontWeight: 900, cursor: 'pointer' } }, '← Back to simple school'), subTab === 'school' && advOn && (isAdmin || isOwner) && typeof ClassroomDaily === 'function' && !(typeof ssQuizDay === 'function' && typeof crDayNum === 'function' && ssQuizDay(crDayNum())) && React.createElement(ClassroomDaily, { personId: personId, isAdmin: isAdmin || isOwner }), subTab === 'jobs' && typeof ChoresJob === 'function' && React.createElement(ChoresJob, { personId: personId, name: personId, sessions: sessions, onUpdate: onUpdate, addNotif: addNotif, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'school' && advOn && (isAdmin || isOwner) && React.createElement('button', { onClick: () => setSchoolMore(m => !m), style: { display: 'block', width: 'calc(100% - 28px)', margin: '6px 14px', background: 'rgba(255,255,255,.07)', color: '#c8c8d8', border: '1px solid rgba(255,255,255,.15)', borderRadius: 12, padding: 10, fontWeight: 800, fontSize: 14, cursor: 'pointer', textAlign: 'left' } }, (schoolMore ? '▲ Hide' : '▼ Show') + ' class at a glance, school money & kitchen'), subTab === 'school' && advOn && schoolMore && typeof ClassGlance === 'function' && React.createElement(ClassGlance, { isAdmin: isAdmin || isOwner, personId: personId, sessions: sessions }), subTab === 'school' && advOn && schoolMore && typeof SchoolMoneyStrip === 'function' && React.createElement(SchoolMoneyStrip, { personId: personId, isAdmin: isAdmin || isOwner, onSwitchTab: onSwitchTab, sessions: sessions, onUpdate: onUpdate }), subTab === 'school' && advOn && schoolMore && typeof MoneyLessonDaily === 'function' && ['mykah', 'ashelyn', 'kayla', 'ryan'].indexOf(personId) >= 0 && React.createElement(MoneyLessonDaily, { pid: personId, admin: false }), subTab === 'school' && advOn && schoolMore && typeof SchoolKitchenFold === 'function' && React.createElement(SchoolKitchenFold, { personId: personId, isAdmin: isAdmin || isOwner, family: (typeof DEFAULT_FAMILY !== 'undefined' ? DEFAULT_FAMILY : []) }), subTab === 'el' && (isParent || isOwner) && typeof ElSales === 'function' && React.createElement(ElSales, { isAdmin: isAdmin || isOwner }), subTab === 'school' && advOn && typeof DKAModule !== 'undefined' && React.createElement(DKAModule, { key: 'dka' + dkaKey,
     personId: personId,
     isTeacher: isAdmin || isOwner,
     isAdmin: isAdmin || isOwner,
@@ -39490,7 +39490,7 @@ function SchoolLessonRows(props) {
           h('div', { style: { color: '#c8c8d8' } }, open ? '▲' : '▼')),
         open && h('div', { style: { padding: '0 12px 12px' } },
           r.lab && h(LabToday, { sid: sid, admin: admin }),
-          !admin && !r.lab && (ssKid(sid) || {}).grade <= 5 && h(KidAnswerBox, { sid: sid, day: day, row: r }),
+          !admin && !r.lab && !(typeof ssQuizDay === 'function' && ssQuizDay(day)) && (ssKid(sid) || {}).grade <= 5 && h(KidAnswerBox, { sid: sid, day: day, row: r }),
           admin && h(TeacherGuide, { row: r, sid: sid, day: day }),
           r.act && h(LessonWork, { act: r.act, color: r.color }),
           r.wnote && h('div', { style: { fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.55, background: 'rgba(255,213,79,.14)', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: 12, marginBottom: 8 } }, '✍️ ' + r.wnote),
@@ -39533,16 +39533,18 @@ function SchoolCatchCard(props) {
 function SchoolClassroomRow(props) {
   var h = React.createElement, sid = props.sid, st = ssKid(sid), day = props.day || cuTodayDay(), admin = !!props.admin;
   var clS = ktUse('school/classroom', {}), cl = clS[0] || {}, tiS = ktUse('school/turnin/' + day, {}), ti = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/turnin/' + day, {}) : null) || {}, tiS[0] || {});
-  var asS = ktUse('school/assign/' + day + '/' + sid, null), mS = React.useState('');
+  var asS = ktUse('school/assign/' + day + '/' + sid, null), mS = React.useState(''), qvS = React.useState(false), QZ = typeof ssQuizDay === 'function' && ssQuizDay(day);
   if (!st) return null;
   var url = ((cl.kids || {})[sid]) || cl.main || 'https://classroom.google.com', done = !!ti[sid];
-  var task = asS[0] || (typeof DKA_STUDENT_TASKS !== 'undefined' ? DKA_STUDENT_TASKS[sid] : '') || '';
+  var task = QZ ? 'Take today’s quiz. Answer in your own words. Your teacher grades every answer.' : asS[0] || (typeof DKA_STUDENT_TASKS !== 'undefined' ? DKA_STUDENT_TASKS[sid] : '') || '';
   var open = function (u) { try { window.open(u, '_blank', 'noopener'); } catch (e) {} };
   var copy = function () { try { navigator.clipboard.writeText('Day ' + day + ' — ' + st.name + '\n' + task); mS[1]('📋 Copied'); setTimeout(function () { mS[1](''); }, 3000); } catch (e) { mS[1]('Copy not available'); } };
   var card = { background: done ? 'rgba(76,175,130,.12)' : 'rgba(26,115,232,.12)', border: '2px solid ' + (done ? '#4CAF82' : '#1A73E8'), borderRadius: 18, padding: 14, marginBottom: 12 };
   return h('div', { style: card },
-    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '📤 Turn in your work'),
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, QZ ? '📝 Today’s quiz' : '📤 Turn in your work'),
     task && h('div', { style: { fontSize: 14, color: '#e8e8f4', lineHeight: 1.6, margin: '6px 0 8px' } }, h('b', { style: { color: '#FFD54F' } }, 'Today’s assignment: '), task),
+    QZ && (function () { var L = (st.grade >= 10 ? 'hi' : st.grade >= 6 ? 'mid' : 'lo'), doc = (typeof QUIZ_DOCS !== 'undefined' && QUIZ_DOCS[day] && QUIZ_DOCS[day][L]) || ''; return h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 } }, doc && h('button', { onClick: function () { open(doc); }, style: { flex: 1, minWidth: 150, background: '#fff', color: '#1A73E8', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '📄 Open the quiz'), h('button', { onClick: function () { qvS[1](!qvS[0]); }, style: { flex: 1, minWidth: 150, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer' } }, qvS[0] ? '▲ Hide questions' : '▼ Show the questions')); })(),
+    QZ && qvS[0] && h('div', { style: { whiteSpace: 'pre-wrap', fontSize: 15, color: '#fff', lineHeight: 1.6, background: 'rgba(0,0,0,.25)', borderRadius: 12, padding: 12, marginBottom: 8 } }, dqText(day, (st.grade >= 10 ? 'hi' : st.grade >= 6 ? 'mid' : 'lo'), st.grade)),
     h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
       h('button', { onClick: function () { open(url); }, style: { flex: 1, minWidth: 150, background: '#1A73E8', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '🎓 Open Google Classroom'),
       !admin && h('button', { onClick: function () { try { syncSet('school/turnin/' + day + '/' + sid, done ? null : Date.now()); } catch (e) {} }, style: { flex: 1, minWidth: 150, background: done ? 'rgba(255,255,255,.14)' : '#4CAF82', color: done ? '#fff' : '#000', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, done ? '↩ Not turned in' : '✅ I turned it in'),
@@ -39966,7 +39968,7 @@ function TeacherSubjectColumns(props) {
         h('div', { style: { fontSize: 14, color: '#c8c8d8', marginBottom: 6 } }, ssClean(c.row.topic, 120)),
         h(TeacherGuide, { row: c.row, sid: c.k.id, day: day, always: true }));
     })),
-    sb.groups.length > 1 && (function () {
+    sb.groups.length > 1 && !ssQuizDay(day) && (function () {
       var all = []; sb.groups.forEach(function (g) { g.kids.forEach(function (k) { all.push(k); }); });
       var done = all.every(function (k) { return !!(props.posted[k.id] || {})[sb.id]; }), names = all.map(function (k) { return k.name; });
       function post() {
@@ -39991,7 +39993,7 @@ function TeacherGroupCard(props) {
     window.open(crUrl(title, body(), 'assignment'), '_blank'); g.kids.forEach(function (k) { props.putP(k.id + '/' + g.id, Date.now()); });
   }
   function undo() { g.kids.forEach(function (k) { props.putP(k.id + '/' + g.id, null); }); }
-  if (props.compact) return h('button', { onClick: function () { if (done) undo(); else post(); }, style: { width: '100%', minHeight: 50, background: done ? '#4CAF82' : '#1A73E8', color: done ? '#000' : '#fff', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 6 } }, done ? '✓ Added to Classroom for ' + names.join(', ') + ' · tap to undo' : '➕ Add to Google Classroom for ' + names.join(', '));
+  if (props.compact) return ssQuizDay(day) ? null : h('button', { onClick: function () { if (done) undo(); else post(); }, style: { width: '100%', minHeight: 50, background: done ? '#4CAF82' : '#1A73E8', color: done ? '#000' : '#fff', border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 6 } }, done ? '✓ Added to Classroom for ' + names.join(', ') + ' · tap to undo' : '➕ Add to Google Classroom for ' + names.join(', '));
   return h('div', { style: { marginBottom: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 12 } },
     h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, r.label),
     h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', margin: '2px 0' } }, '👥 ' + (names.length === ssKids().length ? 'All kids' : names.join(' · '))),
@@ -40009,10 +40011,10 @@ function AdminBlockBody(props) {
   var pick = function (test) { return subs.filter(function (sb) { return test(sb.id); }).map(function (sb) { return h(TeacherSubjectColumns, { key: sb.id + day, sb: sb, day: day, posted: {}, putP: function () {} }); }); };
   var isW = /worship/i.test(label), isB = /bible lecture/i.test(label), isM = /music class/i.test(label), isL = /level assign|reading|handwrit|independent/i.test(label);
   var box = { marginTop: 4 };
-  if (isW) return h('div', { style: box }, h(DailyTextCard, { day: day }), h(ClassScriptPost, { key: 'cs' + day, day: day }));
+  if (isW) return h('div', { style: box }, h(DailyTextCard, { day: day }), !ssQuizDay(day) && h(ClassScriptPost, { key: 'cs' + day, day: day }));
   if (isB) return h('div', { style: box }, h(TeacherLessonCard, { day: day, onAdv: null }), pick(function (id) { return id === 'bible'; }));
   if (isM) return h('div', { style: box }, typeof MusicOverview === 'function' && h(MusicOverview, { day: day }), pick(function (id) { return id === 'music'; }));
-  if (isL) return h('div', { style: box }, pick(function (id) { return id !== 'bible' && id !== 'music'; }), typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + day, isAdmin: true, personId: 'laurel', startDay: day, startOpen: false }));
+  if (isL) return h('div', { style: box }, pick(function (id) { return id !== 'bible' && id !== 'music'; }), typeof DayQuizSend === 'function' && h(DayQuizSend, { day: day }), !ssQuizDay(day) && typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + day, isAdmin: true, personId: 'laurel', startDay: day, startOpen: false }));
   return null;
 }
 
@@ -41462,6 +41464,7 @@ function MusicRow(props) {
 </script>
 <script>
 // ═══ Per-day quiz → Google Classroom: one row per level, with a send button, a copy button, and the Google Doc ═══
+function ssQuizDay(d) { return d >= 1 && d <= 19; }
 var DQ_LEVELS = [['hi', 'Ryan and Kayla', 12], ['mid', 'Ashelyn', 8], ['lo', 'Mykah', 4]];
 function dqText(day, tier, grade) {
   var out = [], n = 0, LAB = { bible: 'Bible', science: 'Science', lang: 'Language arts', math: 'Math', history: 'History', comp: 'Writing' };
@@ -41476,7 +41479,7 @@ function dqText(day, tier, grade) {
 }
 function dqTitle(day, name) { var dl = ''; try { dl = schoolDayLabel(day, false); } catch (e) {} return 'Week ' + Math.ceil(day / 5) + ' - Day ' + day + ' Quiz - ' + name + (dl ? ' (' + dl + ')' : ''); }
 function DayQuizSend(props) {
-  var h = React.createElement, day = props.day, mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var h = React.createElement, day = props.day, mS = React.useState(''), msg = mS[0], setMsg = mS[1], PS = fpDoc('classroom/quizposted/' + (props.day || 0), {}), sent = PS[0] || {}, putS = PS[1];
   if (!day || day > 19 && !(typeof QA_OVR !== 'undefined' && QA_OVR[day])) return null;
   var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, t); };
   function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3500); }
@@ -41488,7 +41491,7 @@ function DayQuizSend(props) {
       return h('div', { key: L[0], style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.14)' } },
         h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 6 } }, L[1]),
         h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-          btn('#1A73E8', '#fff', function () { window.open(crUrl(title, 'Type your answers in your own words. Your teacher grades every answer.\n\n' + text, 'assignment'), '_blank'); }, '📤 Send to Classroom'),
+          btn('#1A73E8', '#fff', function () { window.open(crUrl(title, 'Type your answers in your own words. Your teacher grades every answer.\n\n' + text, 'assignment'), '_blank'); try { putS(L[0], Date.now()); } catch (e) {} }, sent[L[0]] ? '✅ Sent — send again' : '📤 Send to Classroom'),
           btn('rgba(255,255,255,.16)', '#fff', function () { try { navigator.clipboard.writeText(title + '\n\n' + text); say('Copied the ' + L[1] + ' quiz.'); } catch (e) { say('Could not copy on this device.'); } }, '📋 Copy'),
           doc ? btn('rgba(255,255,255,.16)', '#fff', function () { window.open(doc, '_blank'); }, '📄 Google Doc') : h('span', { style: { fontSize: 12, color: '#FFB74D', alignSelf: 'center' } }, 'Doc not made yet')));
     }),
@@ -41531,7 +41534,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v204';
+var FM_BUILD = 'v205';
 (function () {
   function stamp() {
     try {
