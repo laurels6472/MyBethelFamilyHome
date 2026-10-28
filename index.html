@@ -39942,7 +39942,7 @@ function ClassScriptPost(props) {
 // group the day's lessons: kids who have the same lesson get ONE teacher card
 function ssGroupLessons(kids, day) {
   var map = {}, order = [];
-  kids.forEach(function (k) { ssLessons(k.id, day).forEach(function (r) { var key = r.id + '|' + r.topic + '|' + r.act + '|' + r.scr; if (!map[key]) { map[key] = { key: key, id: r.id, row: r, kids: [] }; order.push(key); } map[key].kids.push(k); }); });
+  kids.forEach(function (k) { ssLessons(k.id, day).forEach(function (r) { var key = r.id + '|' + r.topic + '|' + r.act + '|' + r.scr + (r.id === 'bible' ? '|' + k.id : ''); if (!map[key]) { map[key] = { key: key, id: r.id, row: r, kids: [] }; order.push(key); } map[key].kids.push(k); }); });
   var ids = []; order.forEach(function (key) { if (ids.indexOf(map[key].id) < 0) ids.push(map[key].id); });
   var out = []; ids.forEach(function (id) { order.forEach(function (key) { if (map[key].id === id) out.push(map[key]); }); });
   return out;
@@ -41485,7 +41485,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v199';
+var FM_BUILD = 'v200';
 (function () {
   function stamp() {
     try {
