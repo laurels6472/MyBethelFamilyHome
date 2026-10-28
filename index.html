@@ -39565,7 +39565,7 @@ function SchoolSimple(props) {
   var h = React.createElement, kids = ssKids(), admin = !!props.isAdmin;
   var rsS = ktUse('school/restart', null), rsv = rsS[0] || {}, restart = ((rsv.date === '2026-10-26' || rsv.date === '2026-10-21') && (+rsv.day || 12) === 12) ? { date: '2026-11-02', day: 20 } : { date: rsv.date || '2026-11-02', day: +rsv.day || 20 };
   var vdS = React.useState(null), viewDay = vdS[0], setViewDay = vdS[1], lockS = ktUse('school/pastlock', false);
-  var autoDay = ssLessonDay(restart), day = viewDay != null && (admin || (autoDay && (!lockS[0]) && viewDay <= autoDay)) ? viewDay : autoDay, qDay = day || 0;
+  var autoDay = (typeof ssQuizToday === 'function' && ssQuizToday()) || ssLessonDay(restart), day = viewDay != null && (admin || (autoDay && (!lockS[0]) && viewDay <= autoDay)) ? viewDay : autoDay, qDay = day || 0;
   var stS = React.useState(false), setOpenSet = stS[0], setSetOpen = stS[1];
   var selS = React.useState(function () { if (admin) return 'teacher'; return (kids.filter(function (k) { return k.id === props.personId; })[0] || kids[0] || {}).id; }), sel = selS[0], setSel = selS[1];
   var teacherMode = admin && sel === 'teacher', allMode = admin && sel === 'all', single = !teacherMode && !allMode, sid = admin ? ((teacherMode || allMode) ? (kids[0] || {}).id : sel) : props.personId, st = ssKid(sid);
@@ -39575,7 +39575,7 @@ function SchoolSimple(props) {
   var cfg = bcUse();
   if (!st) return h('div', { style: { padding: 24, textAlign: 'center', color: '#c8c8d8', fontSize: 16 } }, '📚 School is for the students. Parents: sign in as a parent to see everyone.');
   var info = typeof getSchoolDayInfo === 'function' ? getSchoolDayInfo() : {};
-  var lessons = day ? ssLessons(sid, day) : [], nDone = lessons.filter(function (r) { return cuDone(prog[r.key]); }).length;
+  var lessons = day ? ssLessons(sid, day) : [], nDone = lessons.filter(function (r) { return cuDone(prog[r.key]); }).length, QD = !!day && typeof ssQuizDay === 'function' && ssQuizDay(day);
   function allChip() {
     var tot = 0, dn = 0; if (day) kids.forEach(function (k) { var ls = ssLessons(k.id, day); tot += ls.length; dn += ls.filter(function (r) { return cuDone(prog[r.key]); }).length; });
     return h('button', { key: 'all', onClick: function () { setSel('all'); }, style: { flex: 1, minWidth: 74, padding: '10px 6px', borderRadius: 14, border: '2px solid ' + (allMode ? '#FFD54F' : 'rgba(255,255,255,.15)'), background: allMode ? 'rgba(255,213,79,.15)' : 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer' } },
@@ -39598,18 +39598,19 @@ function SchoolSimple(props) {
     teacherMode && h(TeacherHome, { day: day, restart: restart, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, openSet: setOpenSet, setSetOpen: setSetOpen, onAdv: props.onAdv }),
     single && h('div', { style: { marginBottom: 12 } },
       h('div', { style: { fontSize: 22, fontWeight: 900, color: '#fff' } }, '📚 ' + (admin ? st.name + '’s school' : 'My school today')),
-      day ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'Day ' + day + ' · ' + (viewDay != null && day !== autoDay ? ssDayLabel(day) : new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })) + (lessons.length ? ' · ' + nDone + ' of ' + lessons.length + ' lessons done' : ''))
+      day ? h('div', { style: { fontSize: 13, color: '#c8c8d8' } }, 'Day ' + day + ' · ' + (viewDay != null && day !== autoDay ? ssDayLabel(day) : new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })) + (lessons.length && !QD ? ' · ' + nDone + ' of ' + lessons.length + ' lessons done' : ''))
         : h('div', { style: { fontSize: 14, color: '#FFD54F', fontWeight: 700, lineHeight: 1.5 } }, 'Review quiz first. Regular lessons begin Monday, ' + new Date(restart.date + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric' }) + '.'),
-      lessons.length > 0 && h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginTop: 6 } }, h('div', { style: { height: '100%', width: (nDone / lessons.length * 100) + '%', background: '#4CAF82', transition: 'width .4s' } }))),
+      lessons.length > 0 && !QD && h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginTop: 6 } }, h('div', { style: { height: '100%', width: (nDone / lessons.length * 100) + '%', background: '#4CAF82', transition: 'width .4s' } }))),
     !admin && autoDay && !lockS[0] && autoDay > 1 && h(KidPastDays, { day: day, autoDay: autoDay, setViewDay: setViewDay }),
     admin && h(PastLockToggle, null),
     admin && typeof SchoolAutoToggle === 'function' && h(SchoolAutoToggle, null),
     admin && single && h(SchoolDayPicker, { day: day, autoDay: autoDay, viewDay: viewDay, setViewDay: setViewDay, restart: restart, openSet: setOpenSet, setSetOpen: setSetOpen }),
     admin && single && day && h(TeacherLessonCard, { day: day, onAdv: props.onAdv }),
     single && viewDay == null && typeof SchoolTimeline === 'function' && h(SchoolTimeline, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
-    single && h(SchoolCatchCard, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
-    single && day && h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, viewDay != null && day !== autoDay ? 'LESSONS FOR DAY ' + day : 'TODAY’S LESSONS'),
-    single && day && h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
+    single && !QD && h(SchoolCatchCard, { sid: sid, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
+    single && day && !QD && h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '4px 0 6px' } }, viewDay != null && day !== autoDay ? 'LESSONS FOR DAY ' + day : 'TODAY’S LESSONS'),
+    single && QD && typeof MusicTile === 'function' && h(MusicTile, { sid: sid, day: day }),
+    single && day && !QD && h(SchoolLessonRows, { sid: sid, day: day, admin: admin, sessions: props.sessions, onUpdate: props.onUpdate }),
     single && day && h('div', { style: { height: 8 } }),
     single && day && h(SchoolClassroomRow, { sid: sid, day: day, admin: admin }),
     admin && single && props.onAdv && h(TeacherDeck, { onAdv: props.onAdv }));
@@ -39827,14 +39828,14 @@ function TeacherHome(props) {
     h(DailyTextCard, { day: tday }),
     typeof MusicOverview === 'function' && h(MusicOverview, { day: tday }),
     typeof DayQuizSend === 'function' && h(DayQuizSend, { day: tday }),
-    h(Fold, { id: 'tg-all', title: '🧰 Every lesson, script & answer key' },
+    !(typeof msHas === 'function' && msHas(tday)) && h(Fold, { id: 'tg-all', title: '🧰 Every lesson, script & answer key' },
     teacherSubjects(groups).map(function (sb) { return h(TeacherSubjectColumns, { key: sb.id + tday, sb: sb, day: tday, posted: postedK, putP: putPK }); }),
     rows.map(function (r) {
       return h('div', { key: r.id + tk + tday, style: { marginBottom: 10, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 12 } },
         h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, r.label), h('div', { style: { fontSize: 14, color: '#c8c8d8', margin: '2px 0 8px' } }, ssClean(r.topic, 120)),
         h(TeacherGuide, { row: r, sid: tk, day: tday }));
     }),
-    tk !== 'all' && qs.length > 0 && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '2px solid #FFB74D', borderRadius: 16, padding: 12 } },
+    tk !== 'all' && qs.length > 0 && !(typeof ssQuizDay === 'function' && ssQuizDay(tday)) && h('div', { style: { marginBottom: 10, background: 'rgba(255,152,0,.1)', border: '2px solid #FFB74D', borderRadius: 16, padding: 12 } },
       h('button', { onClick: function () { setQ(!qOpen); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 16, cursor: 'pointer', padding: 0 } }, (qOpen ? '▲ ' : '▼ ') + '📝 Review quiz questions & answer keys — Day ' + tday),
       qOpen && qs.map(function (q) { return h('div', { key: q.id, style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.12)' } }, h('div', { style: { fontSize: 15, color: '#fff', lineHeight: 1.6 } }, q.text), q.key && h('div', { style: { fontSize: 14, color: '#9be3bd', lineHeight: 1.6, marginTop: 4 } }, '🔑 ' + q.key)); })),
     ),
@@ -41470,6 +41471,11 @@ var MS_DATA = {"1": {"date": "Tuesday, October 6", "classes": [{"cls": "BIBLE", 
 </script>
 <script>
 // ═══ Per-day quiz → Google Classroom: one row per level, with a send button, a copy button, and the Google Doc ═══
+function ssQuizToday() {
+  try { var t = new Date(); var ts = t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2), best = 0;
+    for (var n = 1; n <= 19; n++) { var d = schoolDayDate(n), ds = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); if (ds === ts) return n; }
+    return 0; } catch (e) { return 0; }
+}
 function ssQuizDay(d) { return d >= 1 && d <= 19; }
 var DQ_LEVELS = [['hi', 'Ryan and Kayla', 12], ['mid', 'Ashelyn', 8], ['lo', 'Mykah', 4]];
 function dqText(day, tier, grade) {
@@ -41492,8 +41498,9 @@ function dqKey(day, tier, grade) {
 }
 function DayQuizSend(props) {
   var h = React.createElement, nvG = function () { try { return (typeof nvGet === 'function' && nvGet('quizday', null)) || 1; } catch (e) { return 1; } };
-  var dS = React.useState(nvG), day = Math.max(1, Math.min(19, dS[0])), mS = React.useState(''), msg = mS[0], setMsg = mS[1], kS = React.useState(false), keyOpen = kS[0], setKey = kS[1];
+  var dS = React.useState(function () { return props.day && props.day >= 1 && props.day <= 19 ? props.day : nvG(); }), day = Math.max(1, Math.min(19, dS[0])), mS = React.useState(''), msg = mS[0], setMsg = mS[1], kS = React.useState(false), keyOpen = kS[0], setKey = kS[1];
   var PS = fpDoc('classroom/quizposted/' + day, {}), sent = PS[0] || {}, putS = PS[1];
+  React.useEffect(function () { if (props.day && props.day >= 1 && props.day <= 19) dS[1](props.day); }, [props.day]);
   function go(n) { n = Math.max(1, Math.min(19, n)); try { if (typeof nvSet === 'function') nvSet('quizday', n); } catch (e) {} dS[1](n); setKey(false); }
   var dl = ''; try { dl = schoolDayLabel(day, false); } catch (e) {}
   var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, t); };
@@ -41514,7 +41521,7 @@ function DayQuizSend(props) {
           btn('rgba(255,255,255,.16)', '#fff', function () { try { navigator.clipboard.writeText(title + '\n\n' + text); say('Copied the ' + L[1] + ' quiz.'); } catch (e) { say('Could not copy on this device.'); } }, '📋 Copy'),
           doc ? btn('rgba(255,255,255,.16)', '#fff', function () { window.open(doc, '_blank'); }, '📄 Google Doc') : h('span', { style: { fontSize: 12, color: '#FFB74D', alignSelf: 'center' } }, 'Doc not made yet')));
     }),
-    h('div', { style: { borderTop: '1px solid rgba(255,255,255,.14)', paddingTop: 8 } }, btn('rgba(255,213,79,.2)', '#FFD54F', function () { setKey(!keyOpen); }, keyOpen ? '▲ Hide teacher key' : '🔑 Teacher instructions & answer key (you only)')),
+    h('div', { style: { borderTop: '1px solid rgba(255,255,255,.14)', paddingTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' } }, btn('rgba(255,213,79,.2)', '#FFD54F', function () { setKey(!keyOpen); }, keyOpen ? '▲ Hide teacher guide' : '🔑 What to say, script & answer key (you only)'), btn('rgba(255,255,255,.16)', '#fff', function () { window.open('Teacher-Manuscript-Oct6-Oct30.pdf', '_blank'); }, '📖 Full PDF manuscript')),
     keyOpen && h('div', { style: { marginTop: 8 } },
       typeof msHas === 'function' && msHas(day) ? h(MsPanel, { day: day, big: false }) : DQ_LEVELS.map(function (L) { return h('div', { key: L[0], style: { whiteSpace: 'pre-wrap', fontSize: 14, color: '#f2f2f8', lineHeight: 1.6, background: 'rgba(0,0,0,.25)', borderRadius: 12, padding: 12, marginBottom: 8 } }, h('b', { style: { color: '#FFD54F' } }, L[1] + ' — answer key\n'), dqKey(day, L[0], L[2])); }),
       btn('rgba(255,255,255,.16)', '#fff', function () { try { navigator.clipboard.writeText(DQ_LEVELS.map(function (L) { return L[1] + '\n' + dqKey(day, L[0], L[2]); }).join('\n\n')); say('Answer key copied.'); } catch (e) { say('Could not copy.'); } }, '📋 Copy answer key')),
@@ -41592,7 +41599,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v207';
+var FM_BUILD = 'v208';
 (function () {
   function stamp() {
     try {
