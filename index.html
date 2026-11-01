@@ -7668,6 +7668,7 @@ function Dashboard({
   tab === 'admin' && (isAdmin || isOwner) && admSec !== 'reset' && React.createElement('div', { style: { padding: '2px 14px 6px' } }, React.createElement('button', { onClick: function () { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; setAdmSec('reset'); try { window.scrollTo(0, 0); } catch (e) {} }, style: { width: '100%', minHeight: 44, borderRadius: 12, border: '2px solid #4FC3F7', background: 'rgba(79,195,247,.14)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '💾 Back up the app / restart from a backup')),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
   (tab === 'admin' && admSec === 'overview' || tab === 'clock') && (isAdmin || isOwner) && typeof EveryoneClockBar === 'function' && React.createElement(EveryoneClockBar, { family: fam, sessions: sessions, onUpdate: onUpdate }),
+  (tab === 'admin' && admSec === 'overview' || tab === 'clock') && (isAdmin || isOwner) && typeof AdminClockAny === 'function' && React.createElement(AdminClockAny, { family: fam, sessions: sessions, onUpdate: onUpdate }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof TimeAdjustCard === 'function' && React.createElement(TimeAdjustCard, { family: fam, sessions: sessions, onUpdate: onUpdate }),
   tab === 'admin' && admSec === 'overview' && (isAdmin || isOwner) && typeof ApprovalCenter === 'function' && React.createElement(ApprovalCenter, { personId: effectiveId, family: fam, pendingNotifs: pending, onOpenNotifs: () => setShowNotifs(true) }),
   tab === 'admin' && admSec === 'overview' && !viewingAs && (isAdmin || isOwner) && typeof SchoolClockFix === 'function' && React.createElement(SchoolClockFix, { family: fam, sessions: sessions, onUpdate: onUpdate }),
@@ -7845,6 +7846,7 @@ function Dashboard({
       /*#__PURE__*/React.createElement("div", {style:{fontSize:11, fontWeight:700, color:'rgba(255,255,255,.45)', letterSpacing:2, textTransform:'uppercase', marginTop:2}}, "Argilan Family")
     ),
     typeof PrincipleBox === 'function' && React.createElement(PrincipleBox, {slot:'habits', style:{margin:'0 0 16px', maxWidth:'none'}}),
+    typeof CalmHearts === 'function' && React.createElement(CalmHearts, {personId: effectiveId, isAdmin: !!(isAdmin || isOwner) && !viewingAs, family: fam, sessions: sessions, onUpdate: onUpdate}),
     typeof SOPModule === 'never' && /*#__PURE__*/React.createElement("div", {style:{marginBottom:16}},
       /*#__PURE__*/React.createElement(SOPModule, {personId:effectiveId, isAdmin:isAdmin||isOwner, family:fam})
     ),
@@ -31791,8 +31793,8 @@ function StartMyDay(props) {
     // finishing early: the minutes left over go into the saved/banked time. Forgot the timers: nothing earned, nothing taken.
     try {
       var haveM = ((htAll[dkR] || {}).morning) || null;
-      if (forgot) { syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: planned, ts: rNow, forgot: true });
-        mornList.forEach(function (lb) { var hid = 'morning_' + rtHash(lb); if (!(mdS[0] || {})[hid]) syncSet('habitsdone/' + dkR + '/' + pid + '/' + hid, rNow); }); }
+      mornList.forEach(function (lb) { var hid = 'morning_' + rtHash(lb); if (!(mdS[0] || {})[hid]) syncSet('habitsdone/' + dkR + '/' + pid + '/' + hid, rNow); });
+      if (forgot) { syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: planned, ts: rNow, forgot: true }); }
       else if (!haveM && sd.dayStart && elapsed > 0 && elapsed < planned) syncSet('habittime/' + pid + '/' + dkR + '/morning', { planned: planned, actual: elapsed, ts: rNow });
     } catch (e) {}
     // getting ready is over: clock out of My Time. Work and Household Work unlock — the child clocks into each one by hand.
@@ -32182,7 +32184,7 @@ function HabitsPanel(props) {
     !only && h('div', { style: { display: 'flex', gap: 6, marginBottom: 10 } }, periods.map(function (x) { var b = block(x[0]), on = period === x[0]; return h('button', { key: x[0], onClick: function () { setPeriod(x[0]); }, style: { flex: 1, padding: '10px 4px', borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.15)'), background: on ? 'rgba(255,213,79,.15)' : 'transparent', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, x[1], h('div', { style: { fontSize: 12, color: b.n === b.rows.length && b.rows.length ? '#81C784' : '#b8b8c8' } }, b.n + '/' + b.rows.length)); })),
     h('div', { style: { height: 8, background: 'rgba(255,255,255,.1)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 } }, h('div', { style: { height: '100%', width: (cur.rows.length ? cur.n / cur.rows.length * 100 : 0) + '%', background: cur.n === cur.rows.length ? '#4CAF82' : '#FFD54F', transition: 'width .3s' } })),
     !canTime && cur.rows.length > 0 && cur.n === 0 && h('button', { onClick: startBlock, style: { display: 'block', width: '100%', background: '#039BE5', color: '#fff', border: 'none', borderRadius: 16, padding: 14, fontWeight: 900, fontSize: 16, marginBottom: 10, cursor: 'pointer' } }, '▶ Start — timers will run for each step'),
-    cur.rows.map(function (r, idx) {
+    cur.rows.filter(function (r) { return !(period === 'morning' && sd.readyAt && (r.on || r.skip)); }).map(function (r, idx) {
       var rst = auto ? segStart : (hs[r.id] || 0), active = auto ? (idx === activeIdx && canTime) : (!!rst && !r.on && !r.skip), left = active ? r.mins * 60 - (Date.now() - rst) / 1000 : 0, over = left < 0;
       var pct = active ? Math.max(0, Math.min(100, left / (r.mins * 60) * 100)) : 0, tk = r.on ? took(r) : null;
       return h('div', { key: r.id, style: { marginBottom: 6, borderRadius: 14, overflow: 'hidden', position: 'relative', background: r.on ? 'rgba(76,175,130,.15)' : active ? 'rgba(255,213,79,.12)' : 'rgba(255,255,255,.05)', border: (active ? '2px solid ' + (over ? '#EF5350' : '#FFD54F') : '1px solid ' + (r.on ? 'rgba(76,175,130,.5)' : 'rgba(255,255,255,.1)')) } },
@@ -41327,6 +41329,62 @@ function EveryoneClockBar(props) {
     msg && h('div', { style: { marginTop: 6, fontSize: 13, fontWeight: 700, color: '#9be5bd' } }, msg));
 }
 
+
+// ═══ ADMIN: EDIT ANY DAY'S HOURS + CLOCK ANYONE IN / OUT OF ANYTHING ═══
+function AdminClockAny(props) {
+  var h = React.createElement, fam = (props.family || []).filter(function (p) { return !p.deleted; });
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1];
+  var pS = React.useState((fam[0] || {}).id || ''), pid = pS[0], setPid = pS[1];
+  var dS = React.useState(todayKey()), day = dS[0], setDay = dS[1];
+  var aS = React.useState('chores'), act = aS[0], setAct = aS[1];
+  var sS = React.useState('08:00'), st = sS[0], setSt = sS[1], eS = React.useState('09:00'), en = eS[0], setEn = eS[1];
+  var mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var recS = ktUse('sessions/' + day + '/' + pid, null), rec = recS[0] || { current: null, others: null, today: [] };
+  var isToday = day === todayKey(), sessions = props.sessions || {};
+  var api = window._clockApi || {}, up = api.onUpdate || props.onUpdate, ses = api.sessions || sessions;
+  var acts = (typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : []);
+  var lab = function (id) { try { return getAct(id).label; } catch (e) { return id; } };
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 3000); }
+  function toMs(hhmm) { return new Date(day + 'T' + hhmm + ':00').getTime(); }
+  function hhmm(ms) { if (!ms) return ''; var d = new Date(ms); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function save(list) { var r = Object.assign({}, rec, { today: list }); try { syncSet('sessions/' + day + '/' + pid, r); } catch (e) {} if (isToday && up) { var u = Object.assign({}, ses); u[pid] = r; try { window._clockApi && (window._clockApi.sessions = u); } catch (e) {} up(u); } }
+  var list = (rec.today || []).slice();
+  function setT(i, field, v) { if (!v) return; var e = Object.assign({}, list[i]); e[field] = toMs(v); if (e.endTime && e.startTime) { if (e.endTime < e.startTime) e.endTime += 86400000; e.duration = Math.round((e.endTime - e.startTime) / 6000) / 10; } e.adminEdited = true; list[i] = e; save(list); say('Saved'); }
+  function setA(i, v) { var e = Object.assign({}, list[i], { activity: v, adminEdited: true }); list[i] = e; save(list); say('Saved'); }
+  function del(i) { if (!window.confirm('Delete this time entry?')) return; list.splice(i, 1); save(list); say('Deleted'); }
+  function add() { var a = toMs(st), b = toMs(en); if (!a || !b) return say('Pick both times'); if (b <= a) b += 86400000; list.push({ activity: act, startTime: a, endTime: b, duration: Math.round((b - a) / 6000) / 10, approvalStatus: 'approved', adminAdded: true }); save(list); say('Added'); }
+  var running = typeof clockActiveList === 'function' ? clockActiveList(ses[pid] || {}) : [];
+  var inp = { background: 'rgba(255,255,255,.1)', color: '#fff', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10, padding: '8px 6px', fontSize: 14 };
+  var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
+  var box = { margin: '10px 14px', padding: 10, borderRadius: 16, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.18)' };
+  if (!open) return h('div', { style: box }, btn('#7986CB', '#fff', function () { setOpen(true); }, '🛠 Edit hours · clock anyone in or out'));
+  return h('div', { style: box },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } }, h('div', { style: { flex: 1, fontWeight: 900, color: '#fff', fontSize: 15 } }, '🛠 Edit hours · clock anyone in or out'), btn('rgba(255,255,255,.12)', '#fff', function () { setOpen(false); }, 'Close')),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } },
+      h('select', { value: pid, onChange: function (e) { setPid(e.target.value); }, style: inp }, fam.map(function (p) { return h('option', { key: p.id, value: p.id }, p.name); })),
+      h('input', { type: 'date', value: day, onChange: function (e) { if (e.target.value) setDay(e.target.value); }, style: inp })),
+    isToday && h('div', { style: { marginBottom: 10, padding: 8, borderRadius: 12, background: 'rgba(0,0,0,.2)' } },
+      h('div', { style: { color: '#c8c8d8', fontSize: 12, fontWeight: 800, marginBottom: 6 } }, 'LIVE CLOCK — right now'),
+      running.length ? running.map(function (a) { return h('div', { key: a.activity, style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, color: '#fff', fontSize: 14 } }, h('span', { style: { flex: 1 } }, '🟢 ' + lab(a.activity) + ' since ' + hhmm(a.startTime)), btn('#EF5350', '#fff', function () { clockOutActivity(pid, ses, up, a.activity); say('Clocked out'); }, '⏹ Clock out')); }) : h('div', { style: { color: '#9aa', fontSize: 13, marginBottom: 6 } }, 'Not clocked into anything.'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+        h('select', { value: act, onChange: function (e) { setAct(e.target.value); }, style: inp }, acts.map(function (a) { return h('option', { key: a.id, value: a.id }, a.label); })),
+        btn('#4CAF82', '#000', function () { clockInActivity(pid, ses, up, act, { stack: true }); say('Clocked in'); }, '▶ Clock in'),
+        running.length > 0 && btn('#FFB74D', '#000', function () { clockOutAll(pid, ses, up); say('Clocked out of everything'); }, '⏹ Out of all'))),
+    h('div', { style: { color: '#c8c8d8', fontSize: 12, fontWeight: 800, marginBottom: 6 } }, 'HOURS LOGGED ' + day),
+    list.length === 0 && h('div', { style: { color: '#9aa', fontSize: 13, marginBottom: 6 } }, 'No entries this day.'),
+    list.map(function (e, i) { return h('div', { key: i + '_' + e.startTime, style: { display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 } },
+      h('select', { value: e.activity, onChange: function (ev) { setA(i, ev.target.value); }, style: inp }, acts.map(function (a) { return h('option', { key: a.id, value: a.id }, a.label); })),
+      h('input', { type: 'time', defaultValue: hhmm(e.startTime), onBlur: function (ev) { setT(i, 'startTime', ev.target.value); }, style: inp }), h('span', { style: { color: '#fff' } }, '→'),
+      h('input', { type: 'time', defaultValue: hhmm(e.endTime), onBlur: function (ev) { setT(i, 'endTime', ev.target.value); }, style: inp }),
+      h('span', { style: { color: '#9aa', fontSize: 12 } }, (e.duration || 0) + ' min'), btn('rgba(239,83,80,.3)', '#FF8A80', function () { del(i); }, '🗑')); }),
+    h('div', { style: { marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.12)', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' } },
+      h('span', { style: { color: '#c8c8d8', fontSize: 12, fontWeight: 800 } }, 'ADD:'),
+      h('select', { value: act, onChange: function (e) { setAct(e.target.value); }, style: inp }, acts.map(function (a) { return h('option', { key: a.id, value: a.id }, a.label); })),
+      h('input', { type: 'time', value: st, onChange: function (e) { setSt(e.target.value); }, style: inp }), h('span', { style: { color: '#fff' } }, '→'), h('input', { type: 'time', value: en, onChange: function (e) { setEn(e.target.value); }, style: inp }),
+      btn('#4CAF82', '#000', add, '＋ Add')),
+    msg && h('div', { style: { marginTop: 6, fontSize: 13, fontWeight: 700, color: '#9be5bd' } }, msg));
+}
+
 // ═══ YESTERDAY NEVER ENDED: ask what time the day really finished, then close it as of that time ═══
 function yfPrev(pid) {
   var out = null, d = new Date();
@@ -41599,7 +41657,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v210';
+var FM_BUILD = 'v212';
 (function () {
   function stamp() {
     try {
@@ -41637,6 +41695,136 @@ var FM_BUILD = 'v210';
   window.addEventListener('load', function () { stamp(); setTimeout(check, 4000); setInterval(check, 300000); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
 })();
+
+</script>
+<script>
+// ═══ CALM HEARTS: reset timers, weekly star chart + DAILY check-in (Habits tab) ═══
+// Data lives under calm/… : active/<pid>, log/<week>/<pid>/<id>, checkin/<week>/<pid>, cfg
+(function () { try { if (typeof CLOCK_ACTS !== 'undefined' && !CLOCK_ACTS.some(function (a) { return a.id === 'calm'; })) CLOCK_ACTS.push({ id: 'calm', label: '💗 Calm Hearts', color: '#F48FB1', productive: false, expectedMin: 0, pts: 0 }); } catch (e) {} })();
+var CH_LV = [null, { n: 'L1 · Minor', c: '#FFD54F', t: [3, 2], lose: 0 }, { n: 'L2 · Defiance', c: '#FFB74D', t: [5, 3], lose: 1 }, { n: 'L3 · Hurtful', c: '#FF8A80', t: [7, 4], lose: 2 }, { n: 'L4 · Unsafe', c: '#EF5350', t: [10, 5], lose: 3 }];
+var CH_STEPS = [['🛑', 'STOP', 'Freeze. Hands at sides, feet planted.'], ['🌬', 'BREATHE', 'In 4 · hold 2 · out 6. Three times.'], ['💬', 'NAME IT', 'Say "I feel ___."'], ['💗', 'TRUTH', 'I am safe. I am loved. Jehovah loves me.'], ['💡', 'CHOOSE', 'What is my Calm Choice right now?'], ['🔧', 'MAKE IT RIGHT', 'Plan my apology: say it, no "but", fix it, ask forgiveness.']];
+var CH_Q = [['paused', 'I paused before I got angry'], ['words', 'I used my words, not attitude'], ['right', 'I made things right when I was wrong']];
+function chWeek() { var d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toLocaleDateString('en-CA'); }
+function chKids(fam) { var k = (fam || []).filter(function (p) { return p.role === 'child' && !p.deleted; }); return k.length ? k : (typeof HL_KIDS !== 'undefined' ? HL_KIDS : []).map(function (id) { return { id: id, name: id.charAt(0).toUpperCase() + id.slice(1) }; }); }
+function chMins(pid, lv, cfg) { var shortL = (cfg && cfg.short) || ['mykah']; return CH_LV[lv].t[shortL.indexOf(pid) >= 0 ? 1 : 0]; }
+function chStars(log) { var n = 0; Object.keys(log || {}).forEach(function (k) { var e = log[k]; if (e && !e.pending && !e.undone) n += +e.star || 0; }); return Math.max(0, n); }
+function chNotify(pid, title) { try { var id = 'n' + Date.now() + Math.random().toString(36).slice(2, 5); syncSet('notifs/' + id, { id: id, type: 'calm', personId: pid, adminOnly: true, title: title, message: title, timestamp: Date.now(), read: false, approved: null, adminNote: '' }); } catch (e) {} }
+function chClock(props) { var api = window._clockApi || {}; return { s: props.sessions || api.sessions || {}, u: props.onUpdate || api.onUpdate }; }
+function chStart(props, pid, lv, by, cur, cfg) {
+  if (cur) return; cfg = cfg || {};
+  var ck = chClock(props), data = ck.s[pid] || {}, prev = data.current ? data.current.activity : null;
+  try { if (typeof clockOutAll === 'function' && ck.u) clockOutAll(pid, ck.s, ck.u); var s2 = (window._clockApi && window._clockApi.sessions) || ck.s; if (typeof clockInActivity === 'function' && ck.u) clockInActivity(pid, s2, ck.u, 'calm', { label: 'Calm Hearts reset' }); } catch (e) {}
+  var a = { id: 'c' + Date.now(), level: lv, start: Date.now(), mins: chMins(pid, lv, cfg), by: by || pid, prev: prev && prev !== 'calm' ? prev : null, steps: {} };
+  syncSet('calm/active/' + pid, a);
+  if (by === pid) chNotify(pid, (typeof crName === 'function' ? crName(pid) : pid) + ' started a Calm Hearts reset on their own 💗');
+}
+function chFinish(props, pid, outcome, a, cfg) {
+  if (!a || !a.id) return; window._chDone = window._chDone || {}; if (window._chDone[a.id]) return; window._chDone[a.id] = 1;
+  syncSet('calm/active/' + pid, null); cfg = cfg || {};
+  var end = outcome === 'expired' ? Math.min(Date.now(), a.start + a.mins * 60000) : Date.now(), used = Math.max(1, Math.round((end - a.start) / 60000)), lv = CH_LV[a.level] || CH_LV[1];
+  var e = { level: a.level, start: a.start, end: end, mins: a.mins, used: used, outcome: outcome, star: outcome === 'star' ? 1 : outcome === 'expired' ? -lv.lose : 0 };
+  if (outcome === 'expired' && cfg.deductOn !== false) {
+    var rate = cfg.ratePerHr != null && cfg.ratePerHr !== '' ? +cfg.ratePerHr : 2, pts = Math.round(used / 60 * rate * 100) / 100;
+    if (pts > 0) { var raw = typeof mdRaw === 'function' ? mdRaw(pts, mdPtsPerB(syncGet('store/cfg') || {})) : pts; e.ded = pts; e.raw = raw; try { if (window._deductFn) window._deductFn(pid, raw, '💗 Calm Hearts: time ran out (' + used + ' min, ' + lv.n + ')'); } catch (x) {} }
+    chNotify(pid, (typeof crName === 'function' ? crName(pid) : pid) + ': Calm Hearts time ran out (' + lv.n + ')');
+  }
+  syncSet('calm/log/' + chWeek() + '/' + pid + '/' + a.id, e);
+  var ck = chClock(props);
+  try { if (typeof clockOutActivity === 'function' && ck.u) { clockOutActivity(pid, ck.s, ck.u, 'calm'); if (a.prev) { var s2 = (window._clockApi && window._clockApi.sessions) || ck.s; clockInActivity(pid, s2, ck.u, a.prev); } } } catch (x) {}
+}
+function chUndo(pid, wk, id, e) {
+  syncSet('calm/log/' + wk + '/' + pid + '/' + id + '/undone', true);
+  if (e && e.raw > 0 && typeof window._creditFn === 'function') { try { window._creditFn(pid, e.raw, '↩ Calm Hearts deduction undone', 'calm_undo_' + id, true); } catch (x) {} }
+}
+function chFmt(sec) { var a = Math.abs(Math.round(sec)); return Math.floor(a / 60) + ':' + ('0' + (a % 60)).slice(-2); }
+
+function CalmHearts(props) {
+  var h = React.createElement, admin = !!props.isAdmin, me = props.personId, kids = chKids(props.family), wk = chWeek();
+  var act = ktUse('calm/active', {})[0] || {}, logs = ktUse('calm/log/' + wk, {})[0] || {}, cis = ktUse('calm/checkin/' + new Date().toLocaleDateString('en-CA'), {})[0] || {}, cfg = ktUse('calm/cfg', {})[0] || {};
+  var tS = React.useState(0), setT = tS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], sS = React.useState(null), pick = sS[0], setPick = sS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
+  var nm = function (id) { var k = kids.filter(function (x) { return x.id === id; })[0]; return k ? k.name : id; };
+  var card = { background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 18, padding: 14, marginBottom: 12, color: '#fff' };
+  var btn = function (bg, fg) { return { background: bg, color: fg || '#fff', border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 14, cursor: 'pointer' }; };
+  var left = function (a) { return a.mins * 60 - (Date.now() - a.start) / 1000; };
+  // auto-finish any reset whose time ran out (first device to see it records it)
+  React.useEffect(function () { Object.keys(act).forEach(function (pid) { var a = act[pid]; if (a && a.start && left(a) <= 0) chFinish(props, pid, 'expired', a, cfg); }); });
+  var starsRow = function (pid, big) {
+    var lg = logs[pid] || {}, n = chStars(lg), pend = Object.keys(lg).filter(function (k) { return lg[k] && lg[k].pending && !lg[k].undone; }).length, out = [];
+    for (var i = 0; i < 5; i++) out.push(h('span', { key: i, style: { fontSize: big ? 30 : 18, color: i < n ? '#FFD54F' : i < n + pend ? 'rgba(255,213,79,.45)' : 'rgba(255,255,255,.25)' } }, i < n + pend ? '★' : '☆'));
+    if (n > 5) out.push(h('span', { key: 'x', style: { fontSize: 13, color: '#FFD54F', fontWeight: 900, marginLeft: 4 } }, '+' + (n - 5)));
+    return h('span', { style: { letterSpacing: 2 } }, out);
+  };
+  var pausedToday = function (pid) { var d = new Date().toDateString(), lg = logs[pid] || {}, m = 0; Object.keys(lg).forEach(function (k) { var e = lg[k]; if (e && e.used && !e.undone && new Date(e.start).toDateString() === d) m += e.used; }); return m; };
+
+  // ── active reset (big timer + steps) ──
+  var resetCard = function (pid) {
+    var a = act[pid]; if (!a) return null; var lv = CH_LV[a.level] || CH_LV[1], l = left(a), st = a.steps || {}, all = CH_STEPS.every(function (_, i) { return st[i]; }), pct = Math.max(0, Math.min(100, l / (a.mins * 60) * 100));
+    return h('div', { key: 'r' + pid, style: Object.assign({}, card, { border: '2px solid ' + lv.c, background: 'rgba(43,16,85,.6)' }) },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('div', { style: { fontWeight: 900, fontSize: 16 } }, '💗 ' + (admin ? nm(pid) + ' · ' : '') + 'Calm Hearts reset'), h('span', { style: { background: lv.c, color: '#1a1a2e', borderRadius: 10, padding: '3px 10px', fontWeight: 900, fontSize: 12 } }, lv.n)),
+      h('div', { style: { textAlign: 'center', fontSize: 52, fontWeight: 900, fontFamily: 'ui-monospace,Menlo,monospace', color: l < 60 ? '#FF8A80' : '#fff', margin: '8px 0 4px' } }, chFmt(l)),
+      h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 6 } }, h('div', { style: { height: '100%', width: pct + '%', background: lv.c, transition: 'width 1s linear' } })),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8', textAlign: 'center', marginBottom: 10 } }, '⏸ Paused time: no pay or points while the reset runs. Finish in time to earn a star.'),
+      CH_STEPS.map(function (s, i) { var on = !!st[i]; return h('button', { key: i, onClick: function () { syncSet('calm/active/' + pid + '/steps/' + i, on ? null : true); }, style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: on ? 'rgba(76,175,130,.18)' : 'rgba(255,255,255,.05)', border: '1px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.12)'), borderRadius: 12, padding: '10px 12px', marginBottom: 6, color: '#fff', cursor: 'pointer' } },
+        h('span', { style: { width: 28, height: 28, borderRadius: '50%', background: on ? '#4CAF82' : 'transparent', border: '2px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.5)'), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 900, flexShrink: 0 } }, on ? '✓' : ''),
+        h('span', { style: { fontSize: 20 } }, s[0]), h('span', { style: { flex: 1 } }, h('b', null, s[1]), h('span', { style: { color: '#c8c8d8', fontSize: 13 } }, '  ' + s[2]))); }),
+      h('button', { disabled: !all, onClick: function () { chFinish(props, pid, 'star', a, cfg); }, style: Object.assign(btn(all ? '#4CAF82' : 'rgba(255,255,255,.12)', all ? '#0f0c29' : '#8f8daf'), { width: '100%', padding: 14, fontSize: 16, marginTop: 4 }) }, all ? '★ I made my Calm Choice' : 'Check all 6 steps first'),
+      admin && h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } }, h('button', { onClick: function () { chFinish(props, pid, 'star', a, cfg); }, style: Object.assign(btn('rgba(76,175,130,.25)'), { flex: 1 }) }, 'Done well (star)'), h('button', { onClick: function () { chFinish(props, pid, 'cancel', a, cfg); }, style: Object.assign(btn('rgba(255,255,255,.12)'), { flex: 1 }) }, 'Cancel (no change)')));
+  };
+
+  // ── weekly star chart + Sunday check-in for one child ──
+  var weekCard = function (pid, editable) {
+    var ci = cis[pid] || {}, put = function (k, v) { syncSet('calm/checkin/' + new Date().toLocaleDateString('en-CA') + '/' + pid + '/' + k, v); };
+    var face = function (k, v, f) { var on = ci[k] === v; return h('button', { key: v, onClick: editable ? function () { put(k, on ? null : v); } : null, style: { fontSize: 22, background: on ? 'rgba(255,213,79,.25)' : 'transparent', border: on ? '2px solid #FFD54F' : '2px solid transparent', borderRadius: 12, padding: '2px 6px', cursor: editable ? 'pointer' : 'default', opacity: on || editable ? 1 : .35 } }, f); };
+    var txt = function (k, ph) { return editable ? h('textarea', { defaultValue: ci[k] || '', placeholder: ph, onBlur: function (ev) { put(k, ev.target.value || null); }, rows: 2, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.07)', color: '#fff', border: '1px solid rgba(255,255,255,.15)', borderRadius: 12, padding: 10, fontSize: 14, marginTop: 6, fontFamily: 'inherit' } }) : (ci[k] ? h('div', { style: { fontSize: 13, color: '#c8c8d8', marginTop: 6 } }, ph + ' ' + ci[k]) : null); };
+    var pm = pausedToday(pid);
+    return h('div', { style: card },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 } }, h('div', { style: { fontWeight: 900, fontSize: 16 } }, '⭐ ' + (admin ? nm(pid) + "'s" : 'My') + ' week'), starsRow(pid, true)),
+      h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 8 } }, '1★ = 15 min reward game · 5★ = Family Game Night · resets Monday'),
+      editable && !admin && h('button', { onClick: function () { var id = 'k' + Date.now(); syncSet('calm/log/' + wk + '/' + pid + '/' + id, { outcome: 'choice', star: 1, pending: true, start: Date.now() }); chNotify(pid, nm(pid) + ' says they made a Calm Choice ⭐ (approve in Habits)'); }, style: Object.assign(btn('rgba(255,213,79,.18)', '#FFD54F'), { width: '100%', marginBottom: 10, border: '1px solid rgba(255,213,79,.5)' }) }, '⭐ I made a Calm Choice today (Mom or Dad approves)'),
+      pm > 0 && h('div', { style: { fontSize: 13, color: '#FF8A80', fontWeight: 700, marginBottom: 8 } }, '⏸ ' + pm + ' min in Calm Hearts today: time with no progress, pay or points.'),
+      h('div', { style: { fontWeight: 900, fontSize: 14, margin: '6px 0 4px', color: '#F48FB1' } }, '📝 Daily check-in (every day)'),
+      CH_Q.map(function (q) { return h('div', { key: q[0], style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, padding: '4px 0' } }, h('span', { style: { fontSize: 14, flex: 1 } }, q[1]), h('span', null, face(q[0], 2, '😊'), face(q[0], 1, '😐'), face(q[0], 0, '😟'))); }),
+      txt('lesson', "Today's lesson taught me…"), txt('next', 'Tomorrow I will work on…'),
+      admin ? h('textarea', { defaultValue: ci.praise || '', placeholder: 'Parent praise (they will see this)', onBlur: function (ev) { put('praise', ev.target.value || null); }, rows: 2, style: { width: '100%', boxSizing: 'border-box', background: 'rgba(76,175,130,.1)', color: '#fff', border: '1px solid rgba(76,175,130,.4)', borderRadius: 12, padding: 10, fontSize: 14, marginTop: 8, fontFamily: 'inherit' } })
+        : ci.praise ? h('div', { style: { marginTop: 8, background: 'rgba(76,175,130,.15)', borderRadius: 12, padding: 10, fontSize: 14 } }, '💚 ' + ci.praise) : null);
+  };
+
+  // ── everyone's progress ──
+  var board = h('div', { style: card },
+    h('div', { style: { fontWeight: 900, fontSize: 15, marginBottom: 8 } }, '👨‍👩‍👧‍👦 Family progress this week'),
+    kids.map(function (k) { var ci = cis[k.id] || {}, done = CH_Q.every(function (q) { return ci[q[0]] != null; }); return h('div', { key: k.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: '1px solid rgba(255,255,255,.06)' } }, h('span', { style: { flex: 1, fontWeight: 700 } }, k.name, act[k.id] ? h('span', { style: { color: '#F48FB1', fontSize: 12, marginLeft: 6 } }, '· resetting') : null), starsRow(k.id), h('span', { style: { fontSize: 12, width: 72, textAlign: 'right', color: done ? '#81C784' : '#8f8daf' } }, done ? '✓ check-in' : 'check-in …')); }));
+
+  if (!admin) {
+    return h('div', { style: { marginBottom: 16 } },
+      h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', margin: '4px 0 10px' } }, '💗 Calm Hearts'),
+      resetCard(me), weekCard(me, true), board,
+      !act[me] && h('button', { onClick: function () { chStart(props, me, 1, me, act[me], cfg); }, style: Object.assign(btn('rgba(244,143,177,.18)', '#F48FB1'), { width: '100%', border: '1px solid rgba(244,143,177,.5)' }) }, "💗 I'm upset. Start my reset"));
+  }
+
+  // ── admin side ──
+  var pending = []; Object.keys(logs).forEach(function (pid) { var lg = logs[pid] || {}; Object.keys(lg).forEach(function (id) { if (lg[id] && lg[id].pending && !lg[id].undone) pending.push([pid, id]); }); });
+  var today = []; Object.keys(logs).forEach(function (pid) { var lg = logs[pid] || {}; Object.keys(lg).forEach(function (id) { var e = lg[id]; if (e && !e.pending && e.outcome !== 'choice' && new Date(e.start).toDateString() === new Date().toDateString()) today.push([pid, id, e]); }); });
+  today.sort(function (a, b) { return b[2].start - a[2].start; });
+  return h('div', { style: { marginBottom: 16 } },
+    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#fff', margin: '4px 0 10px' } }, '💗 Calm Hearts'),
+    Object.keys(act).map(function (pid) { return resetCard(pid); }),
+    h('div', { style: card },
+      h('div', { style: { fontWeight: 900, fontSize: 15, marginBottom: 8 } }, 'Start a reset'),
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 } }, kids.map(function (k) { var on = pick === k.id; return h('button', { key: k.id, onClick: function () { setPick(on ? null : k.id); }, style: btn(on ? '#7986CB' : 'rgba(255,255,255,.1)') }, k.name); })),
+      pick && (act[pick] ? h('div', { style: { fontSize: 13, color: '#F48FB1' } }, nm(pick) + ' is already in a reset.') : h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 } }, [1, 2, 3, 4].map(function (lv) { var L = CH_LV[lv]; return h('button', { key: lv, onClick: function () { chStart(props, pick, lv, me, act[pick], cfg); setPick(null); }, style: btn(L.c, '#1a1a2e') }, L.n + ' · ' + chMins(pick, lv, cfg) + ' min'); })))),
+    pending.length > 0 && h('div', { style: card }, h('div', { style: { fontWeight: 900, fontSize: 15, marginBottom: 6 } }, '⭐ Calm Choice stars to approve'),
+      pending.map(function (p) { return h('div', { key: p[1], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' } }, h('span', { style: { flex: 1 } }, nm(p[0])), h('button', { onClick: function () { syncSet('calm/log/' + wk + '/' + p[0] + '/' + p[1] + '/pending', null); }, style: btn('#4CAF82', '#0f0c29') }, 'Approve'), h('button', { onClick: function () { syncSet('calm/log/' + wk + '/' + p[0] + '/' + p[1] + '/undone', true); }, style: btn('rgba(255,255,255,.12)') }, 'No')); })),
+    board,
+    today.length > 0 && h('div', { style: card }, h('div', { style: { fontWeight: 900, fontSize: 15, marginBottom: 6 } }, "Today's resets"),
+      today.map(function (t) { var e = t[2], L = CH_LV[e.level] || CH_LV[1]; return h('div', { key: t[1], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 13, opacity: e.undone ? .4 : 1, borderTop: '1px solid rgba(255,255,255,.06)' } }, h('span', { style: { flex: 1 } }, h('b', null, nm(t[0])), ' · ', h('span', { style: { color: L.c } }, L.n), ' · ' + e.used + ' min · ' + (e.outcome === 'star' ? '★ earned' : e.outcome === 'expired' ? 'time ran out (' + e.star + '★' + (e.ded ? ', −' + e.ded + ' pts' : '') + ')' : 'cancelled')), !e.undone && e.outcome !== 'cancel' && h('button', { onClick: function () { chUndo(t[0], wk, t[1], e); }, style: btn('rgba(255,255,255,.1)') }, 'Undo')); })),
+    h('button', { onClick: function () { setOpen(!open); }, style: Object.assign(btn('transparent', '#c8c8d8'), { textDecoration: 'underline', fontWeight: 700 }) }, open ? 'Hide check-ins & settings' : "Each child's check-in & settings"),
+    open && h('div', null, kids.map(function (k) { return h('div', { key: k.id }, weekCard(k.id, false)); }),
+      h('div', { style: card }, h('div', { style: { fontWeight: 900, marginBottom: 8 } }, '⚙ Calm Hearts settings'),
+        h('label', { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 8 } }, h('input', { type: 'checkbox', checked: cfg.deductOn !== false, onChange: function (ev) { syncSet('calm/cfg/deductOn', ev.target.checked); } }), 'Deduct when time runs out'),
+        h('label', { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 } }, 'Points taken per hour of reset time', h('input', { type: 'number', min: 0, step: 0.5, defaultValue: cfg.ratePerHr != null ? cfg.ratePerHr : 2, onBlur: function (ev) { syncSet('calm/cfg/ratePerHr', ev.target.value === '' ? null : +ev.target.value); }, style: { width: 70, background: 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid rgba(255,255,255,.2)', borderRadius: 8, padding: 6 } })),
+        h('div', { style: { fontSize: 12, color: '#8f8daf', marginTop: 8 } }, 'Shorter timers: Mykah. Reset time always pauses pay and points; the deduction applies only when the timer runs out.'))));
+}
 
 </script>
 <script>
