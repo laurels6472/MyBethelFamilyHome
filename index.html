@@ -25957,7 +25957,7 @@ var INSTRUMENTS = [{
   name: 'Voice / Singing',
   emoji: '🎤',
   color: '#9C27B0',
-  desc: 'Vocal technique, worship songs, breath control, harmony'
+  desc: 'Vocal technique, easy songs, breath control, harmony'
 }];
 
 // Structured lessons per instrument — 30 days of progressive content
@@ -26071,10 +26071,10 @@ var GUITAR_LESSONS = [{
   song: 'Spider exercise'
 }, {
   day: 19,
-  title: 'Song: "Amazing Grace"',
-  focus: 'Learn the chord progression, slow strumming, vocal timing',
+  title: 'Song: Easy 12-Bar Blues',
+  focus: 'Learn the 12-bar blues chord progression, slow strumming, steady timing',
   chord: 'G C D',
-  song: 'Amazing Grace'
+  song: 'Easy 12-bar blues'
 }, {
   day: 20,
   title: 'Month 1 Showcase',
@@ -26121,7 +26121,7 @@ var DRUMS_LESSONS = [{
 }, {
   day: 7,
   title: 'The Shuffle Beat',
-  focus: 'Swung hi-hat rhythm — the feeling of blues and gospel',
+  focus: 'Swung hi-hat rhythm — the feeling of the blues',
   pattern: 'Shuffle',
   song: 'Blues feel'
 }, {
@@ -26151,9 +26151,9 @@ var DRUMS_LESSONS = [{
 }, {
   day: 12,
   title: 'Ride Cymbal Beat',
-  focus: 'Ride instead of hi-hat — jazz and worship music feel',
+  focus: 'Ride instead of hi-hat — jazz and blues feel',
   pattern: 'Ride beat',
-  song: 'Worship feel'
+  song: 'Blues ride feel'
 }, {
   day: 13,
   title: 'Kick Variations',
@@ -26175,9 +26175,9 @@ var DRUMS_LESSONS = [{
 }, {
   day: 16,
   title: 'Quarter Note Triplets',
-  focus: 'Triplet feel — the heartbeat of gospel music',
+  focus: 'Triplet feel — the heartbeat of slow blues',
   pattern: 'Triplets',
-  song: 'Gospel triplet feel'
+  song: 'Blues triplet feel'
 }, {
   day: 17,
   title: 'Linear Drumming',
@@ -26192,10 +26192,10 @@ var DRUMS_LESSONS = [{
   song: null
 }, {
   day: 19,
-  title: 'Play Along: "Amazing Grace"',
-  focus: 'Drum along to a hymn — learn to serve the song, not show off',
+  title: 'Play Along: Slow 12-Bar Blues',
+  focus: 'Drum along to a slow blues — learn to serve the song, not show off',
   pattern: 'Applied',
-  song: 'Amazing Grace'
+  song: 'Slow 12-bar blues'
 }, {
   day: 20,
   title: 'Month 1 Showcase',
@@ -26250,7 +26250,7 @@ var PIANO_LESSONS = [{
   title: 'F Major Chord',
   focus: 'F-A-C, the classic C-F-G-C progression — basis of hundreds of songs',
   note: 'F chord',
-  song: 'Simple hymn feel'
+  song: 'Simple blues feel'
 }, {
   day: 9,
   title: 'JW Song on Piano',
@@ -26329,13 +26329,13 @@ var BASS_LESSONS = [{
 }, {
   day: 7, title: 'Rhythm & the Pocket', focus: 'Lock in with a drum beat (real or metronome) — bass and drums are a team', chord: 'Review', song: null
 }, {
-  day: 8, title: '8th Note Grooves', focus: 'Steady 8th-note bass pattern, the backbone of most pop/rock/gospel songs', chord: 'Groove', song: null
+  day: 8, title: '8th Note Grooves', focus: 'Steady 8th-note bass pattern, the backbone of most pop/rock/blues songs', chord: 'Groove', song: null
 }, {
   day: 9, title: 'JW Song Bass Line', focus: 'Pick a favorite Kingdom song and play root notes along with the recording', chord: 'Applied', song: 'Kingdom song bass line'
 }, {
   day: 10, title: 'Week 2 Showcase', focus: 'Play a full groove with root notes over a 4-chord progression for the family', chord: 'Review all', song: 'Mini performance for family'
 }, {
-  day: 11, title: 'Adding the 5th', focus: 'Root-5th pattern — the classic punchy bass sound used in rock and gospel', chord: 'Root-5th', song: null
+  day: 11, title: 'Adding the 5th', focus: 'Root-5th pattern — the classic punchy bass sound used in rock and blues', chord: 'Root-5th', song: null
 }, {
   day: 12, title: 'Syncopation', focus: 'Playing off the beat — the "and" counts — adds groove and funk feel', chord: 'Syncopated', song: null
 }, {
@@ -26351,7 +26351,7 @@ var BASS_LESSONS = [{
 }, {
   day: 18, title: 'Speed & Control', focus: 'Metronome practice at 70bpm building to 100bpm — clean notes over fast notes', chord: 'Speed', song: null
 }, {
-  day: 19, title: 'Song: "Amazing Grace"', focus: 'Play simple root-note bass line under the hymn, locking the tempo steady', chord: 'G C D', song: 'Amazing Grace'
+  day: 19, title: 'Song: Easy 12-Bar Blues', focus: 'Play a simple root-note bass line under a 12-bar blues, locking the tempo steady', chord: 'G C D', song: 'Easy 12-bar blues'
 }, {
   day: 20, title: 'Month 1 Showcase', focus: 'Full mini performance — play bass over a full song with the family', chord: 'All', song: 'Performance day'
 }];
@@ -26419,45 +26419,46 @@ function musicVideoFor(instr, lesson, day) {
   var d = m.days[day];
   if (d) return {t:d.t, u:d.u, exact:true};
   var q = (lesson && lesson.title ? lesson.title : '').replace(/^(Song|Fill|Play Along):?\s*/i,'').replace(/JW Song[^\s]*/i,'easy song').replace(/[^A-Za-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+  if (/amazing grace|hymn|gospel|worship|holy|sacred|spiritual/i.test(q)) q = 'easy 12 bar blues';
   return {t:'Find a beginner tutorial: ' + (lesson ? lesson.title : ''), u:'https://www.youtube.com/results?search_query=' + encodeURIComponent(m.tag + ' ' + q), exact:false};
 }
 var YOUTUBE_TUTORIALS = {
   guitar:[
-    {title:"Beginner Guitar: First Chords",genre:"Acoustic/Worship",url:"https://www.youtube.com/results?search_query=beginner+guitar+first+chords+worship"},
-    {title:"Gospel Guitar Chords",genre:"Gospel",url:"https://www.youtube.com/results?search_query=gospel+guitar+chords+beginner"},
-    {title:"Chord Transitions Practice",genre:"All Styles",url:"https://www.youtube.com/results?search_query=guitar+chord+switching+beginner"},
-    {title:"Kingdom Song on Guitar",genre:"JW Worship",url:"https://www.youtube.com/results?search_query=kingdom+song+guitar+tutorial"},
+    {title:"Beginner Guitar: First Chords",genre:"Beginner",url:"https://www.youtube.com/results?search_query=beginner+guitar+first+chords+lesson"},
+    {title:"Easy 12-Bar Blues Guitar",genre:"Blues",url:"https://www.youtube.com/results?search_query=easy+12+bar+blues+guitar+beginner+lesson"},
+    {title:"Chord Transitions Practice",genre:"Beginner",url:"https://www.youtube.com/results?search_query=guitar+chord+switching+beginner"},
+    {title:"Kingdom Song on Guitar (teacher shows how)",genre:"JW Songs",url:"https://www.youtube.com/results?search_query=kingdom+song+guitar+tutorial+how+to+play"},
   ],
   drums:[
-    {title:"Drum Lessons: Basic Beat",genre:"Rock/Gospel",url:"https://www.youtube.com/results?search_query=beginner+drum+lessons+basic+beat"},
-    {title:"Gospel Drumming Basics",genre:"Gospel",url:"https://www.youtube.com/results?search_query=gospel+drumming+basics+beginner"},
-    {title:"Worship Drumming Patterns",genre:"Contemporary Worship",url:"https://www.youtube.com/results?search_query=worship+drumming+patterns+beginner"},
+    {title:"Drum Lessons: Basic Beat",genre:"Beginner",url:"https://www.youtube.com/results?search_query=beginner+drum+lessons+basic+beat"},
+    {title:"Blues Shuffle Drum Beat",genre:"Blues",url:"https://www.youtube.com/results?search_query=blues+shuffle+drum+beat+beginner"},
+    {title:"Slow Blues Drumming Basics",genre:"Blues",url:"https://www.youtube.com/results?search_query=slow+blues+drumming+basics+beginner"},
   ],
   ukulele:[
-    {title:"Ukulele for Beginners",genre:"Folk/Pop",url:"https://www.youtube.com/results?search_query=ukulele+complete+beginners+lesson"},
-    {title:"Worship Songs on Ukulele",genre:"Worship",url:"https://www.youtube.com/results?search_query=worship+songs+ukulele+beginner"},
+    {title:"Ukulele for Beginners",genre:"Beginner",url:"https://www.youtube.com/results?search_query=ukulele+complete+beginners+lesson"},
+    {title:"12-Bar Blues on Ukulele",genre:"Blues",url:"https://www.youtube.com/results?search_query=12+bar+blues+ukulele+beginner"},
   ],
   piano:[
-    {title:"Piano for Beginners",genre:"Classical/All",url:"https://www.youtube.com/results?search_query=piano+beginners+lesson+1"},
-    {title:"Gospel Piano Chords",genre:"Gospel/Worship",url:"https://www.youtube.com/results?search_query=gospel+piano+chords+beginner"},
-    {title:"Hymns on Piano Easy",genre:"Traditional Hymns",url:"https://www.youtube.com/results?search_query=hymns+piano+easy+beginner"},
+    {title:"Piano for Beginners",genre:"Beginner",url:"https://www.youtube.com/results?search_query=piano+beginners+lesson+1"},
+    {title:"Easy Blues Piano",genre:"Blues",url:"https://www.youtube.com/results?search_query=easy+blues+piano+beginner"},
+    {title:"12-Bar Blues Piano Chords",genre:"Blues",url:"https://www.youtube.com/results?search_query=12+bar+blues+piano+chords+beginner"},
   ],
   bass:[
-    {title:"Bass Guitar Beginners",genre:"Rock/Gospel",url:"https://www.youtube.com/results?search_query=bass+guitar+beginners+lesson"},
-    {title:"Gospel Bass Lines",genre:"Gospel",url:"https://www.youtube.com/results?search_query=gospel+bass+guitar+lines+beginner"},
+    {title:"Bass Guitar Beginners",genre:"Beginner",url:"https://www.youtube.com/results?search_query=bass+guitar+beginners+lesson"},
+    {title:"12-Bar Blues Bass Line",genre:"Blues",url:"https://www.youtube.com/results?search_query=12+bar+blues+bass+line+beginner"},
   ],
   violin:[
-    {title:"Violin for Beginners",genre:"Classical",url:"https://www.youtube.com/results?search_query=violin+beginner+lesson+1"},
-    {title:"Worship Violin",genre:"Contemporary Worship",url:"https://www.youtube.com/results?search_query=worship+violin+tutorials+beginner"},
+    {title:"Violin for Beginners",genre:"Beginner",url:"https://www.youtube.com/results?search_query=violin+beginner+lesson+1"},
+    {title:"Easy Blues Fiddle",genre:"Blues",url:"https://www.youtube.com/results?search_query=easy+blues+violin+beginner"},
   ],
   singing:[
-    {title:"Singing Lessons for Beginners",genre:"All Styles",url:"https://www.youtube.com/results?search_query=singing+lessons+beginners+vocal+warmup"},
-    {title:"Gospel Vocal Technique",genre:"Gospel/Worship",url:"https://www.youtube.com/results?search_query=gospel+vocal+technique+beginner"},
-    {title:"Breath Control for Singers",genre:"All Styles",url:"https://www.youtube.com/results?search_query=breath+control+singing+beginners"},
-    {title:"Harmony and Worship Singing",genre:"Worship",url:"https://www.youtube.com/results?search_query=harmony+singing+worship+beginner"},
-    {title:"Kingdom Songs Sing Along",genre:"JW Worship",url:"https://www.jw.org/en/library/music-songs/sing-out-joyfully/"},
+    {title:"Singing Lessons for Beginners",genre:"Beginner",url:"https://www.youtube.com/results?search_query=singing+lessons+beginners+vocal+warmup"},
+    {title:"Blues Singing for Beginners",genre:"Blues",url:"https://www.youtube.com/results?search_query=blues+singing+beginner+lesson"},
+    {title:"Breath Control for Singers",genre:"Beginner",url:"https://www.youtube.com/results?search_query=breath+control+singing+beginners"},
+    {title:"Kingdom Songs Sing Along",genre:"JW Songs",url:"https://www.jw.org/en/library/music-songs/sing-out-joyfully/"},
   ],
 };
+
 
 
 function MusicClassPanel(_ref) {
@@ -42290,7 +42291,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v237';
+var FM_BUILD = 'v238';
 (function () {
   function stamp() {
     try {
