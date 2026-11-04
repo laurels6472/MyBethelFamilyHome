@@ -243,8 +243,19 @@ var FM_FIREBASE_CONFIG = {
   var s=FM_FIREBASE_CONFIG?JSON.stringify(FM_FIREBASE_CONFIG):localStorage.getItem('fb_cfg');
   if(s)try{initFirebase(JSON.parse(s));}catch(e){}
 })();
-function syncSet(p,v){if(/^pins\/(laurel|eric)$/.test(p)){localStorage.setItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_'),JSON.stringify(v));return;}localStorage.setItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_'),JSON.stringify(v));if(db)db.ref('argilan/'+p).set(v).catch(function(){});}
+function syncSet(p,v){if(/^pins\/(laurel|eric)$/.test(p)){localStorage.setItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_'),JSON.stringify(v));return;}localStorage.setItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_'),JSON.stringify(v));if(db)db.ref('argilan/'+p).set(v).then(function(){fmQDone(p);}).catch(function(){fmQAdd(p,v);});}
 function syncGet(p){try{return JSON.parse(localStorage.getItem('_s_'+p.replace(/[^a-zA-Z0-9]/g,'_')));}catch(e){return null;}}
+// Unsent-write queue: if Firebase is offline/slow/errors, the write is kept and retried automatically (every 20s, when the phone comes back online, and when the app opens). Nothing is lost and nobody has to fix anything.
+function fmQGet(){try{return JSON.parse(localStorage.getItem('_fm_q')||'{}');}catch(e){return {};}}
+function fmQPut(q){try{var k=Object.keys(q);if(k.length>300){k.slice(0,k.length-300).forEach(function(x){delete q[x];});}localStorage.setItem('_fm_q',JSON.stringify(q));}catch(e){}}
+function fmQAdd(p,v){var q=fmQGet();q[p]=v;fmQPut(q);}
+function fmQDone(p){var q=fmQGet();if(q[p]!==undefined){delete q[p];fmQPut(q);}}
+function fmQFlush(){try{if(typeof db==='undefined'||!db)return;var q=fmQGet();Object.keys(q).forEach(function(p){db.ref('argilan/'+p).set(q[p]).then(function(){fmQDone(p);}).catch(function(){});});}catch(e){}}
+try{setInterval(fmQFlush,20000);window.addEventListener('online',fmQFlush);setTimeout(fmQFlush,4000);}catch(e){}
+function mpReportText(o){var L=['Music practice — '+o.date,o.name+' · '+o.inst+' · Lesson '+o.lesson+(o.title?': '+o.title:''),'Time practiced today: '+(o.mins||0)+' minutes'];if(o.week!=null)L.push('This week: '+o.week+' minutes');L.push('Practice notes: '+(o.notes||'(none yet)'));return L.join('\n');}
+function mpToday(){var t=new Date();return t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2);}
+function mpMerge(id,d){var o=Object.assign({},d||{}),td=mpToday(),c=syncGet('music_practice/'+id+'/'+td);if(c&&(!o[td]||(c.ts||0)>=(o[td].ts||0)))o[td]=c;return o;}
+function mpWeekMins(prac){var tot=0,now=Date.now();try{Object.keys(prac||{}).forEach(function(k){var d=new Date(k+'T12:00:00');if(now-d.getTime()<7*864e5&&prac[k]&&prac[k].mins)tot+=prac[k].mins;});}catch(e){}return tot;}
 
 // ═══ UNIVERSAL FIREBASE SYNC ══════════════════════════════════════════════════
 
@@ -26550,6 +26561,16 @@ function MusicClassPanel(_ref) {
       clearInterval(timerRef.current);
     };
   }, [practicing]);
+  var _pl = React.useState(null), todayLog = _pl[0], setTodayLog = _pl[1];
+  React.useEffect(function () {
+    var un = null;
+    try { un = syncOn('music_practice/' + personId, function (d) { setTodayLog(mpMerge(personId, d)); }); } catch (_e) {}
+    var lf = function () { setTodayLog(function (o) { return mpMerge(personId, o); }); };
+    window.addEventListener('fm-local', lf); lf();
+    var un0 = un; un = function () { window.removeEventListener('fm-local', lf); un0 && un0(); };
+    return function () { try { un && un(); } catch (_e) {} };
+  }, [personId]);
+  var _cp = React.useState(''), copyMsg = _cp[0], setCopyMsg = _cp[1];
   function saveProgress(inst, day, n) {
     var data = {
       instrument: inst,
@@ -26581,11 +26602,19 @@ function MusicClassPanel(_ref) {
   function stopPractice() {
     setPracticing(false);
     var mins = Math.round(practiceElapsed / 60);
-    if (mins > 0) syncSet('music_practice/' + personId + '/' + new Date().toISOString().split('T')[0], {
-      mins: mins,
-      instrument: instrument,
-      ts: Date.now()
-    });
+    if (mins < 1 && practiceElapsed >= 20) mins = 1;
+    if (mins > 0) {
+      var dk = mpToday(), prev = syncGet('music_practice/' + personId + '/' + dk) || {};
+      var lsn = null; try { lsn = getMusicLesson(instrument, lessonDay); } catch (_e) {}
+      syncSet('music_practice/' + personId + '/' + dk, {
+        mins: (prev.mins || 0) + mins,
+        instrument: instrument,
+        lesson: lessonDay,
+        title: lsn ? lsn.title : '',
+        notes: notes || '',
+        ts: Date.now()
+      });
+    }
     if (window._sendNotif) window._sendNotif('🎵 Practice done!', mins + ' min ' + (instrument || '') + ' practice logged');
   }
   function fmtTimer(s) {
@@ -26946,7 +26975,15 @@ function MusicClassPanel(_ref) {
       resize: 'vertical',
       fontFamily: 'inherit'
     }
-  })));
+  }), (function () {
+    var tl = (todayLog || {})[mpToday()] || {}, kid = null;
+    try { kid = (ssKids() || []).find(function (k) { return k.id === personId; }); } catch (_e) {}
+    var txt = mpReportText({ date: mpToday(), name: kid ? kid.name : personId, inst: instr ? instr.name : instrument, lesson: lessonDay, title: lesson ? lesson.title : '', mins: tl.mins || 0, week: mpWeekMins(todayLog), notes: notes });
+    return React.createElement('div', { style: { marginTop: 10, background: 'rgba(66,133,244,.1)', border: '1px solid rgba(66,133,244,.35)', borderRadius: 12, padding: '10px 12px' } },
+      React.createElement('div', { style: { fontSize: 11, fontWeight: 800, color: '#8AB4F8' } }, '⏱ Practiced today: ' + (tl.mins || 0) + ' min · this week: ' + mpWeekMins(todayLog) + ' min'),
+      React.createElement('button', { onClick: function () { try { navigator.clipboard.writeText(txt); setCopyMsg('Copied! Paste it into your Google Classroom turn-in.'); } catch (_e) { setCopyMsg('Could not copy on this device — ask Mom.'); } setTimeout(function () { setCopyMsg(''); }, 4000); }, style: { marginTop: 8, width: '100%', background: '#1A73E8', color: '#fff', border: 'none', borderRadius: 20, padding: 10, fontWeight: 800, fontSize: 11, cursor: 'pointer' } }, '📋 Copy my practice report for Google Classroom'),
+      copyMsg && React.createElement('div', { style: { fontSize: 10, color: '#81C784', marginTop: 6 } }, copyMsg));
+  })()));
 }
 </script>
 <script>
@@ -41713,9 +41750,36 @@ function MusicTile(props) {
 }
 function MusicOverview(props) {
   var h = React.createElement, kids = (typeof ssKids === 'function' ? ssKids() : []), day = props.day || 1;
+  var dS = React.useState({}), D = dS[0], mS = React.useState('');
+  React.useEffect(function () {
+    var uns = [];
+    kids.forEach(function (k) {
+      try { uns.push(syncOn('music_practice/' + k.id, function (d) { dS[1](function (o) { var n = Object.assign({}, o); n[k.id] = Object.assign({}, n[k.id], { prac: mpMerge(k.id, d) }); return n; }); })); } catch (e) {}
+      try { uns.push(syncOn('music_progress/' + k.id, function (d) { dS[1](function (o) { var n = Object.assign({}, o); n[k.id] = Object.assign({}, n[k.id], { prog: d || {} }); return n; }); })); } catch (e) {}
+    });
+    var lf = function () { dS[1](function (o) { var n = Object.assign({}, o); kids.forEach(function (k) { n[k.id] = Object.assign({}, n[k.id], { prac: mpMerge(k.id, n[k.id] && n[k.id].prac) }); }); return n; }); };
+    window.addEventListener('fm-local', lf); lf();
+    return function () { window.removeEventListener('fm-local', lf); uns.forEach(function (u) { try { u && u(); } catch (e) {} }); };
+  }, [kids.length]);
+  function report() {
+    var td = mpToday(), parts = [];
+    kids.forEach(function (k) {
+      var pr = (D[k.id] && D[k.id].prog) || {}, pc = (D[k.id] && D[k.id].prac) || {}, ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(k.id)) || ['guitar'];
+      var cur = pr.instrument || ins[0], ld = pr.lessonDay || 1, ml = null; try { ml = getMusicLesson(cur, ld); } catch (e) {}
+      parts.push(mpReportText({ date: td, name: k.name, inst: mpInstName(cur), lesson: ld, title: ml ? ml.title : '', mins: (pc[td] && pc[td].mins) || 0, week: mpWeekMins(pc), notes: pr.notes }));
+    });
+    return parts.join('\n\n');
+  }
+  function say(t) { mS[1](t); setTimeout(function () { mS[1](''); }, 3500); }
+  var bt = function (bg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, t); };
   return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid #E91E63', background: 'rgba(233,30,99,.08)', padding: 12 } },
     h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 6 } }, '🎵 Music — what each student picked and where they are'),
-    kids.map(function (k) { return h(MusicRow, { key: k.id, k: k, day: day }); }));
+    kids.map(function (k) { var pc = (D[k.id] && D[k.id].prac) || {}, t = pc[mpToday()]; return h('div', { key: k.id }, h(MusicRow, { k: k, day: day }), h('div', { style: { fontSize: 13, color: '#8AB4F8', paddingBottom: 6 } }, '⏱ Practiced today: ' + ((t && t.mins) || 0) + ' min · this week: ' + mpWeekMins(pc) + ' min')); }),
+    window._isAdminSession && h('div', { style: { borderTop: '1px solid rgba(255,255,255,.14)', paddingTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' } },
+      bt('#1A73E8', function () { window.open(crUrl('Music practice — ' + mpToday(), report(), 'assignment'), '_blank'); }, '🎓 Send today’s music report to Classroom'),
+      bt('rgba(255,255,255,.16)', function () { try { navigator.clipboard.writeText(report()); say('Copied today’s music report for all students.'); } catch (e) { say('Could not copy on this device.'); } }, '📋 Copy'),
+      msg(mS[0])));
+  function msg(t) { return t ? h('span', { style: { fontSize: 13, color: '#81C784', alignSelf: 'center' } }, t) : null; }
 }
 function MusicRow(props) {
   var h = React.createElement, k = props.k, pr = mpUse(k.id) || {}, ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(k.id)) || ['guitar'];
@@ -42009,7 +42073,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v230';
+var FM_BUILD = 'v231';
 (function () {
   function stamp() {
     try {
