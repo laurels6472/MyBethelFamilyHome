@@ -32141,9 +32141,17 @@ function planOwnBlocks(pid, dayKey) {
   } catch (e) {}
   return out;
 }
+// Late start: if the day was started after 8:15 on a school day, the 6-hour school window (8:00–2:00) becomes 5 hours from the start time, and later blocks move after it.
+function mdLs(pid, t) {
+  try { var sd = syncGet('startday/' + todayKey() + '/' + pid), S = sd && sd.lateStart && sd.lateStart.fromM; if (!S || t == null) return t; var nEnd = S + 300;
+    if (t >= 480 && t < 840) return S + Math.round((t - 480) * 300 / 360);
+    if (t >= 840 && nEnd > 840) return Math.min(1439, t + (nEnd - 840)); } catch (e) {}
+  return t;
+}
 function planBlocksFor(schedHook, pid, dayKey) {
   var day = schedHook && schedHook.getDay ? schedHook.getDay(dayKey) : { blocks: [] };
   var bl = (day.blocks || []).filter(function (b) { return !b.kids || !b.kids.length || b.kids.indexOf(pid) !== -1; }).concat(planOwnBlocks(pid, dayKey)).map(function (b, i) { return Object.assign({ _i: i, _t: planMinutes(b.time) }, b); });
+  try { if (dayKey === planDayKey()) bl.forEach(function (b) { if (b._t != null) { var t2 = mdLs(pid, b._t); if (t2 !== b._t) { b._t = t2; b.time = btFmt(t2); b._late = true; } } }); } catch (e) {}
   return bl.sort(function (a, b) { if (a._t == null && b._t == null) return a._i - b._i; if (a._t == null) return 1; if (b._t == null) return -1; return a._t - b._t || a._i - b._i; });
 }
 function PlanRightNow(props) {
@@ -32732,7 +32740,7 @@ function NowNextCard(props) {
 function DayClock(props) {
   var h = React.createElement, pid = props.personId, key = 'startday/' + todayKey() + '/' + pid;
   var sdS = ktUse(key, null), sd = sdS[0] || {};
-  var tS = React.useState(0), setT = tS[1];
+  var tS = React.useState(0), setT = tS[1], lsS = React.useState(''), lsT = lsS[0], setLsT = lsS[1], lsE = React.useState(false), lsEarly = lsE[0], setLsEarly = lsE[1];
   React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, []);
   var data = (props.sessions || {})[pid] || {};
   var now = Date.now(), started = !!sd.dayStart, ended = !!sd.dayEnd, end = ended ? sd.dayEnd : now;
@@ -32751,6 +32759,18 @@ function DayClock(props) {
   function startOver() { dcResetDay(pid, props.sessions, props.onUpdate); }
   function reopen() { try { syncSet(key, Object.assign({}, sd, { dayEnd: null })); } catch (e) {} }
   var card = { background: 'linear-gradient(135deg,rgba(76,175,130,.28),rgba(3,155,229,.2))', border: '2px solid ' + (started && !ended ? '#4CAF82' : 'rgba(255,255,255,.25)'), borderRadius: 20, padding: 16, marginBottom: 12 };
+  var schR = typeof clockActiveList === 'function' ? clockActiveList(data).filter(function (a) { return a.activity === 'school'; })[0] : null, schD = schR ? new Date(schR.startTime) : null, schM = schD ? schD.getHours() * 60 + schD.getMinutes() : 0, wdD = new Date().getDay();
+  function beginAt(ts, late) { var m = new Date(ts).getHours() * 60 + new Date(ts).getMinutes(); try { syncSet(key, Object.assign({}, sd, { dayStart: ts, dayEnd: null, clockedAt: sd.clockedAt || ts, lateAsked: true, lateStart: late && m > 495 ? { fromM: m } : null })); } catch (e) {} }
+  if (!started && schR && !sd.lateAsked && schM > 495 && wdD > 0 && wdD < 6) {
+    var bt2 = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { width: '100%', background: bg, color: fg, border: 'none', borderRadius: 16, padding: 16, fontWeight: 900, fontSize: 17, cursor: 'pointer', marginTop: 8 } }, t); };
+    return h('div', { style: Object.assign({}, card, { borderColor: '#FFD54F' }) },
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, '🕐 YOU CLOCKED INTO SCHOOL AT ' + btFmt(schM)),
+      h('div', { style: { fontSize: 16, color: '#fff', margin: '6px 0', lineHeight: 1.5 } }, 'It is after 8:00. Did you need to clock in earlier?'),
+      bt2('#4CAF82', '#000', function () { beginAt(schR.startTime, true); }, 'No — start my day now (' + btFmt(schM) + ')'),
+      !lsEarly && bt2('rgba(255,255,255,.14)', '#fff', function () { setLsEarly(true); }, 'Yes — I started earlier'),
+      lsEarly && h('div', { style: { marginTop: 8 } }, h('div', { style: { fontSize: 14, color: '#d8d8e8', marginBottom: 4 } }, 'What time did you really start?'), h('input', { type: 'time', value: lsT, onChange: function (e) { setLsT(e.target.value); }, style: { width: '100%', boxSizing: 'border-box', fontSize: 20, padding: 12, borderRadius: 12, border: '2px solid #FFD54F', background: '#fff', color: '#000' } }),
+        lsT && bt2('#4CAF82', '#000', function () { var p = lsT.split(':'), dd = new Date(); dd.setHours(+p[0], +p[1], 0, 0); beginAt(Math.min(dd.getTime(), schR.startTime), true); }, 'Start my day at that time')));
+  }
   if (!started) return h('div', { style: card },
     h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1 } }, '🕐 MY DAY CLOCK'), typeof WallClock === 'function' && h(WallClock, { admin: !!props.canReset })),
     h('div', { style: { fontSize: 14, color: '#d8d8e8', margin: '4px 0 12px' } }, 'Start this first. It shows how long your whole day was.'),
@@ -34235,8 +34255,8 @@ function MyDayList(props) {
   var blocks = (typeof planBlocksFor === 'function') ? planBlocksFor(props.schedHook, pid, day) : [];
   var rows = [], wdN = new Date().getDay(), schoolOn = !!props.flow && wdN > 0 && wdN < 6 && typeof DKA_BLOCKS !== 'undefined' && typeof btParse === 'function' && !!(typeof ssKid === 'function' && ssKid(pid));
   if (schoolOn) blocks = blocks.filter(function (b) { return !(/worship|bible|lesson|school|reading|handwrit|music class|reconvene|puzzle|academ|assignment|snack/i.test(b.title || '') && (!b.activity || b.activity === 'school' || b.activity === 'spiritual')); });
-  if (schoolOn) { var sdn = pdone.schoolday; rows.push({ k: 'b_schoolday', t: 480, kind: 'block', icon: '📚', label: 'School session — 6 hours (8:00 AM – 2:00 PM)', time: btFmt(480), color: '#7986CB', on: !!sdn && (sdn.status === 'approved' || sdn.status === 'submitted'), pts: (typeof psCfg === 'function' ? Math.round(6 * psCfg(psS0[0]).rate) : 0), mins: 360, startM: 480, endM: 840, schoolDay: true, b: { id: 'schoolday', title: 'School day', activity: 'school', own: true, _label: '📚 School day', _t: 465 } }); }
-  if (schoolOn) { var snd = pdone.snackbreak; rows.push({ k: 'b_snackbreak', t: 585, kind: 'block', icon: '🍎', label: 'Snack + small break (up to 15 min)', time: btFmt(585), color: '#EF5350', on: !!snd && (snd.status === 'approved' || snd.status === 'submitted'), pts: cfg.blockPts, mins: 15, startM: 585, endM: 600, snackBreak: true, b: { id: 'snackbreak', title: 'Snack + small break', own: true, _label: '🍎 Snack', _t: 585 } }); }
+  if (schoolOn) { var sdn = pdone.schoolday; var sL0 = mdLs(pid, 480), sL1 = mdLs(pid, 840), sLate = sL0 !== 480; rows.push({ k: 'b_schoolday', t: sL0, kind: 'block', icon: '📚', label: sLate ? 'School session — 5 hours (' + btFmt(sL0) + ' – ' + btFmt(sL1) + ')' : 'School session — 6 hours (8:00 AM – 2:00 PM)', time: btFmt(sL0), color: '#7986CB', on: !!sdn && (sdn.status === 'approved' || sdn.status === 'submitted'), pts: (typeof psCfg === 'function' ? Math.round(6 * psCfg(psS0[0]).rate) : 0), mins: sLate ? 300 : 360, startM: sL0, endM: sL1, schoolDay: true, b: { id: 'schoolday', title: 'School day', activity: 'school', own: true, _label: '📚 School day', _t: 465 } }); }
+  if (schoolOn) { var snd = pdone.snackbreak; var sn0 = mdLs(pid, 585); rows.push({ k: 'b_snackbreak', t: sn0, kind: 'block', icon: '🍎', label: 'Snack + small break (up to 15 min)', time: btFmt(sn0), color: '#EF5350', on: !!snd && (snd.status === 'approved' || snd.status === 'submitted'), pts: cfg.blockPts, mins: 15, startM: sn0, endM: sn0 + 15, snackBreak: true, b: { id: 'snackbreak', title: 'Snack + small break', own: true, _label: '🍎 Snack', _t: 585 } }); }
 
   blocks.forEach(function (b, i) {
     var nx = blocks[i + 1], endM = nx && nx._t != null ? nx._t : (b._t != null ? b._t + 30 : null), dn = pdone[b.id];
@@ -37516,8 +37536,16 @@ function rsClearLocal() {
   try { if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }); } catch (e) {}
   try { if (navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }); } catch (e) {}
 }
+function rsFreshLocal() {
+  try { var P = /^_s_(awards|earnings|habitsdone|habitsrun|habitstart|plansdone|planlog|taskruns|skips|sessions|startday|blocklog|breaks|opsdone|opsprog|late_req|wallets_|finplan_p_[A-Za-z0-9]+_pts)/, ks = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (P.test(k)) ks.push(k); } ks.forEach(function (k) { localStorage.removeItem(k); }); var q = fmQGet(); Object.keys(q).forEach(function (p) { if (/^(awards|earnings|habitsdone|habitsrun|habitstart|plansdone|planlog|taskruns|skips|sessions|startday|blocklog|breaks|opsdone|opsprog|late_req|wallets\/|finplan\/p\/[^/]+\/pts)/.test(p)) delete q[p]; }); fmQPut(q); } catch (e) {}
+}
 // Every device: when the owner resets, clear this device's saved data too (once)
 function ResetWatcher() {
+  React.useEffect(function () {
+    if (typeof db === 'undefined' || !db) return;
+    var r2 = db.ref('argilan/fresh_epoch'), f2 = function (snap) { var v = snap.val(); if (!v) return; var mine = null; try { mine = localStorage.getItem('fm_fresh_epoch'); } catch (e) {} if (String(v) === mine) return; try { localStorage.setItem('fm_fresh_epoch', String(v)); } catch (e) {} if (mine || Date.now() - v < 600000) { rsFreshLocal(); setTimeout(function () { location.reload(); }, 400); } };
+    r2.on('value', f2); return function () { try { r2.off('value', f2); } catch (e) {} };
+  }, []);
   React.useEffect(function () {
     if (typeof db === 'undefined' || !db) return;
     var ref = db.ref('argilan/reset_epoch'), first = true;
@@ -40724,11 +40752,11 @@ function ResetCenter(props) {
   }
   function freshTomorrow() {
     var paths = ['awards', 'earnings', 'habitsdone', 'habitsrun', 'habitstart', 'plansdone', 'planlog', 'taskruns', 'skips', 'sessions', 'startday', 'blocklog', 'breaks', 'opsdone', 'opsprog', 'late_req'];
-    fam.forEach(function (p) { paths.push('wallets/' + p.id); paths.push('finplan/p/' + p.id + '/pts/earned'); });
+    fam.forEach(function (p) { paths.push('wallets/' + p.id); paths.push('finplan/p/' + p.id + '/pts'); });
     guard('Before: fresh start for tomorrow (points and days)', paths, function () {
-      fam.forEach(function (p) { var w = null; try { w = syncGet('wallets/' + p.id); } catch (e) {} try { syncSet('wallets/' + p.id, { balance: 0, pending: 0, history: [], linked: (w && w.linked) || { type: null, username: '' } }); syncSet('finplan/p/' + p.id + '/pts/earned', null); } catch (e) {} });
+      fam.forEach(function (p) { var w = null; try { w = syncGet('wallets/' + p.id); } catch (e) {} try { syncSet('wallets/' + p.id, { balance: 0, pending: 0, history: [], linked: (w && w.linked) || { type: null, username: '' } }); syncSet('finplan/p/' + p.id + '/pts', null); } catch (e) {} });
       paths.filter(function (x) { return x.indexOf('/') === -1; }).forEach(function (x) { try { syncSet(x, null); } catch (e) {} });
-      rcClearClockUi(fam.map(function (p) { return p.id; }));
+      rcClearClockUi(fam.map(function (p) { return p.id; })); try { syncSet('fresh_epoch', Date.now()); } catch (e) {} setTimeout(function () { rsFreshLocal(); location.reload(); }, 1500);
     }, '✅ Fresh start. Points, wallets, check-offs and clock-ins are cleared for everyone. School lessons, schoolwork, schedules, members and passwords were not touched.');
   }
   function wipe(keepPins) {
@@ -42666,7 +42694,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v247';
+var FM_BUILD = 'v248';
 (function () {
   function stamp() {
     try {
