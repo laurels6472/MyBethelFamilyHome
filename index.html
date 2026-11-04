@@ -25929,6 +25929,12 @@ var INSTRUMENTS = [{
   color: '#FF5722',
   desc: 'Rhythm, beats, drum patterns, coordination'
 }, {
+  id: 'edrums',
+  name: 'Electric Drums',
+  emoji: '🔌',
+  color: '#FF9800',
+  desc: 'Pads and a sound module — headphones, volume, kits, and the same beats'
+}, {
   id: 'ukulele',
   name: 'Ukulele',
   emoji: '🎵',
@@ -26082,6 +26088,28 @@ var GUITAR_LESSONS = [{
   chord: 'All',
   song: 'Performance day'
 }];
+var EDRUMS_LESSONS = [
+  {day:1, title:"Meet Your Electric Kit", focus:"Name the pads (snare, toms, hi-hat, kick, cymbals), the module (the little brain box) and what each cable does. Sit and set the height.", pattern:"Pads and module names", song:null},
+  {day:2, title:"Power On and Headphones", focus:"Plug in the power, then headphones or speaker into the PHONES or OUTPUT jack. Turn the module volume down first, then up slowly. Never start with it loud.", pattern:"Audio out: PHONES vs OUTPUT", song:null},
+  {day:3, title:"Sticks and Grip", focus:"Matched grip, relaxed hands, let the stick bounce. Pads are quiet, so listen for an even sound, not a loud one.", pattern:"Matched grip", song:null},
+  {day:4, title:"Kits and the Click", focus:"Pick a kit with the kit button. Turn on the built-in click (metronome) and set it to a slow tempo. Play along with it.", pattern:"Click at 60 BPM", song:null},
+  {day:5, title:"Single Stroke Roll on the Pads", focus:"Right, left, right, left on the snare pad at a slow click. Even volume on both hands.", pattern:"R L R L", song:null},
+  {day:6, title:"Kick Pedal", focus:"Heel down, toe tap. The kick pedal triggers a pad, so you will not hear a drum hit, only the sound from the module. Count 1-2-3-4 with the kick on 1 and 3.", pattern:"Kick on 1 and 3", song:null},
+  {day:7, title:"Hi-Hat Pedal", focus:"The hi-hat pedal changes the sound: pedal down is closed, pedal up is open. Practice closed 8th notes on the hi-hat.", pattern:"Closed hi-hat 8ths", song:null},
+  {day:8, title:"Your First Beat", focus:"Hi-hat 8th notes, kick on 1 and 3, snare on 2 and 4. Slow click, steady, no stopping.", pattern:"Basic rock beat", song:null},
+  {day:9, title:"Rim Shots and Zones", focus:"Electric pads have zones: head and rim. Learn where the rim sounds, and why hitting the edge makes a different sound than the middle.", pattern:"Head vs rim", song:null},
+  {day:10, title:"Adjusting Sensitivity", focus:"If soft hits do not sound, or loud hits are too loud, find the module's trigger or sensitivity setting with your teacher and adjust one pad at a time.", pattern:"Sensitivity settings", song:null},
+  {day:11, title:"Toms and a Simple Fill", focus:"Move from snare to a tom and back on beat 4. Count out loud. Land the next beat on 1.", pattern:"One-beat fill", song:null},
+  {day:12, title:"Week 2 Review", focus:"Play your basic beat with a click for two minutes without stopping. Change the kit and play it again.", pattern:"Review", song:null},
+  {day:13, title:"Crash and Ride", focus:"Crash on beat 1 to start a section. Ride is a steady pattern instead of the hi-hat. Use your ears for the choke: grab the crash to stop it.", pattern:"Crash on 1", song:null},
+  {day:14, title:"Practice with Backing Tracks", focus:"Many modules have a play-along or Bluetooth input. Plug in or connect a clean, non-religious beginner backing track and play the basic beat.", pattern:"Play along", song:null},
+  {day:15, title:"Recording Yourself", focus:"Some modules record to USB or the phone. Record 30 seconds, listen back, and write one thing to improve.", pattern:"Record and listen", song:null},
+  {day:16, title:"Mary Had a Little Lamb Rhythm", focus:"Tap the rhythm of the melody on the snare pad, then add the kick on 1 and 3.", pattern:"Melody rhythm", song:null},
+  {day:17, title:"12-Bar Blues Beat", focus:"Slow shuffle feel on the hi-hat, kick and snare. Count 12 bars and start again.", pattern:"Blues shuffle", song:null},
+  {day:18, title:"Dynamics: Soft to Loud", focus:"Play the same beat quietly, medium and loud. Electric kits show your touch, so practice control.", pattern:"Soft and loud", song:null},
+  {day:19, title:"Pack Up and Care", focus:"Turn the volume to zero, then turn the module off. Wrap cables loosely. Do not step on pads.", pattern:"Safe shutdown", song:null},
+  {day:20, title:"Month 1 Showcase", focus:"Play your beat, a fill, and the blues beat for the family. Use headphones or speaker.", pattern:"Performance day", song:null}
+];
 var DRUMS_LESSONS = [{
   day: 1,
   title: 'Meet Your Drums',
@@ -26369,7 +26397,7 @@ function getAssignedInstruments(personId) {
 
 // Get lesson for instrument and day number
 function getMusicLesson(instrumentId, dayNum) {
-  var lessons = instrumentId === 'guitar' ? GUITAR_LESSONS : instrumentId === 'drums' ? DRUMS_LESSONS : instrumentId === 'piano' ? PIANO_LESSONS : instrumentId === 'ukulele' ? UKULELE_LESSONS : instrumentId === 'bass' ? BASS_LESSONS : instrumentId === 'singing' ? (typeof SINGING_LESSONS !== 'undefined' ? SINGING_LESSONS : GUITAR_LESSONS) : GUITAR_LESSONS; // default
+  var lessons = instrumentId === 'guitar' ? GUITAR_LESSONS : instrumentId === 'drums' ? DRUMS_LESSONS : instrumentId === 'edrums' ? EDRUMS_LESSONS : instrumentId === 'piano' ? PIANO_LESSONS : instrumentId === 'ukulele' ? UKULELE_LESSONS : instrumentId === 'bass' ? BASS_LESSONS : instrumentId === 'singing' ? (typeof SINGING_LESSONS !== 'undefined' ? SINGING_LESSONS : GUITAR_LESSONS) : GUITAR_LESSONS; // default
   return lessons[Math.min(dayNum - 1, lessons.length - 1)] || lessons[0];
 }
 
@@ -26422,6 +26450,7 @@ function musicVideoFor(instr, lesson, day) {
 var TEACHER_VIDEOS = {
   guitar: [['Marty Music — Your Very First Guitar Lesson (E Minor + Asus2)', 'HNSaXAe8tyg'], ['Marty Music — Beginners first guitar lesson: ten songs with two easy chords', '0heHRj9aHAk'], ['Marty Music — Easy one-finger riffs for beginners', 'wzPx8pTaelM']],
   drums: [['Drum Lesson #1 for absolute beginners (holding the sticks)', 'chWkvMVgKfo'], ['Lesson 1 for absolute beginners on the drum set', 'YW9Pho8fWGs'], ['Easy first drum set lesson for kids', 'YXrq5lOw5KA'], ['Your first drum lesson in 6 steps', '0uQiH9XIECg']],
+  edrums: [['Roland TD-17 module set up and start', 'xjU6_aO3gwA'], ['How to set up e-drums (Roland TD-07KVX)', 'lQSxmZ63byI'], ['Roland TD-1DMK setup guide (beginner kit)', '9vIwdMqoucE'], ['Roland TD-07DMK setup guide', 'C_DvvACZQCM'], ['Lesson 1 for absolute beginners on the drum set (same beats on electric)', 'YW9Pho8fWGs'], ['Easy first drum set lesson for kids (same beats on electric)', 'YXrq5lOw5KA']],
   ukulele: [['Start Here: Ukulele Basics for Complete Beginners (Lesson 1)', 'G_40HhQ2yss'], ['Your FIRST ukulele lesson (by a music teacher)', 'NA0SvOREelg'], ['Bernadette Teaches Music — Kum Ba Ya on ukulele', 'TuqoYzzwmK4']],
   piano: [['Hoffman Academy — Unit 1 easy beginner piano lessons for kids (playlist)', 'PLOpWFi5W-47oMUgHx3S0gWOAGbWuDwHPe', 'playlist'], ['Hoffman Academy — The musical alphabet', 'zV1x4-1Owsw']],
   bass: [['Scott’s Bass Lessons — Beginner Bass Lesson, your very first steps', 'W7KWZYNYpFs'], ['BassBuzz — Beginner Bass Lesson #1', '7anFuDXV2j8'], ['Beginner’s Guide to Bass Guitar — Lesson 1, the absolute basics', 'c1pC20SXnqY']],
@@ -26442,6 +26471,12 @@ var YOUTUBE_TUTORIALS = {
     {title:"Drum Lessons: Basic Beat",genre:"Beginner",url:"https://www.youtube.com/results?search_query=beginner+drum+lessons+basic+beat"},
     {title:"Blues Shuffle Drum Beat",genre:"Blues",url:"https://www.youtube.com/results?search_query=blues+shuffle+drum+beat+beginner"},
     {title:"Slow Blues Drumming Basics",genre:"Blues",url:"https://www.youtube.com/results?search_query=slow+blues+drumming+basics+beginner"},
+  ],
+  edrums:[
+    {title:"Electric Drum Kit Setup (find your brand and model)",genre:"Setup",url:"https://www.youtube.com/results?search_query=electric+drum+kit+setup+guide+beginner"},
+    {title:"Electric Drums for Beginners",genre:"Beginner",url:"https://www.youtube.com/results?search_query=electric+drums+beginner+lesson+1"},
+    {title:"Headphones, Volume and Click on an E-Drum Module",genre:"Setup",url:"https://www.youtube.com/results?search_query=electronic+drum+module+headphones+click+metronome+beginner"},
+    {title:"Hi-Hat Pedal and Kick on Electric Drums",genre:"Beginner",url:"https://www.youtube.com/results?search_query=electric+drums+hi+hat+pedal+kick+beginner"},
   ],
   ukulele:[
     {title:"Easy Songs on Ukulele",genre:"Modern",url:"https://www.youtube.com/results?search_query=easy+pop+songs+ukulele+beginner+3+chords"},
@@ -32054,7 +32089,7 @@ function StartMyDay(props) {
               h('div', { style: { fontSize: 12, fontWeight: 900, color: '#9be3bd', letterSpacing: 1 } }, '☀️ GETTING READY'),
               mornToday ? h('div', { style: { fontSize: 20, fontWeight: 900, color: '#fff', margin: '4px 0' } }, 'Took ' + fm(mornToday.actual) + ' · should take ' + fm(mornToday.planned)) : h('div', { style: { fontSize: 18, fontWeight: 800, color: '#fff', margin: '4px 0' } }, ready ? 'Ready at ' + tm(sd.readyAt) : ''),
               mornToday && h('div', { style: { fontSize: 16, fontWeight: 800, color: mornToday.planned - mornToday.actual >= 0 ? '#81C784' : '#FF8A80', marginBottom: 8 } }, mornToday.planned - mornToday.actual >= 0 ? '⚡ Saved ' + fm(mornToday.planned - mornToday.actual) : fm(mornToday.actual - mornToday.planned) + ' over'),
-              !submitted && h(DcConfirm, { onConfirm: function () { try { var dkR = typeof rtDay === 'function' ? rtDay() : todayKey(); ['habitsdone', 'habitstart', 'habitsrun'].forEach(function (b) { var all = syncGet(b + '/' + dkR + '/' + pid) || {}; Object.keys(all).forEach(function (k) { if (/^morning/.test(k)) syncSet(b + '/' + dkR + '/' + pid + '/' + k, null); }); }); syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null, lateAt: null })); } catch (e) {} }, label: '↺ Start getting ready over', sure: 'Tap again — clears this morning’s checkmarks', style: { display: 'block', width: '100%', minHeight: 56, background: 'rgba(255,255,255,.12)', color: '#fff', border: '2px solid rgba(255,255,255,.35)', borderRadius: 14, fontWeight: 900, fontSize: 17, cursor: 'pointer' } })) : null;
+              !submitted && window._isAdminSession && h(DcConfirm, { onConfirm: function () { try { var dkR = typeof rtDay === 'function' ? rtDay() : todayKey(), ids = mornList.map(function (lb) { return 'morning_' + rtHash(lb); }); ['habitsdone', 'habitstart', 'habitsrun'].forEach(function (b) { Object.keys(syncGet(b + '/' + dkR + '/' + pid) || {}).forEach(function (k) { if (/^morning/.test(k) && ids.indexOf(k) === -1) ids.push(k); }); }); ids.forEach(function (id) { ['habitsdone', 'habitstart', 'habitsrun', 'skips'].forEach(function (b) { fmClearPath(b + '/' + dkR + '/' + pid + '/' + id); }); ['', '_bonus', '_team'].forEach(function (sfx) { try { mdRevoke(pid, 'h_' + id + sfx, 'Getting ready reset'); } catch (e) {} }); }); fmClearPath('habittime/' + pid + '/' + dkR + '/morning'); syncSet('startday/' + todayKey() + '/' + pid, Object.assign({}, sd, { readyAt: null, lateAt: null })); syncSet('dayreset/' + pid, { ts: Date.now(), day: dkR }); } catch (e) {} }, label: '↺ Start getting ready over', sure: 'Tap again — clears this morning’s checkmarks', style: { display: 'block', width: '100%', minHeight: 56, background: 'rgba(255,255,255,.12)', color: '#fff', border: '2px solid rgba(255,255,255,.35)', borderRadius: 14, fontWeight: 900, fontSize: 17, cursor: 'pointer' } })) : null;
             return h('div', null,
               (function () {
                 var mdp = { personId: pid, name: nm, sessions: props.sessions, onUpdate: props.onUpdate, schedHook: props.schedHook, flow: true, noSchoolBar: true, forgotOK: { morning: !ready && !lateNow, school: !bdone.school, afternoon: !bdone.afternoon, evening: !bdone.evening }, groupHide: { morning: ready, afternoon: !!bdone.afternoon }, groupFoot: { morning: mornFoot, school: schoolFoot, afternoon: afterFoot, evening: eveKidFoot } };
@@ -32672,9 +32707,18 @@ function DcConfirm(props) {
   React.useEffect(function () { if (!armed) return; var t = setTimeout(function () { setArmed(false); }, 5000); return function () { clearTimeout(t); }; }, [armed]);
   return h('button', { onClick: function () { if (armed) { setArmed(false); props.onConfirm(); } else setArmed(true); }, style: Object.assign({}, props.style, armed ? { background: '#E53935', color: '#fff', border: '1px solid #E53935' } : {}) }, armed ? (props.sure || 'Tap again to confirm') : props.label);
 }
+// Clears a path everywhere: Firebase, this device's saved copies of it AND its children, and any unsent copies waiting to be re-sent.
+function fmClearPath(p) {
+  try { syncSet(p, null); } catch (e) {}
+  try { var pre = '_s_' + p.replace(/[^a-zA-Z0-9]/g, '_') + '_', ks = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf(pre) === 0) ks.push(k); } ks.forEach(function (k) { localStorage.removeItem(k); }); var q = fmQGet(); Object.keys(q).forEach(function (x) { if (x.indexOf(p + '/') === 0) delete q[x]; }); fmQPut(q); } catch (e) {}
+  try { window.dispatchEvent(new CustomEvent('fm-local', { detail: p })); } catch (e) {}
+}
 function dcResetDay(pid, sessions, onUpdate) {
+  if (!window._isAdminSession) return;
   var dk = typeof planDayKey === 'function' ? planDayKey() : todayKey(), tk = todayKey();
-  ['startday/' + tk + '/' + pid, 'habitsdone/' + dk + '/' + pid, 'habitsrun/' + dk + '/' + pid, 'taskruns/' + dk + '/' + pid, 'plansdone/' + dk + '/' + pid, 'planlog/' + dk + '/' + pid, 'sessions/' + tk + '/' + pid].forEach(function (p) { try { syncSet(p, null); } catch (e) {} });
+  try { var aw = syncGet('awards/' + dk + '/' + pid) || {}; Object.keys(aw).forEach(function (k) { mdRevoke(pid, k, 'Day reset'); }); } catch (e) {}
+  ['startday/' + tk + '/' + pid, 'habitsdone/' + dk + '/' + pid, 'habitsrun/' + dk + '/' + pid, 'habitstart/' + dk + '/' + pid, 'skips/' + dk + '/' + pid, 'awards/' + dk + '/' + pid, 'habittime/' + pid + '/' + dk, 'taskruns/' + dk + '/' + pid, 'plansdone/' + dk + '/' + pid, 'planlog/' + dk + '/' + pid, 'sessions/' + tk + '/' + pid].forEach(function (p) { fmClearPath(p); });
+  try { syncSet('dayreset/' + pid, { ts: Date.now(), day: dk }); } catch (e) {}
   if (onUpdate) { var n = Object.assign({}, sessions || {}); delete n[pid]; onUpdate(n); }
 }
 // ═══ NOW & NEXT (inside "Clocked in — my day is running"): the day's schedule block I am in, what is next, and the work I am on (car, client or task) ═══
@@ -32990,7 +33034,7 @@ function AdminDayEditor(props) {
     sec('Morning habits (tap to check or uncheck)'),
     h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, morning.map(function (lab) { var id = 'morning_' + rtHash(lab), on = !!hd[id], pr = rtParse(lab);
       return h('button', { key: id, onClick: function () { try { syncSet('habitsdone/' + dk + '/' + pid + '/' + id, on ? null : Date.now()); } catch (e) {} }, style: { background: on ? 'rgba(76,175,130,.3)' : 'rgba(255,255,255,.08)', color: '#fff', border: '1px solid ' + (on ? '#4CAF82' : 'rgba(255,255,255,.2)'), borderRadius: 14, padding: '5px 10px', fontSize: 12, cursor: 'pointer' } }, (on ? '✓ ' : '') + pr.text); })),
-    morning.length > 0 && btn('rgba(255,255,255,.12)', '#fff', function () { try { syncSet('habitsdone/' + dk + '/' + pid, null); syncSet('habitsrun/' + dk + '/' + pid, null); } catch (e) {} }, '↺ Restart habits'),
+    morning.length > 0 && window._isAdminSession && btn('rgba(255,255,255,.12)', '#fff', function () { try { fmClearPath('habitsdone/' + dk + '/' + pid); fmClearPath('habitsrun/' + dk + '/' + pid); fmClearPath('habitstart/' + dk + '/' + pid); syncSet('dayreset/' + pid, { ts: Date.now(), day: dk }); } catch (e) {} }, '↺ Restart habits'),
     sec('Task times'),
     Object.keys(trs).length === 0 && h('div', { style: { color: '#888' } }, 'None yet.'),
     Object.keys(trs).map(function (id) { var t = trs[id], m = t.mins != null ? t.mins : Math.round((Date.now() - t.start) / 60000);
@@ -37543,8 +37587,10 @@ function rsFreshLocal() {
 function ResetWatcher() {
   React.useEffect(function () {
     if (typeof db === 'undefined' || !db) return;
+    var r3 = db.ref('argilan/dayreset'), f3 = function (snap) { var o = snap.val() || {}, hit = false; Object.keys(o).forEach(function (pid) { var ts = o[pid] && o[pid].ts; if (!ts) return; var mine = null; try { mine = localStorage.getItem('fm_dr_' + pid); } catch (e) {} if (String(ts) === mine) return; try { localStorage.setItem('fm_dr_' + pid, String(ts)); } catch (e) {} if (mine || Date.now() - ts < 600000) { try { var R = new RegExp('^_s_(habitsdone|habitsrun|habitstart|plansdone|planlog|taskruns|skips|awards|blocklog|breaks|sessions|startday|habittime)_.*' + pid + '(_|$)'), ks = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (R.test(k)) ks.push(k); } ks.forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {} hit = true; } }); if (hit) setTimeout(function () { location.reload(); }, 1500); };
+    r3.on('value', f3);
     var r2 = db.ref('argilan/fresh_epoch'), f2 = function (snap) { var v = snap.val(); if (!v) return; var mine = null; try { mine = localStorage.getItem('fm_fresh_epoch'); } catch (e) {} if (String(v) === mine) return; try { localStorage.setItem('fm_fresh_epoch', String(v)); } catch (e) {} if (mine || Date.now() - v < 600000) { rsFreshLocal(); setTimeout(function () { location.reload(); }, 400); } };
-    r2.on('value', f2); return function () { try { r2.off('value', f2); } catch (e) {} };
+    r2.on('value', f2); return function () { try { r2.off('value', f2); r3.off('value', f3); } catch (e) {} };
   }, []);
   React.useEffect(function () {
     if (typeof db === 'undefined' || !db) return;
@@ -42108,7 +42154,7 @@ function mpUse(pid) {
   React.useEffect(function () { var un = null; try { un = syncOn('music_progress/' + pid, function (d) { set(d || {}); }); } catch (e) { set({}); } return function () { try { un && un(); } catch (e) {} }; }, [pid]);
   return v;
 }
-function mpInstName(id) { return id ? id.charAt(0).toUpperCase() + id.slice(1) : ''; }
+function mpInstName(id) { if (!id) return ''; try { var i = INSTRUMENTS.filter(function (x) { return x.id === id; })[0]; if (i) return i.name; } catch (e) {} return id.charAt(0).toUpperCase() + id.slice(1); }
 function MusicTile(props) {
   var h = React.createElement, sid = props.sid, day = props.day || 1, o = React.useState(false), open = o[0], setOpen = o[1], pr = mpUse(sid) || {};
   var ins = [], cur = mpPick(pr), ml = null;
@@ -42694,7 +42740,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v248';
+var FM_BUILD = 'v250';
 (function () {
   function stamp() {
     try {
