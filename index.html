@@ -26491,11 +26491,11 @@ function MusicVideoGate(props) {
     window.open(url, '_blank');
   };
   return h('div', { style: { margin: '0 14px 12px', background: 'rgba(76,175,80,.07)', border: '1px solid rgba(76,175,80,.3)', borderRadius: 12, padding: '10px 12px' } },
-    h('div', { style: { fontSize: 12, fontWeight: 800, color: '#81C784', marginBottom: 4 } }, '🎓 Learn Lesson ' + day + ' step by step'),
-    h('div', { style: stp }, '1️⃣ Watch the video your teacher picked, with your instrument in your lap. Pause and copy each step.'),
-    asg ? h('a', { href: asg.u, target: '_blank', rel: 'noopener noreferrer', style: lk }, '▶ ' + asg.t) : h('div', { style: { fontSize: 12, color: '#FFD54F', padding: '8px 0' } }, '⏳ Your teacher will give you your video with your Classroom assignment.'),
-    h('div', { style: stp }, '2️⃣ Practice 10–15 minutes with the practice timer below. Slow is good.'),
-    h('div', { style: stp }, '3️⃣ Turn in your lesson on Google Classroom (your practice minutes and notes, or a short video of you playing). That is how this class is graded.'),
+    !props.teacherOnly && h('div', { style: { fontSize: 12, fontWeight: 800, color: '#81C784', marginBottom: 4 } }, '🎓 Learn Lesson ' + day + ' step by step'),
+    !props.teacherOnly && h('div', { style: stp }, '1️⃣ Watch the video your teacher picked, with your instrument in your lap. Pause and copy each step.'),
+    asg ? h('a', { href: asg.u, target: '_blank', rel: 'noopener noreferrer', style: lk }, (props.teacherOnly ? '✅ Assigned: ' : '▶ ') + asg.t) : (props.teacherOnly ? null : h('div', { style: { fontSize: 12, color: '#FFD54F', padding: '8px 0' } }, '⏳ Your teacher will give you your video with your Classroom assignment.')),
+    !props.teacherOnly && h('div', { style: stp }, '2️⃣ Practice 10–15 minutes with the practice timer below. Slow is good.'),
+    !props.teacherOnly && h('div', { style: stp }, '3️⃣ Turn in your lesson on Google Classroom (your practice minutes and notes, or a short video of you playing). That is how this class is graded.'),
     adm && h('div', { style: { marginTop: 10, borderTop: '2px solid #FFD54F', paddingTop: 8 } },
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, '🔒 TEACHER ONLY — pick the video for ' + (instr.name || '') + ' Lesson ' + day),
       h('div', { style: { fontSize: 12, color: '#c8c8d8', margin: '4px 0' } }, 'Children never see the video library. Open a suggestion, find the exact video on YouTube, copy its link and paste it below.'),
@@ -26508,6 +26508,31 @@ function MusicVideoGate(props) {
         asg && h('button', { onClick: function () { putV('d' + day, null); setMsg('Removed. The child sees no video for this lesson.'); }, style: { background: 'rgba(239,83,80,.25)', color: '#FF8A80', border: '1px solid #EF5350', borderRadius: 10, padding: 10, fontWeight: 800, cursor: 'pointer' } }, 'Remove')),
       h('button', { onClick: function () { post(asg); }, style: { width: '100%', background: 'rgba(26,115,232,.2)', color: '#8AB4F8', border: '1px solid rgba(26,115,232,.5)', borderRadius: 10, padding: 10, fontWeight: 900, cursor: 'pointer', marginTop: 6 } }, '📤 Post this lesson to Google Classroom' + (asg ? ' with the video' : '')),
       msg && h('div', { style: { fontSize: 12, color: '#81C784', marginTop: 6 } }, msg)));
+}
+
+
+// ═══ TEACHER: every child's music lesson for the day — pick the one video, then post it to Google Classroom ═══
+function MusicClassroomSection(props) {
+  var h = React.createElement, kids = Object.keys(MUSIC_ASSIGNMENTS || {});
+  var dS = React.useState({}), ov = dS[0], setOv = dS[1];
+  if (!window._isAdminSession) return null;
+  var rows = [];
+  kids.forEach(function (k) { (getAssignedInstruments(k) || []).forEach(function (ins) { rows.push({ k: k, ins: ins }); }); });
+  var nm = function (k) { try { return crName(k); } catch (e) { return k; } };
+  return h('div', { style: { margin: '10px 0', padding: 12, borderRadius: 14, background: 'rgba(233,30,99,.08)', border: '2px solid rgba(233,30,99,.45)' } },
+    h('div', { style: { fontSize: 13, fontWeight: 900, color: '#F48FB1', letterSpacing: 1, marginBottom: 2 } }, '🎵 MUSIC — SEND TO GOOGLE CLASSROOM'),
+    h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 8 } }, 'Pick the one video for each child, then post it. In Classroom they see only that video.'),
+    rows.map(function (r) {
+      var key = r.k + r.ins, pr = null; try { pr = syncGet('music_progress/' + r.k); } catch (e) {}
+      var ld = ov[key] || (pr && pr.instrument === r.ins && pr.lessonDay) || 1, lesson = null, instr = null;
+      try { lesson = getMusicLesson(r.ins, ld); instr = (typeof INSTRUMENTS !== 'undefined' ? INSTRUMENTS : []).filter(function (i) { return i.id === r.ins; })[0]; } catch (e) {}
+      var set = function (n) { var o = Object.assign({}, ov); o[key] = Math.max(1, Math.min(30, n)); setOv(o); };
+      return h('div', { key: key, style: { marginBottom: 12, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,.1)' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 } }, h('div', { style: { flex: 1, fontSize: 14, fontWeight: 900, color: '#fff' } }, nm(r.k) + ' — ' + ((instr && instr.name) || r.ins) + ' · Lesson ' + ld + (lesson ? ': ' + lesson.title : '')),
+          h('button', { onClick: function () { set(ld - 1); }, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' } }, '‹'),
+          h('button', { onClick: function () { set(ld + 1); }, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' } }, '›')),
+        lesson && h(MusicVideoGate, { key: key + ld, pid: r.k, instrument: r.ins, lessonDay: ld, lesson: lesson, instr: instr || { name: r.ins }, teacherOnly: true }));
+    }));
 }
 
 function MusicClassPanel(_ref) {
@@ -36787,6 +36812,7 @@ function ClassroomDaily(props) {
         tg.length ? null : h('div', { style: { fontSize: 11, color: '#9ad' } }, 'No group lessons yet. Admin → Content Manager → All-together group lessons.')),
       h('div', { style: { fontSize: 12, fontWeight: 900, color: '#90CAF9', marginBottom: 2 } }, '🙋 Just ' + crName(k)),
       rows.map(function (r) { var done = isDone(k, r.s[0]); return h('div', { key: r.s[0], style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderTop: '1px solid rgba(255,255,255,.07)' } }, h('div', { style: { flex: 1, fontSize: 12, color: '#eee' } }, h('b', null, r.s[1]), ' — ' + r.L.title), h('button', { onClick: function () { if (done) markSame(r, true); else one(r); }, style: S.btn(done ? '#4CAF82' : '#1A73E8') }, done ? '✓ Added · tap to undo' : '➕ Add'), admin && r.cid ? h('span', { onClick: function () { putC(r.cid, null); }, style: { cursor: 'pointer', color: '#EF5350' } }, '✕') : null); }),
+      admin && typeof MusicClassroomSection === 'function' && h(MusicClassroomSection, { day: day }),
       h('div', { style: { display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' } }, h('button', { onClick: copy, style: S.btn('rgba(255,255,255,.15)') }, '📋 Copy the list')),
       admin ? h('div', { style: { marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.1)' } }, h('div', { style: { fontSize: 12, fontWeight: 800, color: '#FFD54F', marginBottom: 4 } }, '➕ Add your own assignment for Day ' + day),
         h('input', { value: nf.subj, onChange: function (e) { setNf(Object.assign({}, nf, { subj: e.target.value })); }, placeholder: 'Subject (e.g. Art, Music, Life skills)', style: Object.assign({}, S.inp, { width: '100%', marginBottom: 6 }) }),
@@ -40231,7 +40257,7 @@ function AdminBlockBody(props) {
   var box = { marginTop: 4 };
   if (isW) return h('div', { style: box }, h(DailyTextCard, { day: day }), !ssQuizDay(day) && h(ClassScriptPost, { key: 'cs' + day, day: day }));
   if (isB) return h('div', { style: box }, h(TeacherLessonCard, { day: day, onAdv: null }), pick(function (id) { return id === 'bible'; }));
-  if (isM) return h('div', { style: box }, typeof MusicOverview === 'function' && h(MusicOverview, { day: day }), pick(function (id) { return id === 'music'; }));
+  if (isM) return h('div', { style: box }, typeof MusicClassroomSection === 'function' && h(MusicClassroomSection, { day: day }), typeof MusicOverview === 'function' && h(MusicOverview, { day: day }), pick(function (id) { return id === 'music'; }));
   if (isL) return h('div', { style: box }, pick(function (id) { return id !== 'bible' && id !== 'music'; }), typeof DayQuizSend === 'function' && h(DayQuizSend, { day: day }), !ssQuizDay(day) && typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + day, isAdmin: true, personId: 'laurel', startDay: day, startOpen: false }));
   return null;
 }
@@ -42374,7 +42400,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v239';
+var FM_BUILD = 'v240';
 (function () {
   function stamp() {
     try {
