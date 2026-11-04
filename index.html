@@ -26535,6 +26535,55 @@ function MusicClassroomSection(props) {
     }));
 }
 
+// ═══ TEACHER MUSIC GUIDE — every instrument, every lesson: what to say, answer key, video options, and "Add to Google Classroom" ═══
+function tmgLessons(ins) { var out = [], seen = {}; for (var d = 1; d <= 60; d++) { var l = null; try { l = getMusicLesson(ins, d); } catch (e) {} if (!l || seen[l.title]) break; seen[l.title] = 1; out.push(Object.assign({}, l, { _d: d })); } return out; }
+function tmgScript(inst, l) {
+  var key = l.chord || l.pattern || l.note || '';
+  return 'Today we are on ' + inst + ' Lesson ' + l._d + ': ' + l.title + '. ' + (l.focus ? l.focus.replace(/\.?$/, '.') + ' ' : '') +
+    'I am giving you one video for this lesson. Watch it with your ' + inst.toLowerCase() + ' in your lap, pause it, and copy each step slowly. ' +
+    (key ? 'The key thing to get right today is ' + key + '. ' : '') + (l.song ? 'When that feels steady, we will use it on ' + l.song + '. ' : '') +
+    'Practice for ten to fifteen minutes with your timer. Slow is good. Then turn in your practice minutes and your notes on Google Classroom, or a short video of you playing.';
+}
+function tmgKey(inst, l) {
+  var key = l.chord || l.pattern || l.note || '';
+  return [
+    ['What are we learning today?', l.title + (l.focus ? ' — ' + l.focus : '')],
+    ['What is the key thing to get right?', key ? key + '. Listen for a clean, steady sound with no stopping.' : 'Steady, relaxed playing at a slow tempo.'],
+    ['What do we use it on?', l.song ? l.song : 'Nothing yet this lesson; just the skill itself.'],
+    ['What do I turn in, and how long do I practice?', 'Ten to fifteen minutes of practice. Turn in practice minutes and notes, or a short video of playing.']];
+}
+function TeacherMusicGuide(props) {
+  var h = React.createElement;
+  if (!window._isAdminSession) return null;
+  var insList = (typeof INSTRUMENTS !== 'undefined' ? INSTRUMENTS : []), A = (typeof MUSIC_ASSIGNMENTS !== 'undefined' ? MUSIC_ASSIGNMENTS : {});
+  var iS = React.useState(''), insId = iS[0], setIns = iS[1], lS = React.useState(0), openD = lS[0], setOpenD = lS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], kS = React.useState({}), kSel = kS[0], setKSel = kS[1];
+  var nm = function (k) { try { return crName(k); } catch (e) { return k; } };
+  var kidsOf = function (id) { return Object.keys(A).filter(function (k) { var a = A[k]; return Array.isArray(a) ? a.indexOf(id) !== -1 : a === id; }); };
+  var chip = function (on, col) { return { background: on ? col : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 }; };
+  var cur = insList.filter(function (i) { return i.id === insId; })[0];
+  var lessons = cur ? tmgLessons(cur.id) : [];
+  var box = { background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10, margin: '8px 0' };
+  return h('div', { style: { width: '100%', boxSizing: 'border-box', margin: '10px 0', padding: 12, borderRadius: 16, background: 'rgba(233,30,99,.08)', border: '2px solid #E91E63' } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#F48FB1', fontWeight: 900, fontSize: 16, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '🎵 MUSIC TEACHER GUIDE — all lessons, scripts, answer keys & videos'),
+    open && h('div', { style: { marginTop: 10 } },
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, 'WHO PLAYS WHAT'),
+      h('div', { style: Object.assign({}, box, { fontSize: 14, color: '#fff', lineHeight: 1.7 }) }, Object.keys(A).map(function (k) { return h('div', { key: k }, h('b', null, nm(k)), ': ', (Array.isArray(A[k]) ? A[k] : [A[k]]).map(function (x) { var i = insList.filter(function (y) { return y.id === x; })[0]; return i ? i.emoji + ' ' + i.name : x; }).join(', ')); })),
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '8px 0 4px' } }, 'PICK AN INSTRUMENT'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, insList.map(function (i) { return h('button', { key: i.id, onClick: function () { setIns(i.id); setOpenD(0); }, style: chip(insId === i.id, '#F48FB1') }, i.emoji + ' ' + i.name + (kidsOf(i.id).length ? ' · ' + kidsOf(i.id).map(nm).join(', ') : '')); })),
+      cur && h('div', { style: { marginTop: 10 } },
+        h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 4 } }, cur.name.toUpperCase() + ' — ' + lessons.length + ' LESSONS (tap one)'),
+        lessons.map(function (l) {
+          var on = openD === l._d, kids = kidsOf(cur.id), ks = kSel[cur.id] || kids[0];
+          return h('div', { key: l._d, style: { marginBottom: 6 } },
+            h('button', { onClick: function () { setOpenD(on ? 0 : l._d); }, style: { width: '100%', textAlign: 'left', background: on ? 'rgba(233,30,99,.3)' : 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 12px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, (on ? '▲ ' : '▼ ') + 'Lesson ' + l._d + ': ' + l.title),
+            on && h('div', { style: { padding: '4px 0' } },
+              h('div', { style: box }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#81C784', letterSpacing: 1 } }, '🗣 WHAT TO SAY (read this aloud)'), h('div', { style: { fontSize: 15, color: '#fff', lineHeight: 1.7, marginTop: 4 } }, tmgScript(cur.name, l))),
+              h('div', { style: Object.assign({}, box, { background: 'rgba(255,235,59,.12)', border: '1px solid #FFEB3B' }) }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFEB3B', letterSpacing: 1 } }, '🔑 ANSWER KEY (teacher only)'), tmgKey(cur.name, l).map(function (q, i) { return h('div', { key: i, style: { fontSize: 14, color: '#fff', lineHeight: 1.6, marginTop: 4 } }, (i + 1) + '. ' + q[0], h('div', { style: { color: '#FFF59D', fontWeight: 700 } }, '✔ ' + q[1])); })),
+              kids.length > 1 && h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0' } }, kids.map(function (k) { return h('button', { key: k, onClick: function () { var o = Object.assign({}, kSel); o[cur.id] = k; setKSel(o); }, style: chip(ks === k, '#90CAF9') }, 'For ' + nm(k)); })),
+              ks ? h(MusicVideoGate, { key: ks + cur.id + l._d, pid: ks, instrument: cur.id, lessonDay: l._d, lesson: l, instr: cur, teacherOnly: true }) : h('div', { style: { fontSize: 13, color: '#FFB74D' } }, 'No child has this instrument yet.')));
+        }))));
+}
+
 function MusicClassPanel(_ref) {
   var personId = _ref.personId,
     isTeacher = _ref.isTeacher,
@@ -40068,6 +40117,7 @@ function TeacherHome(props) {
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, 'FOR WHICH CHILD?'),
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, [{ id: 'all', name: 'All kids', emoji: '👨‍👩‍👧‍👦' }].concat(kids).map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
     h(DailyTextCard, { day: tday }),
+    typeof TeacherMusicGuide === 'function' && h(TeacherMusicGuide, { day: tday }),
     typeof MusicOverview === 'function' && h(MusicOverview, { day: tday }),
     typeof DayQuizSend === 'function' && h(DayQuizSend, { day: tday }),
     !(typeof msHas === 'function' && msHas(tday)) && h(Fold, { id: 'tg-all', title: '🧰 Every lesson, script & answer key' },
@@ -40257,7 +40307,7 @@ function AdminBlockBody(props) {
   var box = { marginTop: 4 };
   if (isW) return h('div', { style: box }, h(DailyTextCard, { day: day }), !ssQuizDay(day) && h(ClassScriptPost, { key: 'cs' + day, day: day }));
   if (isB) return h('div', { style: box }, h(TeacherLessonCard, { day: day, onAdv: null }), pick(function (id) { return id === 'bible'; }));
-  if (isM) return h('div', { style: box }, typeof MusicClassroomSection === 'function' && h(MusicClassroomSection, { day: day }), typeof MusicOverview === 'function' && h(MusicOverview, { day: day }), pick(function (id) { return id === 'music'; }));
+  if (isM) return h('div', { style: box }, typeof TeacherMusicGuide === 'function' && h(TeacherMusicGuide, { day: day }), typeof MusicClassroomSection === 'function' && h(MusicClassroomSection, { day: day }), typeof MusicOverview === 'function' && h(MusicOverview, { day: day }), pick(function (id) { return id === 'music'; }));
   if (isL) return h('div', { style: box }, pick(function (id) { return id !== 'bible' && id !== 'music'; }), typeof DayQuizSend === 'function' && h(DayQuizSend, { day: day }), !ssQuizDay(day) && typeof ClassroomDaily === 'function' && h(ClassroomDaily, { key: 'cd' + day, isAdmin: true, personId: 'laurel', startDay: day, startOpen: false }));
   return null;
 }
@@ -42400,7 +42450,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v241';
+var FM_BUILD = 'v242';
 (function () {
   function stamp() {
     try {
