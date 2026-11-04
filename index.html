@@ -32050,7 +32050,7 @@ function StartMyDay(props) {
         WORK_SUB[actId] && props.role === 'parent' && big('#039BE5', '#fff', goWork(WORK_SUB[actId][0]), WORK_SUB[actId][1]));
     return null;
   }
-  var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: ready ? [] : ['work', 'chores'], panelFor: panelFor, noWhere: true }) : null;
+  var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: (ready || window._isAdminSession) ? [] : ['work', 'chores'], panelFor: panelFor, noWhere: true }) : null;
   function secHead(open, icon, title, sub, state, onTap) {
     var col = state === 'done' ? C.done : state === 'now' ? C.now : C.lock;
     return h('div', { onClick: onTap, style: { display: 'flex', alignItems: 'center', gap: 12, cursor: onTap ? 'pointer' : 'default' } },
@@ -32765,6 +32765,7 @@ function NowNextCard(props) {
       timed.length > 0 && h('button', { onClick: function () { setAll(!allOpen); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer', marginTop: 4 } }, (allOpen ? '▲ ' : '▼ ') + 'Whole day'),
       allOpen && h('div', { style: { marginTop: 8 } }, timed.map(function (b) { var isNow = b === cur, past = b._end <= nowM; return h('div', { key: b.id || b._i, style: { display: 'flex', gap: 8, padding: '6px 8px', borderRadius: 8, marginBottom: 3, background: isNow ? 'rgba(129,199,132,.25)' : 'rgba(255,255,255,.05)', border: isNow ? '2px solid #81C784' : '1px solid transparent', opacity: past ? .55 : 1 } }, h('div', { style: { minWidth: 64, fontSize: 12, fontWeight: 800, color: '#FFD54F' } }, msFmt(b._t)), h('div', { style: { flex: 1, fontSize: 14, fontWeight: 800, color: '#fff' } }, ttl(b)), h('div', { style: { fontSize: 11, color: '#c8c8d8' } }, isNow ? 'NOW' : past ? 'done' : '')); }))),
     typeof SchoolNowCard === 'function' && h(SchoolNowCard, { pid: pid, sessions: props.sessions, onUpdate: props.onUpdate }),
+    typeof SopNowCard === 'function' && h(SopNowCard, { pid: pid, sessions: props.sessions }),
     workRun.map(function (r) {
       var act = r.activity, man = wq[act] || {}, items = Object.keys(man).map(function (k) { return Object.assign({ id: k }, man[k]); }).filter(function (x) { return x && x.t && !x.done; }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
       var auto = nnAuto(act), list = items.concat(auto.filter(function (a) { return !(man['x' + a.id] && man['x' + a.id].done); }));
@@ -39836,6 +39837,36 @@ function ssFinish(sid, sessions, onUpdate, label) {
 function ssRunning(sid, sessions) { var d = (sessions || {})[sid] || {}; return clockActiveList(d).filter(function (a) { return a.activity === 'school'; })[0] || null; }
 function ssMin(r) { return r ? Math.max(0, Math.round((Date.now() - r.startTime) / 60000)) : 0; }
 
+// ═══ GETTING READY + CHORES / ORDER OF OPERATIONS — shown in My Day when clocked into them: what I'm on now and what is next ═══
+function SopNowCard(props) {
+  var h = React.createElement, pid = props.pid, data = (props.sessions || {})[pid] || {}, run = typeof clockActiveList === 'function' ? clockActiveList(data) : [];
+  var dk = typeof rtDay === 'function' ? rtDay() : todayKey();
+  var ohS = ktUse('habits/' + pid, null), haS = ktUse('habits/__all', null), hdS = ktUse('habitsdone/' + dk + '/' + pid, {}), skS = ktUse('skips/' + dk + '/' + pid, {});
+  var ocS = ktUse('ops/custom', null), olS = ktUse('ops/lib', {}), odS = ktUse('opsdone', {});
+  var nm = ''; try { nm = ((typeof FAMILY !== 'undefined' ? FAMILY : []).filter(function (m) { return m.id === pid; })[0] || {}).name || ''; } catch (e) {}
+  var hd = hdS[0] || {}, sk = skS[0] || {}, od = odS[0] || {};
+  var gettingReady = run.some(function (r) { return r.activity === 'free' && /getting ready/i.test(String(r.label || '')); });
+  var chores = run.some(function (r) { return r.activity === 'chores'; });
+  if (!gettingReady && !chores) return null;
+  var card = { background: 'rgba(0,0,0,.28)', border: '2px solid rgba(38,166,154,.6)', borderRadius: 16, padding: 12, marginBottom: 12 };
+  function block(title, items) {
+    var todo = items.filter(function (x) { return !x.done; }), cur = todo[0], nx = todo[1];
+    return h('div', { key: title, style: card },
+      h('div', { style: { fontSize: 12, fontWeight: 900, color: '#4DB6AC', letterSpacing: 1, marginBottom: 2 } }, title),
+      !items.length ? h('div', { style: { fontSize: 14, color: '#c8c8d8' } }, 'Nothing is on this list yet.') : !cur ? h('div', { style: { fontSize: 15, color: '#fff', padding: '6px 0' } }, '🎉 Everything on this list is done.') : h('div', null,
+        h('div', { style: { display: 'flex', gap: 8, padding: '5px 0', alignItems: 'baseline' } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#81C784', minWidth: 54, letterSpacing: 1 } }, 'NOW'), h('div', { style: { flex: 1, fontSize: 16, fontWeight: 900, color: '#fff' } }, cur.label, cur.mins ? h('div', { style: { fontSize: 12, fontWeight: 600, color: '#c8c8d8' } }, 'about ' + cur.mins + ' min') : null)),
+        h('div', { style: { display: 'flex', gap: 8, padding: '5px 0', alignItems: 'baseline' } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#90CAF9', minWidth: 54, letterSpacing: 1 } }, 'NEXT'), h('div', { style: { flex: 1, fontSize: 15, fontWeight: 800, color: '#fff' } }, nx ? nx.label : 'That is the last one'))),
+      h('div', { style: { margin: '6px 0' } }, items.map(function (x, i) { return h('div', { key: i, style: { display: 'flex', gap: 8, padding: '4px 8px', borderRadius: 8, marginBottom: 3, background: x === cur ? 'rgba(129,199,132,.25)' : 'rgba(255,255,255,.05)', border: x === cur ? '2px solid #81C784' : '1px solid transparent', opacity: x.done ? .55 : 1 } }, h('div', { style: { width: 20, fontWeight: 900, color: '#81C784' } }, x.done ? '✓' : ''), h('div', { style: { flex: 1, fontSize: 14, fontWeight: 700, color: '#fff' } }, x.label)); })),
+      h('button', { onClick: function () { try { if (window._fmGo) window._fmGo('habits'); } catch (e) {} }, style: { background: 'rgba(255,255,255,.12)', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, 'Open my checklist to check things off'));
+  }
+  var out = [];
+  try {
+    if (gettingReady && typeof rtHabits === 'function') out.push(block('☀️ GETTING READY FOR THE DAY — MY STEPS', rtHabits(nm, pid, 'morning', ohS[0], haS[0]).map(function (lb) { var pr = rtParse(lb), id = 'morning_' + rtHash(lb); return { label: pr.text, mins: pr.mins, done: !!hd[id] || !!sk['h_' + id] }; })));
+    if (chores && typeof rtItems === 'function') { var its = rtItems(ocS[0], pid, nm, olS[0]), all = its.daily.concat(its.weekly); out.push(block('🧹 CHORES & ORDER OF OPERATIONS — MY TASKS', all.map(function (it) { var r = od[it.id], rec = r && r.period === rtPeriod(it.freq) ? r : null; return { label: it.label, mins: it.est || null, done: !!rec && (rec.status === 'approved' || rec.status === 'submitted') }; }))); }
+  } catch (e) {}
+  return out.length ? h('div', null, out) : null;
+}
+
 // ═══ SCHOOL — WHAT I'M ON (inside My Day, when clocked into school): the class I'm in now, the one next, and its lesson ═══
 function SchoolNowCard(props) {
   var h = React.createElement, sid = props.pid, st = ssKid(sid), sessions = props.sessions, onUpdate = props.onUpdate;
@@ -42740,7 +42771,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v250';
+var FM_BUILD = 'v251';
 (function () {
   function stamp() {
     try {
