@@ -32712,6 +32712,7 @@ function NowNextCard(props) {
         h('div', { key: 'x' }, line('NEXT', '#90CAF9', next, 'That was the last block today'))],
       timed.length > 0 && h('button', { onClick: function () { setAll(!allOpen); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer', marginTop: 4 } }, (allOpen ? '▲ ' : '▼ ') + 'Whole day'),
       allOpen && h('div', { style: { marginTop: 8 } }, timed.map(function (b) { var isNow = b === cur, past = b._end <= nowM; return h('div', { key: b.id || b._i, style: { display: 'flex', gap: 8, padding: '6px 8px', borderRadius: 8, marginBottom: 3, background: isNow ? 'rgba(129,199,132,.25)' : 'rgba(255,255,255,.05)', border: isNow ? '2px solid #81C784' : '1px solid transparent', opacity: past ? .55 : 1 } }, h('div', { style: { minWidth: 64, fontSize: 12, fontWeight: 800, color: '#FFD54F' } }, msFmt(b._t)), h('div', { style: { flex: 1, fontSize: 14, fontWeight: 800, color: '#fff' } }, ttl(b)), h('div', { style: { fontSize: 11, color: '#c8c8d8' } }, isNow ? 'NOW' : past ? 'done' : '')); }))),
+    typeof SchoolNowCard === 'function' && h(SchoolNowCard, { pid: pid, sessions: props.sessions, onUpdate: props.onUpdate }),
     workRun.map(function (r) {
       var act = r.activity, man = wq[act] || {}, items = Object.keys(man).map(function (k) { return Object.assign({ id: k }, man[k]); }).filter(function (x) { return x && x.t && !x.done; }).sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
       var auto = nnAuto(act), list = items.concat(auto.filter(function (a) { return !(man['x' + a.id] && man['x' + a.id].done); }));
@@ -32797,7 +32798,7 @@ function DayClock(props) {
         h('div', { style: { width: 14, height: 14, borderRadius: '50%', background: deptColor(r.activity), flexShrink: 0 } }),
         h('div', { style: { flex: 1, fontSize: 18, fontWeight: 900, color: '#fff' } }, (r.label && r.activity !== 'school' ? r.label : nameOf(r.activity) + (r.label ? ' · ' + r.label.replace(/^[^\w]+/, '') : '')) + (r.with ? ' with ' + r.with : '')),
         h('div', { style: { fontSize: 28, fontWeight: 900, color: '#fff', fontFamily: mono } }, hms((now - r.startTime) / 1000))); })),
-    !ended && typeof NowNextCard === 'function' && h(NowNextCard, { pid: pid, sessions: props.sessions, schedHook: props.schedHook }),
+    !ended && typeof NowNextCard === 'function' && h(NowNextCard, { pid: pid, sessions: props.sessions, schedHook: props.schedHook, onUpdate: props.onUpdate }),
     h('div', { style: { display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' } },
       h('svg', { viewBox: '0 0 200 200', width: 190, height: 190, style: { flexShrink: 0 } },
         h('circle', { cx: CX, cy: CY, r: R + 6, fill: 'rgba(255,255,255,.08)' }),
@@ -39701,7 +39702,7 @@ function ssLessons(sid, day) {
     if (sub.id === 'bible') {
       if (!en) return; topic = String(en[3] || 'Bible lesson'); act = en[4] ? (st.grade <= 5 ? 'Read ' + en[4] + ' (or have it read to you). Then type or speak one thing it teaches us about Jehovah.' : 'Read ' + en[4] + ' with Mom or Dad, then talk about what it teaches us about Jehovah.') : (st.grade <= 5 ? 'Listen to the Bible lesson. Then type or speak what you learned.' : 'Listen to the Bible lesson and talk about it.');
     } else {
-      topic = bcTopic(L); if (!topic) return; act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
+      topic = bcTopic(L); if (!topic) return; try { var _ms = (typeof MS_DATA !== 'undefined' && MS_DATA[String(day)]) || null, _cn = { math: 'MATH' }[sub.id]; if (_ms && _cn) { var _c = _ms.classes.filter(function (x) { return x.cls === _cn; })[0]; if (_c && _c.title) topic = _c.title; } } catch (e) {} act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
     }
     try { scr = String((L && L.script) || ''); } catch (e) {}
     if (!ans) ans = sub.id === 'bible' ? 'Look for: ' + st.name + ' names at least one thing ' + ((en && en[4]) || 'the scripture') + ' teaches about Jehovah (his love, justice, wisdom or power) in his or her own words, and can say how to apply it today. There is no single right sentence — listen for the verse’s main point: ' + topic + '.' : 'Look for: ' + st.name + ' can explain the main idea of “' + topic + '” in his or her own words, finished every step of the activity above, and can show or tell you how the answer was found. If something is wrong, ask “How did you get that?” before you correct it.';
@@ -39758,6 +39759,39 @@ function ssFinish(sid, sessions, onUpdate, label) {
 }
 function ssRunning(sid, sessions) { var d = (sessions || {})[sid] || {}; return clockActiveList(d).filter(function (a) { return a.activity === 'school'; })[0] || null; }
 function ssMin(r) { return r ? Math.max(0, Math.round((Date.now() - r.startTime) / 60000)) : 0; }
+
+// ═══ SCHOOL — WHAT I'M ON (inside My Day, when clocked into school): the class I'm in now, the one next, and its lesson ═══
+function SchoolNowCard(props) {
+  var h = React.createElement, sid = props.pid, st = ssKid(sid), sessions = props.sessions, onUpdate = props.onUpdate;
+  var pS = ktUse('school/progress', {}), prog = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('school/progress', {}) : null) || {}, pS[0] || {});
+  var oS = React.useState(true), open = oS[0], setOpen = oS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var tS = React.useState(0), setT = tS[1];
+  React.useEffect(function () { var iv = setInterval(function () { setT(function (x) { return x + 1; }); }, 15000); return function () { clearInterval(iv); }; }, []);
+  if (!st) return null;
+  var run = ssRunning(sid, sessions); if (!run) return null;
+  var day = cuTodayDay(), rows = ssLessons(sid, day), todo = rows.filter(function (r) { return !cuDone(prog[r.key]); });
+  var cur = rows.filter(function (r) { return run.label && r.label === run.label && !cuDone(prog[r.key]); })[0] || todo[0] || null;
+  var next = todo.filter(function (r) { return r !== cur; })[0] || null;
+  var D = (typeof MS_DATA !== 'undefined' && MS_DATA[String(day)]) || null, cls = null;
+  try { if (cur && D) cls = D.classes.filter(function (c) { return String(cur.label || '').toUpperCase().indexOf(c.cls) !== -1 || String(cur.topic || '') === c.title; })[0] || null; } catch (e) {}
+  var going = cur && run.label === cur.label;
+  function finish() { var m = going ? ssFinish(sid, sessions, onUpdate, cur.label) : 0; try { syncSet('school/progress/' + cur.key, { done: true, status: 'submitted', teacherApproved: false, actualMins: m || 0, attempts: [], ts: Date.now(), by: 'student' }); } catch (e) {} setMsg('✅ Nice work!'); setTimeout(function () { setMsg(''); }, 3000); }
+  var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '11px 14px', fontWeight: 900, fontSize: 15, cursor: 'pointer', minHeight: 44 } }, t); };
+  return h('div', { style: { background: 'rgba(0,0,0,.28)', border: '2px solid rgba(255,213,79,.55)', borderRadius: 16, padding: 12, marginBottom: 12 } },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 2 } }, '📚 SCHOOL — WHAT I’M ON'),
+    !cur ? h('div', { style: { fontSize: 15, color: '#fff', padding: '6px 0' } }, rows.length ? '🎉 Every class for today is done.' : 'No lessons are set for today.') : h('div', null,
+      h('div', { style: { display: 'flex', gap: 8, padding: '5px 0', alignItems: 'baseline' } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#81C784', minWidth: 54, letterSpacing: 1 } }, 'NOW'), h('div', { style: { flex: 1, fontSize: 16, fontWeight: 900, color: '#fff' } }, cur.label, h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c8c8d8' } }, ssClean(cur.topic, 100)))),
+      h('div', { style: { display: 'flex', gap: 8, padding: '5px 0', alignItems: 'baseline' } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#90CAF9', minWidth: 54, letterSpacing: 1 } }, 'NEXT'), h('div', { style: { flex: 1, fontSize: 15, fontWeight: 800, color: '#fff' } }, next ? next.label + ' — ' + ssClean(next.topic, 70) : 'That is the last class today')),
+      h('button', { onClick: function () { setOpen(!open); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer', margin: '4px 0' } }, (open ? '▲ ' : '▼ ') + 'Today’s lesson'),
+      open && h('div', { style: { marginTop: 6 } },
+        cls && cls.summary && h('div', { style: { margin: '0 0 10px', padding: '10px 12px', borderRadius: 12, background: 'rgba(255,213,79,.12)', border: '2px solid #FFD54F' } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, '📌 THE WHOLE LESSON — read this first'), cls.summary.map(function (t, i) { return h('div', { key: i, style: { margin: '6px 0', color: '#fff', lineHeight: 1.7, fontSize: 16 } }, t); })),
+        cur.act && typeof LessonWork === 'function' && h(LessonWork, { act: cur.act, color: cur.color }),
+        cur.wnote && h('div', { style: { fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.55, background: 'rgba(255,213,79,.14)', border: '1px solid rgba(255,213,79,.5)', borderRadius: 12, padding: 12, marginTop: 8 } }, '✍️ ' + cur.wnote)),
+      h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 } },
+        !going && btn('#4CAF82', '#000', function () { ssStart(sid, sessions, onUpdate, cur.label); }, '▶ Clock in to ' + cur.label),
+        btn('#7E57C2', '#fff', finish, '✅ I finished')),
+      msg && h('div', { style: { color: '#9be3bd', fontWeight: 800, fontSize: 14, marginTop: 6 } }, msg)));
+}
 
 // the list of today's lessons, each with Clock in / Finish — used on the School screen AND inside Start My Day's clock-in
 function SchoolLessonRows(props) {
@@ -42619,7 +42653,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v245';
+var FM_BUILD = 'v246';
 (function () {
   function stamp() {
     try {
