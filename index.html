@@ -26395,6 +26395,21 @@ var MUSIC_HISTORY_LESSONS = [
 ];
 
 // ── YouTube Tutorial Library ──────────────────────────────────────────────────
+var MUSIC_VID = {
+  guitar:{tag:'JustinGuitar beginner', course:{t:'JustinGuitar Beginner Course (Grade 1) — full playlist, free', u:'https://www.youtube.com/playlist?list=PLlwfspJqZ126JHOY5rTkKCSAp2Ua907-v'},
+    days:{1:{t:'JustinGuitar Beginner Lesson 1 — START HERE', u:'https://www.youtube.com/watch?v=_QCt3UBTS1Y'}, 4:{t:'Practice routine for chord changes', u:'https://www.youtube.com/watch?v=uBZsLmmOz9I'}}},
+  bass:{tag:"Scott's Bass Lessons beginner", course:{t:'Master the Basics: Bass Lessons for Beginners — playlist', u:'https://www.youtube.com/playlist?list=PLk694VNSFZ5XecChXKRO0I65UPGUL039Q'},
+    days:{1:{t:"Beginner Bass Lesson — Your Very First Steps (Scott's Bass Lessons)", u:'https://www.youtube.com/watch?v=W7KWZYNYpFs'}, 5:{t:'Walking Bass Lesson, Beginner #1 (Scott Devine)', u:'https://www.youtube.com/watch?v=Ilh4uMAdss8'}, 6:{t:'Walking Bass Lesson, Beginner #2 (Scott Devine)', u:'https://www.youtube.com/watch?v=Dm31tl5O-h4'}}},
+  drums:{tag:'Drumeo beginner drum lesson', course:{t:'Drumeo — Getting Started on the Drums (free series)', u:'https://www.drumeo.com/getting-started'},
+    days:{1:{t:'Absolute Beginner Drum Lesson — names of the drums & setup', u:'https://www.youtube.com/watch?v=AWa4RQHwGrc'}, 3:{t:'Your Very First Drum Lesson (Drumeo)', u:'https://www.youtube.com/watch?v=et9hU7QMDYU'}, 4:{t:'Learn to Play the Drums in 10 Minutes (Drumeo)', u:'https://www.youtube.com/watch?v=XeVLe4dX9V8'}}}
+};
+function musicVideoFor(instr, lesson, day) {
+  var m = MUSIC_VID[instr]; if (!m) return null;
+  var d = m.days[day];
+  if (d) return {t:d.t, u:d.u, exact:true};
+  var q = (lesson && lesson.title ? lesson.title : '').replace(/^(Song|Fill|Play Along):?\s*/i,'').replace(/JW Song[^\s]*/i,'easy song').replace(/[^A-Za-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+  return {t:'Find a beginner tutorial: ' + (lesson ? lesson.title : ''), u:'https://www.youtube.com/results?search_query=' + encodeURIComponent(m.tag + ' ' + q), exact:false};
+}
 var YOUTUBE_TUTORIALS = {
   guitar:[
     {title:"Beginner Guitar: First Chords",genre:"Acoustic/Worship",url:"https://www.youtube.com/results?search_query=beginner+guitar+first+chords+worship"},
@@ -26761,6 +26776,20 @@ function MusicClassPanel(_ref) {
       cursor: 'pointer'
     }
   }, "I'm done with this lesson — Next Lesson ›"))),
+  // Step-by-step learn card (video + practice + Classroom turn-in)
+  lesson && MUSIC_VID[instrument] && (function () {
+    var v = musicVideoFor(instrument, lesson, lessonDay), m = MUSIC_VID[instrument];
+    var lk = {display:'block', background:'rgba(255,0,0,.12)', border:'1px solid rgba(255,0,0,.35)', borderRadius:10, padding:'9px 10px', margin:'4px 0', textDecoration:'none', color:'#fff', fontSize:11, fontWeight:700};
+    var stp = {fontSize:10, color:'rgba(255,255,255,.8)', margin:'3px 0', lineHeight:1.4};
+    return React.createElement('div', { style:{ margin:'0 14px 12px', background:'rgba(76,175,80,.07)', border:'1px solid rgba(76,175,80,.3)', borderRadius:12, padding:'10px 12px' } },
+      React.createElement('div', { style:{ fontSize:11, fontWeight:800, color:'#81C784', marginBottom:4 } }, '🎓 Learn Lesson ' + lessonDay + ' step by step'),
+      React.createElement('div', { style:stp }, '1️⃣ Watch the video with your instrument in your lap. Pause and copy each step.'),
+      React.createElement('a', { href:v.u, target:'_blank', rel:'noopener noreferrer', style:lk }, '▶ ' + v.t + (v.exact ? '' : '  ›')),
+      React.createElement('div', { style:stp }, '2️⃣ Practice 10–15 minutes with the practice timer above. Slow is good.'),
+      React.createElement('div', { style:stp }, '3️⃣ Turn in your lesson on Google Classroom (your practice notes or a short video of you playing) — that is how this class is graded.'),
+      React.createElement('div', { style:{ fontSize:9, color:'rgba(255,255,255,.55)', marginTop:6 } }, 'Brand new to ' + instr.name.toLowerCase() + '? Start at Lesson 1 and do 2 lessons a day until you catch up. Everyone starts as a beginner.'),
+      React.createElement('a', { href:m.course.u, target:'_blank', rel:'noopener noreferrer', style:Object.assign({}, lk, {background:'rgba(255,255,255,.06)', borderColor:'rgba(255,255,255,.2)', marginTop:6, fontWeight:600}) }, '📚 ' + m.course.t + ' ›'));
+  })(),
   // YouTube tutorials for this instrument
   (YOUTUBE_TUTORIALS[instrument] || []).length > 0 && React.createElement('div', {
     style: { margin: '0 14px 12px', background: 'rgba(255,0,0,.05)', border: '1px solid rgba(255,0,0,.2)', borderRadius: 12, padding: '10px 12px' }
@@ -41980,7 +42009,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v229';
+var FM_BUILD = 'v230';
 (function () {
   function stamp() {
     try {
