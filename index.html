@@ -33938,6 +33938,7 @@ function TeacherManual(props) {
     })),
     !have && !MSD && h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginBottom: 10, fontSize: 13, color: '#FFE0B2', lineHeight: 1.5 } }, 'This day is not written out in your Teacher Lectures document yet, so you are seeing the app’s general outline. Ask me and I can write a full word-for-word script for it.'),
     typeof KidReadAlong === 'function' && h(KidReadAlong, { key: 'kra' + day, day: day, big: big, admin: true }),
+    day <= 24 && h(MathDrill, { key: 'md' + day, day: day, admin: true }),
     day <= 24 && h(WorkbookPage, { key: 'wb' + day, day: day, admin: true }),
     MSD ? h(MsPanel, { day: day, big: big }) : h('div', { style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: 14 } }, h(ScriptText, { text: text, big: big })),
     !MSD && day <= 24 && h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginTop: 10, fontSize: 13, color: '#FFE0B2', lineHeight: 1.5 } }, 'The researched version of this day is not written yet. The earlier script is shown until it is.'),
@@ -39595,6 +39596,7 @@ function SchoolClassroomRow(props) {
   return h('div', { style: card },
     typeof KidReadAlong === 'function' && !admin && h(KidReadAlong, { key: 'kra' + day, day: day, big: true }),
     h('div', { style: { fontSize: 16, fontWeight: 900, color: dayColor(day) } }, 'Day ' + day + ' · ' + (QZ ? '📝 Today’s quiz' : '📤 Turn in your work')),
+    h(MathDrill, { key: 'md' + day + sid, day: day, sid: sid, admin: admin }),
     h(WorkbookPage, { key: 'wb' + day + sid, day: day, sid: sid, admin: admin }),
     task && h('div', { style: { fontSize: 14, color: '#e8e8f4', lineHeight: 1.6, margin: '6px 0 8px' } }, h('b', { style: { color: '#FFD54F' } }, 'Today’s assignment: '), task),
     QZ && (function () { var L = (sid === 'kayla' ? 'kayla' : (sid === 'ashelyn' || st.grade >= 10) ? 'hi' : st.grade >= 6 ? 'mid' : 'lo'), doc = (typeof QUIZ_DOCS !== 'undefined' && QUIZ_DOCS[day] && QUIZ_DOCS[day][L]) || ''; return h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 } }, doc && h('button', { onClick: function () { open(doc); }, style: { flex: 1, minWidth: 150, background: '#fff', color: '#1A73E8', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '📄 Open the quiz'), h('button', { onClick: function () { qvS[1](!qvS[0]); }, style: { flex: 1, minWidth: 150, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer' } }, qvS[0] ? '▲ Hide questions' : '▼ Show the questions')); })(),
@@ -41842,6 +41844,63 @@ function msKey(day, tier, grade, sub) {
   qs.forEach(function (q) { out.push(LAB[sub] + ': ' + q.q + '\n   ✔ ' + q.a); });
   return out.join('\n');
 }
+
+// ═══ DAILY MATH DRILL: 100 random facts for the child's grade, a timer, and a place to write the time ═══
+function mdRng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function mdLevel(sid, grade) { if (sid === 'mykah') return 'lo'; if (sid === 'ashelyn') return 'mid'; if (sid === 'ryan' || sid === 'kayla') return 'hi'; var g = +grade || 8; return g <= 5 ? 'lo' : g <= 9 ? 'mid' : 'hi'; }
+var MD_KINDS = ['add', 'sub', 'mul', 'div', 'mix'], MD_NAMES = { add: 'Addition', sub: 'Subtraction', mul: 'Multiplication', div: 'Division', mix: 'Mixed facts' }, MD_WHO = { lo: 'Mykah (4th grade)', mid: 'Ashelyn (8th grade)', hi: 'Kayla and Ryan (11th and 12th grade)' };
+function mdKind(day, level) { var o = { lo: 0, mid: 2, hi: 2 }[level] || 0; return MD_KINDS[((day - 1) + o) % 5]; }
+function mdOne(kind, lv, r) {
+  var ri = function (a, b) { return a + Math.floor(r() * (b - a + 1)); }, a, b, q;
+  if (kind === 'mix') kind = ['add', 'sub', 'mul', 'div'][ri(0, 3)];
+  if (kind === 'add') { if (lv === 'lo') { a = ri(0, 12); b = ri(0, 12); } else if (lv === 'mid') { a = ri(10, 99); b = ri(10, 99); } else { a = ri(100, 999); b = ri(100, 999); } return { a: a, b: b, op: '+', ans: a + b }; }
+  if (kind === 'sub') { if (lv === 'lo') { a = ri(0, 20); b = ri(0, a); } else if (lv === 'mid') { a = ri(20, 99); b = ri(10, a); } else { a = ri(200, 999); b = ri(100, a); } return { a: a, b: b, op: '−', ans: a - b }; }
+  if (kind === 'mul') { if (lv === 'lo') { a = ri(0, 12); b = ri(0, 12); } else if (lv === 'mid') { a = ri(2, 12); b = ri(2, 12); } else { a = ri(11, 19); b = ri(3, 19); } return { a: a, b: b, op: '×', ans: a * b }; }
+  if (lv === 'lo') { b = ri(1, 12); q = ri(0, 12); } else if (lv === 'mid') { b = ri(2, 12); q = ri(2, 12); } else { b = ri(6, 19); q = ri(3, 19); }
+  return { a: b * q, b: b, op: '÷', ans: q };
+}
+function mdProblems(day, level) { var r = mdRng(day * 7919 + ({ lo: 1, mid: 2, hi: 3 }[level] || 1) * 104729), k = mdKind(day, level), out = []; for (var i = 0; i < 100; i++) out.push(mdOne(k, level, r)); return out; }
+function mdFmt(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
+function mdPrint(day, level, who, key) {
+  var P = mdProblems(day, level), col = dayColor(day, 40), dl = ''; try { dl = schoolDayLabel(day, true); } catch (e) {}
+  function page(k) {
+    var cells = P.map(function (p) { return '<div class="c"><div>' + p.a + '</div><div>' + p.op + ' ' + p.b + '</div><div class="l"></div>' + (k ? '<div class="k">' + p.ans + '</div>' : '<div class="k">&nbsp;</div>') + '</div>'; }).join('');
+    return '<div class="pg"><div class="hd"><span class="t">' + MD_NAMES[mdKind(day, level)] + ' · Day ' + day + (dl ? ' · ' + dl : '') + '</span><span>' + (k ? '<b style="color:#c00">ANSWER KEY</b>' : 'Name: ' + who + '</span>') + '</div>' + (k ? '' : '<div class="tm">My time: ______ min ______ sec &nbsp;&nbsp; Start: ________ &nbsp; Stop: ________</div>') + '<div class="g">' + cells + '</div></div>';
+  }
+  var w = window.open('', '_blank'); if (!w) return false;
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Day ' + day + ' math drill</title><style>body{font-family:Arial,sans-serif;margin:0;color:#111}.pg{page-break-after:always;padding:22px 28px;border-top:12px solid ' + col + '}.hd{display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:4px;font-size:16px}.t{font-weight:900;color:' + col + '}.tm{margin:10px 0;font-size:15px;border:2px solid ' + col + ';padding:8px;border-radius:8px}.g{display:grid;grid-template-columns:repeat(10,1fr);gap:8px 4px;margin-top:10px}.c{text-align:right;font-size:17px;line-height:1.25;font-variant-numeric:tabular-nums}.l{border-top:2px solid #000;margin-top:1px}.k{color:#d00;font-size:17px;min-height:22px}</style></head><body>' + page(false) + (key ? page(true) : '') + '</body></html>');
+  w.document.close(); setTimeout(function () { try { w.print(); } catch (e) {} }, 400); return true;
+}
+function MathDrill(props) {
+  var h = React.createElement, day = props.day, admin = !!props.admin, ks = (typeof ssKid === 'function' && props.sid) ? ssKid(props.sid) : null;
+  var lS = React.useState(ks ? mdLevel(props.sid, ks.grade) : 'hi'), level = lS[0], oS = React.useState(false), open = oS[0];
+  var rS = React.useState(0), runAt = rS[0], eS = React.useState(0), base = eS[0], tk = React.useState(0), kS = React.useState(false), showKey = kS[0], mS = React.useState('');
+  var kid = props.sid || (level === 'lo' ? 'mykah' : level === 'mid' ? 'ashelyn' : 'ryan');
+  var DS = fpDoc('school/drill/' + day, {}), rec = (DS[0] || {})[kid] || null, put = DS[1];
+  React.useEffect(function () { if (!runAt) return; var iv = setInterval(function () { tk[1](function (x) { return x + 1; }); }, 250); return function () { clearInterval(iv); }; }, [runAt]);
+  var col = dayColor(day), P = mdProblems(day, level), el = base + (runAt ? (Date.now() - runAt) / 1000 : 0), kind = MD_NAMES[mdKind(day, level)];
+  var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 15, cursor: 'pointer', minHeight: 46 } }, t); };
+  function start() { rS[1](Date.now()); }
+  function stop() { var t = base + (Date.now() - runAt) / 1000; eS[1](t); rS[1](0); }
+  function save() { var t = runAt ? base + (Date.now() - runAt) / 1000 : base; if (runAt) { eS[1](t); rS[1](0); } if (t > 0) { put(kid, { secs: Math.round(t), ts: Date.now(), kind: mdKind(day, level) }); } }
+  function manual() { var v = window.prompt('Type the time it took (minutes:seconds, like 7:35)', rec ? mdFmt(rec.secs) : ''); if (!v) return; var m = /^(\d+):(\d{1,2})$/.exec(v.trim()), n = /^\d+$/.test(v.trim()) ? +v.trim() * 60 : null, t = m ? (+m[1]) * 60 + (+m[2]) : n; if (t == null) { mS[1]('Use minutes:seconds, like 7:35'); return; } put(kid, { secs: t, ts: Date.now(), kind: mdKind(day, level), manual: true }); }
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid ' + col, background: dayTint(day, .1), padding: 12 } },
+    h('button', { onClick: function () { oS[1](!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: col, fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '⏱ Day ' + day + ' math drill: ' + kind + (rec ? ' · ✅ ' + mdFmt(rec.secs) : '')),
+    open && h('div', { style: { marginTop: 10 } },
+      !ks && h('div', { style: { display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' } }, ['lo', 'mid', 'hi'].map(function (L) { return h('button', { key: L, onClick: function () { lS[1](L); }, style: { background: level === L ? col : 'rgba(255,255,255,.14)', color: level === L ? '#000' : '#fff', border: 'none', borderRadius: 10, padding: '8px 10px', fontWeight: 800, cursor: 'pointer' } }, MD_WHO[L]); })),
+      h('div', { style: { textAlign: 'center', fontSize: 44, fontWeight: 900, color: '#fff', fontFamily: 'ui-monospace,Menlo,monospace', margin: '4px 0' } }, mdFmt(el)),
+      h('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 10 } },
+        !runAt && btn('#4CAF82', '#000', start, base > 0 ? '▶ Keep going' : '▶ Start the timer'),
+        runAt ? btn('#EF5350', '#fff', stop, '⏹ Stop') : null,
+        base > 0 && !runAt && btn('rgba(255,255,255,.16)', '#fff', function () { eS[1](0); }, '↺ Reset'),
+        btn(col, '#000', save, '💾 Save my time')),
+      h('div', { style: { textAlign: 'center', color: '#fff', fontSize: 15, marginBottom: 6 } }, rec ? 'My time today: ' + mdFmt(rec.secs) + ' (' + Math.floor(rec.secs / 60) + ' min ' + (rec.secs % 60) + ' sec)' : 'Write your time here after you finish:', ' ', btn('rgba(255,255,255,.16)', '#fff', manual, '✏️ Type my time')),
+      mS[0] && h('div', { style: { color: '#FFB74D', fontSize: 13, textAlign: 'center' } }, mS[0]),
+      h('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', margin: '8px 0' } },
+        btn('#1A73E8', '#fff', function () { mdPrint(day, level, ks ? ks.name : MD_WHO[level], admin); }, '🖨 Print the drill page'),
+        admin && btn('rgba(255,213,79,.25)', '#FFD54F', function () { kS[1](!showKey); }, showKey ? '▲ Hide answer key' : '🔑 Answer key')),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(92px,1fr))', gap: 6 } }, P.map(function (p, i) { return h('div', { key: i, style: { background: 'rgba(0,0,0,.25)', borderRadius: 8, padding: '6px 8px', color: '#fff', fontSize: 16, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' } }, p.a + ' ' + p.op + ' ' + p.b + ' =', admin && showKey && h('div', { style: { color: '#FFEB3B' } }, p.ans)); }))));
+}
 function msHas(day) { return typeof MS_DATA !== 'undefined' && !!MS_DATA[day]; }
 function msClean(t) { return String(t || '').replace(/^§A(\d):\s*/, ''); }
 function msText(day) {
@@ -41916,7 +41975,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v227';
+var FM_BUILD = 'v228';
 (function () {
   function stamp() {
     try {
