@@ -33915,7 +33915,8 @@ function ScriptText(props) {
     return h('div', { key: i, style: quoted ? { margin: '6px 0', padding: '6px 10px', borderLeft: '4px solid #4CAF82', background: 'rgba(76,175,130,.12)', borderRadius: 8 } : { margin: '5px 0' } }, parts.map(function (p, j) { if (LAB.test(p) && j % 2 === 1) return h('span', { key: j, style: { display: 'inline-block', background: /^SAY|^ASK/i.test(p) ? '#4CAF82' : '#9C8DC4', color: '#000', fontWeight: 900, fontSize: fs - 4, borderRadius: 8, padding: '1px 8px', marginRight: 6 } }, p.replace(':', '')); return h('span', { key: j, style: /^(SAY|ASK):$/.test(parts[j - 1] || '') ? { color: '#C8FFE0', background: 'rgba(76,175,130,.28)', padding: '2px 6px', borderRadius: 6, fontWeight: 700 } : /^[“"]/.test(p.trim()) ? { color: '#fff', fontWeight: 600 } : null }, p); }));
   }));
 }
-function TeacherManual(props) {
+function TeacherManual(props) { if (!window._isAdminSession) return null; return React.createElement(TeacherManualIn, props); }
+function TeacherManualIn(props) {
   var h = React.createElement, cur = (typeof DKA_CURRICULUM !== 'undefined') ? DKA_CURRICULUM : [], units = (typeof DKA_UNITS !== 'undefined') ? DKA_UNITS : {};
   var dS = React.useState(window._manualDay || (typeof nvGet === 'function' && nvGet('manualday', null)) || props.dayNum || 1), day = dS[0], setDay = dS[1], bS = React.useState(true), big = bS[0], setBig = bS[1], uS = React.useState(false), listOpen = uS[0], setListOpen = uS[1];
   if (props.onDay && props.dayNum) day = props.dayNum;
@@ -39672,7 +39673,8 @@ function SchoolSimple(props) {
 }
 
 // ── TEACHER: today's lesson card (between the school header and the lessons) + big toolbox tiles ──
-function TeacherLessonCard(props) {
+function TeacherLessonCard(props) { if (!window._isAdminSession) return null; return React.createElement(TeacherLessonCardIn, props); }
+function TeacherLessonCardIn(props) {
   var h = React.createElement, oS = React.useState(false), open = oS[0], setOpen = oS[1];
   var e = (typeof DKA_CURRICULUM !== 'undefined' && DKA_CURRICULUM[props.day - 1]) || null;
   if (!e) return null;
@@ -41729,7 +41731,8 @@ function dqKey(day, tier, grade) {
   ['bible', 'science', 'lang', 'math', 'history', 'comp'].forEach(function (s) { var qs = []; try { qs = qaFor(s, day, grade); } catch (e) {} qs.forEach(function (q) { out.push(LAB[s] + ': ' + q.q + '\n   ✔ ' + q.a); }); });
   return out.join('\n');
 }
-function DayQuizSend(props) {
+function DayQuizSend(props) { if (!window._isAdminSession) return null; return React.createElement(DayQuizSendIn, props); }
+function DayQuizSendIn(props) {
   var h = React.createElement, nvG = function () { try { return (typeof nvGet === 'function' && nvGet('quizday', null)) || 1; } catch (e) { return 1; } };
   var dS = React.useState(function () { return props.day && props.day >= 1 && props.day <= 24 ? props.day : nvG(); }), day = Math.max(1, Math.min(24, dS[0])), mS = React.useState(''), msg = mS[0], setMsg = mS[1], kS = React.useState(false), keyOpen = kS[0], setKey = kS[1];
   var PS = fpDoc('classroom/quizposted/' + day, {}), sent = PS[0] || {}, putS = PS[1];
@@ -41796,7 +41799,7 @@ function wbPrint(day, tier, who, ans, blank) {
   w.document.close(); setTimeout(function () { try { w.print(); } catch (e) {} }, 400); return true;
 }
 function WorkbookPage(props) {
-  var h = React.createElement, day = props.day, admin = !!props.admin, ks = (typeof ssKid === 'function' && props.sid) ? ssKid(props.sid) : null;
+  var h = React.createElement, day = props.day, admin = !!props.admin && !!window._isAdminSession, ks = (typeof ssKid === 'function' && props.sid) ? ssKid(props.sid) : null;
   var tS = React.useState((ks && (props.sid === 'ashelyn' || ks.grade >= 10 || ks.grade >= 6)) ? 'hi' : (ks ? 'lo' : 'hi')), tier = tS[0], oS = React.useState(!!props.open), open = oS[0], setOpen = oS[1];
   var kidId = props.sid || (tier === 'lo' ? 'mykah' : 'ryan');
   var AS = fpDoc('school/workbook/' + day + '/' + kidId, {}), ans = AS[0] || {}, put = AS[1];
@@ -41862,6 +41865,7 @@ function mdOne(kind, lv, r) {
 function mdProblems(day, level) { var r = mdRng(day * 7919 + ({ lo: 1, mid: 2, hi: 3 }[level] || 1) * 104729), k = mdKind(day, level), out = []; for (var i = 0; i < 100; i++) out.push(mdOne(k, level, r)); return out; }
 function mdFmt(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
 function mdPrint(day, level, who, key) {
+  key = !!key && !!window._isAdminSession;
   var P = mdProblems(day, level), col = dayColor(day, 40), dl = ''; try { dl = schoolDayLabel(day, true); } catch (e) {}
   function page(k) {
     var cells = P.map(function (p) { return '<div class="c"><div>' + p.a + '</div><div>' + p.op + ' ' + p.b + '</div><div class="l"></div>' + (k ? '<div class="k">' + p.ans + '</div>' : '<div class="k">&nbsp;</div>') + '</div>'; }).join('');
@@ -41872,7 +41876,7 @@ function mdPrint(day, level, who, key) {
   w.document.close(); setTimeout(function () { try { w.print(); } catch (e) {} }, 400); return true;
 }
 function MathDrill(props) {
-  var h = React.createElement, day = props.day, admin = !!props.admin, ks = (typeof ssKid === 'function' && props.sid) ? ssKid(props.sid) : null;
+  var h = React.createElement, day = props.day, admin = !!props.admin && !!window._isAdminSession, ks = (typeof ssKid === 'function' && props.sid) ? ssKid(props.sid) : null;
   var lS = React.useState(ks ? mdLevel(props.sid, ks.grade) : 'hi'), level = lS[0], oS = React.useState(false), open = oS[0];
   var rS = React.useState(0), runAt = rS[0], eS = React.useState(0), base = eS[0], tk = React.useState(0), kS = React.useState(false), showKey = kS[0], mS = React.useState('');
   var kid = props.sid || (level === 'lo' ? 'mykah' : level === 'mid' ? 'ashelyn' : 'ryan');
@@ -41909,7 +41913,8 @@ function msText(day) {
   MS_DATA[day].classes.forEach(function (c) { o.push(c.cls + ' — ' + c.title); (c.summary || []).forEach(function (t) { o.push(t); }); if (c.answers) o.push(c.answers); if (c.answersMykah) o.push(c.answersMykah); c.blocks.forEach(function (b) { o.push(b.head); b.talk.forEach(function (t) { o.push(msClean(t)); }); }); });
   return o.join('\n');
 }
-function MsPanel(props) {
+function MsPanel(props) { if (!window._isAdminSession) return null; return React.createElement(MsPanelIn, props); }
+function MsPanelIn(props) {
   var h = React.createElement, day = props.day, D = MS_DATA[day], big = props.big, fs = big ? 18 : 14, st = React.useState({}), open = st[0], setOpen = st[1];
   var COL = { 'VERIFIED': '#4CAF82', 'YOUR DOCUMENT': '#4CAF82', 'NOT OPENED': '#EF5350', 'STANDARD KNOWLEDGE': '#FFB74D' }, LV = { hi: 'Ryan · Kayla', mid: 'Ashelyn', lo: 'Mykah' };
   return h('div', null, h('div', { style: { margin: '0 0 12px', padding: '10px 14px', borderRadius: 14, background: dayTint(day, .18), border: '2px solid ' + dayColor(day), color: dayColor(day), fontWeight: 900, fontSize: fs + 4 } }, 'DAY ' + day + (function () { try { return ' · ' + schoolDayLabel(+day, true); } catch (e) { return ''; } })()), D.classes.map(function (c, ci) {
@@ -41975,7 +41980,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v228';
+var FM_BUILD = 'v229';
 (function () {
   function stamp() {
     try {
