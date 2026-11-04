@@ -34279,7 +34279,8 @@ function MyDayList(props) {
   function catOf(r) { return r.kind === 'chore' ? '🧹 Chore' : r.kind === 'block' && !r.b.activity ? '📋 Task' : (CATL[grpOf(r)] || '📋 Task'); }
   function clockWhat(r) { try { if (typeof mdClockLabel === 'function' && !(r.kind === 'block' && r.b.activity)) mdClockLabel(pid, props.sessions, props.onUpdate, r.kind === 'chore' ? 'chores' : 'free', catOf(r) + ' · ' + String(r.label).replace(/^[^\w]+/, '').slice(0, 40)); } catch (e) {} }
   function startHabit(r) { if (typeof tgGuard === 'function' && !tgGuard(pid, 'this step')) return; playOnce('clockIn'); try { syncSet('habitstart/' + rdy + '/' + pid + '/' + (r.hid || r.k), Date.now()); } catch (e) {} clockWhat(r); }
-  function toggle(r, frac) { keepScroll(); if (!r.on && props.flow) { var nw0 = Date.now(); if (nw0 - (window._mdLastDone || 0) < 8000) { say('✋ Slow down — really do it, then check it off. Wait a few seconds.'); return; } window._mdLastDone = nw0; }
+  function toggle(r, frac) { keepScroll(); if (!r.on) { var stT = hst[r.hid || r.k], nw0 = Date.now(); if (stT && nw0 - stT < 10000) { say('✋ You just pressed Start — give it ' + Math.ceil((10000 - (nw0 - stT)) / 1000) + ' more seconds, then check it off.'); return; }
+      if (r.per === 'evening' || (r.kind === 'chore' && r.t >= 1110)) { var aftLeft = rows.filter(function (x) { return x.per === 'afternoon' && !x.on && !x.skip; }).length; if (aftLeft > 0) { say('🌙 Finish your afternoon steps first (' + aftLeft + ' left). Evening opens after that.'); return; } } }
     if (!r.on) { playOnce(r.kind === 'habit' ? 'claim' : 'success');
     try { if (r.kind === 'chore' && typeof clockOutActivity === 'function' && hst[r.k] && clockActiveList((props.sessions || {})[pid] || {}).some(function (a) { return a.activity === 'chores'; })) clockOutActivity(pid, props.sessions || {}, props.onUpdate, 'chores'); else if (r.kind !== 'chore' && !(r.kind === 'block' && r.b.activity) && hst[r.hid || r.k]) mdClockLabel(pid, props.sessions, props.onUpdate, 'free', CATL[grpOf(r)] || '📋 Task'); } catch (e) {} }
     return toggle0(r, frac); }
@@ -39702,8 +39703,9 @@ function ssLessons(sid, day) {
     if (sub.id === 'bible') {
       if (!en) return; topic = String(en[3] || 'Bible lesson'); act = en[4] ? (st.grade <= 5 ? 'Read ' + en[4] + ' (or have it read to you). Then type or speak one thing it teaches us about Jehovah.' : 'Read ' + en[4] + ' with Mom or Dad, then talk about what it teaches us about Jehovah.') : (st.grade <= 5 ? 'Listen to the Bible lesson. Then type or speak what you learned.' : 'Listen to the Bible lesson and talk about it.');
     } else {
-      topic = bcTopic(L); if (!topic) return; try { var _ms = (typeof MS_DATA !== 'undefined' && MS_DATA[String(day)]) || null, _cn = { math: 'MATH' }[sub.id]; if (_ms && _cn) { var _c = _ms.classes.filter(function (x) { return x.cls === _cn; })[0]; if (_c && _c.title) topic = _c.title; } } catch (e) {} act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
+      topic = bcTopic(L); if (!topic) return; act = bcKidize(String((L && L.activity) || '').replace(/\r/g, '').trim().slice(0, 3000), st.grade); ans = (L && L.answerKey && L.answerKey.long) || '';
     }
+    try { var _ms = (typeof MS_DATA !== 'undefined' && MS_DATA[String(day)]) || null; if (_ms) { var _c = _ms.classes.filter(function (x) { return String(sub.l || '').toUpperCase().indexOf(x.cls) !== -1; })[0]; if (_c && _c.title && !/three levels/i.test(_c.title)) topic = _c.title; } } catch (e) {}
     try { scr = String((L && L.script) || ''); } catch (e) {}
     if (!ans) ans = sub.id === 'bible' ? 'Look for: ' + st.name + ' names at least one thing ' + ((en && en[4]) || 'the scripture') + ' teaches about Jehovah (his love, justice, wisdom or power) in his or her own words, and can say how to apply it today. There is no single right sentence — listen for the verse’s main point: ' + topic + '.' : 'Look for: ' + st.name + ' can explain the main idea of “' + topic + '” in his or her own words, finished every step of the activity above, and can show or tell you how the answer was found. If something is wrong, ask “How did you get that?” before you correct it.';
     out.push({ id: sub.id, label: sub.l, color: sub.c || '#9C8DC4', topic: topic, act: act, ans: ans, scr: scr, wnote: ssIsWriting(sub.id, topic, act) ? SS_WRITE_NOTE : '', key: sid + '_d' + day + '_' + sub.id });
@@ -39782,6 +39784,7 @@ function SchoolNowCard(props) {
     !cur ? h('div', { style: { fontSize: 15, color: '#fff', padding: '6px 0' } }, rows.length ? '🎉 Every class for today is done.' : 'No lessons are set for today.') : h('div', null,
       h('div', { style: { display: 'flex', gap: 8, padding: '5px 0', alignItems: 'baseline' } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#81C784', minWidth: 54, letterSpacing: 1 } }, 'NOW'), h('div', { style: { flex: 1, fontSize: 16, fontWeight: 900, color: '#fff' } }, cur.label, h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c8c8d8' } }, ssClean(cur.topic, 100)))),
       h('div', { style: { display: 'flex', gap: 8, padding: '5px 0', alignItems: 'baseline' } }, h('div', { style: { fontSize: 11, fontWeight: 900, color: '#90CAF9', minWidth: 54, letterSpacing: 1 } }, 'NEXT'), h('div', { style: { flex: 1, fontSize: 15, fontWeight: 800, color: '#fff' } }, next ? next.label + ' — ' + ssClean(next.topic, 70) : 'That is the last class today')),
+      h('div', { style: { margin: '6px 0' } }, rows.map(function (r) { var dn = cuDone(prog[r.key]), isC = r === cur; return h('div', { key: r.id, style: { display: 'flex', gap: 8, padding: '5px 8px', borderRadius: 8, marginBottom: 3, background: isC ? 'rgba(129,199,132,.25)' : 'rgba(255,255,255,.05)', border: isC ? '2px solid #81C784' : '1px solid transparent', opacity: dn ? .55 : 1 } }, h('div', { style: { width: 22, fontWeight: 900, color: '#81C784' } }, dn ? '✓' : ''), h('div', { style: { flex: 1, fontSize: 14, fontWeight: 800, color: '#fff' } }, r.label), h('div', { style: { fontSize: 11, color: '#c8c8d8' } }, isC ? 'NOW' : dn ? 'done' : '')); })),
       h('button', { onClick: function () { setOpen(!open); }, style: { background: 'rgba(255,255,255,.1)', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer', margin: '4px 0' } }, (open ? '▲ ' : '▼ ') + 'Today’s lesson'),
       open && h('div', { style: { marginTop: 6 } },
         cls && cls.summary && h('div', { style: { margin: '0 0 10px', padding: '10px 12px', borderRadius: 12, background: 'rgba(255,213,79,.12)', border: '2px solid #FFD54F' } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, '📌 THE WHOLE LESSON — read this first'), cls.summary.map(function (t, i) { return h('div', { key: i, style: { margin: '6px 0', color: '#fff', lineHeight: 1.7, fontSize: 16 } }, t); })),
@@ -40719,6 +40722,15 @@ function ResetCenter(props) {
     var paths = []; fam.forEach(function (p) { paths = paths.concat(rcDayPaths(p.id)); }); paths = paths.concat(['opsdone', 'opsprog', 'late_req']);
     guard('Before: reset today for everyone', paths, function () { paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi(fam.map(function (p) { return p.id; })); }, '✅ Today is reset for everyone. Money, schedules, members and passwords were not touched.');
   }
+  function freshTomorrow() {
+    var paths = ['awards', 'earnings', 'habitsdone', 'habitsrun', 'habitstart', 'plansdone', 'planlog', 'taskruns', 'skips', 'sessions', 'startday', 'blocklog', 'breaks', 'opsdone', 'opsprog', 'late_req'];
+    fam.forEach(function (p) { paths.push('wallets/' + p.id); paths.push('finplan/p/' + p.id + '/pts/earned'); });
+    guard('Before: fresh start for tomorrow (points and days)', paths, function () {
+      fam.forEach(function (p) { var w = null; try { w = syncGet('wallets/' + p.id); } catch (e) {} try { syncSet('wallets/' + p.id, { balance: 0, pending: 0, history: [], linked: (w && w.linked) || { type: null, username: '' } }); syncSet('finplan/p/' + p.id + '/pts/earned', null); } catch (e) {} });
+      paths.filter(function (x) { return x.indexOf('/') === -1; }).forEach(function (x) { try { syncSet(x, null); } catch (e) {} });
+      rcClearClockUi(fam.map(function (p) { return p.id; }));
+    }, '✅ Fresh start. Points, wallets, check-offs and clock-ins are cleared for everyone. School lessons, schoolwork, schedules, members and passwords were not touched.');
+  }
   function wipe(keepPins) {
     return function () {
       if (typeof db === 'undefined' || !db) { say('Not connected — nothing was erased.'); return; }
@@ -40800,6 +40812,7 @@ function ResetCenter(props) {
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 } }, fam.map(function (p) { var on = pick === p.id; return h('button', { key: p.id, onClick: function () { setPick(p.id); }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: '#fff', background: on ? 'rgba(255,213,79,.2)' : 'rgba(255,255,255,.06)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.15)') } }, (p.emoji || '') + ' ' + p.name); })),
       dc(resetTimer, '⏱ Reset ' + ((fam.filter(function (x) { return x.id === pick; })[0] || {}).name || 'their') + ' timers & clock-ins (today)', 'Tap again — clears their clocks'),
       hd('RESET THE DAY'),
+      dc(freshTomorrow, '🌅 Fresh start for tomorrow — clear points, wallets & every check-off (keeps school)', 'Tap again — everyone’s points go to zero'),
       dc(resetDay, '☀️ Reset today for everyone (timers, checklists, attendance)', 'Tap again — everyone starts today over'),
       h('div', { style: sm }, 'Money, members, schedules and passwords are not touched.'),
       hd('🌱 FRESH-START POINT'),
@@ -42601,7 +42614,7 @@ function MsPanelIn(props) {
       c.blocks.map(function (b, bi) {
         return h('div', { key: bi, style: { marginBottom: 14 } },
           h('div', { style: { display: 'inline-block', background: '#9C8DC4', color: '#000', fontWeight: 900, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginBottom: 6 } }, '🗣 ' + b.head),
-          b.talk.map(function (t, i) { var m = /^§A(\d):/.exec(t); return h('div', { key: i, style: m ? { margin: '6px 0', padding: '8px 10px', borderLeft: '4px solid #4CAF82', background: 'rgba(76,175,130,.14)', borderRadius: 8, color: '#f2f2f8', lineHeight: 1.7, fontSize: fs } : { margin: '6px 0', color: '#f2f2f8', lineHeight: 1.7, fontSize: fs } }, m && h('b', { style: { color: '#81C784' } }, 'ANSWER ' + m[1] + ' · '), msClean(t)); }),
+          (c.summary ? b.talk.filter(function (t) { return c.summary.indexOf(t) === -1; }) : b.talk).map(function (t, i) { var m = /^§A(\d):/.exec(t); return h('div', { key: i, style: m ? { margin: '6px 0', padding: '8px 10px', borderLeft: '4px solid #4CAF82', background: 'rgba(76,175,130,.14)', borderRadius: 8, color: '#f2f2f8', lineHeight: 1.7, fontSize: fs } : { margin: '6px 0', color: '#f2f2f8', lineHeight: 1.7, fontSize: fs } }, m && h('b', { style: { color: '#81C784' } }, 'ANSWER ' + m[1] + ' · '), msClean(t)); }),
           h('div', { style: { marginTop: 8, padding: 10, borderRadius: 10, background: 'rgba(255,152,0,.1)', border: '1px solid rgba(255,183,77,.5)' } },
             h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFB74D', marginBottom: 4 } }, '📝 Quiz questions and answer key'),
             b.qs.map(function (q, i) { return h('div', { key: i, style: { fontSize: fs - 1, color: '#fff', lineHeight: 1.6, marginBottom: 6 } }, (i + 1) + '. ' + q[0], h('div', { style: { color: '#9be3bd' } }, '✔ ' + q[1])); }),
@@ -42653,7 +42666,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v246';
+var FM_BUILD = 'v247';
 (function () {
   function stamp() {
     try {
