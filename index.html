@@ -34006,6 +34006,7 @@ function TeacherManualIn(props) {
     !have && !MSD && h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginBottom: 10, fontSize: 13, color: '#FFE0B2', lineHeight: 1.5 } }, 'This day is not written out in your Teacher Lectures document yet, so you are seeing the app’s general outline. Ask me and I can write a full word-for-word script for it.'),
     typeof KidReadAlong === 'function' && h(KidReadAlong, { key: 'kra' + day, day: day, big: big, admin: true }),
     day <= 24 && h(MathDrill, { key: 'md' + day, day: day, admin: true }),
+    day <= 24 && h(MealPrepAdmin, { key: 'mpa' + day, day: day }),
     day <= 24 && h(WorkbookPage, { key: 'wb' + day, day: day, admin: true }),
     MSD ? h(MsPanel, { day: day, big: big }) : h('div', { style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: 14 } }, h(ScriptText, { text: text, big: big })),
     !MSD && day <= 24 && h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginTop: 10, fontSize: 13, color: '#FFE0B2', lineHeight: 1.5 } }, 'The researched version of this day is not written yet. The earlier script is shown until it is.'),
@@ -39664,6 +39665,7 @@ function SchoolClassroomRow(props) {
     typeof KidReadAlong === 'function' && !admin && h(KidReadAlong, { key: 'kra' + day, day: day, big: true }),
     h('div', { style: { fontSize: 16, fontWeight: 900, color: dayColor(day) } }, 'Day ' + day + ' · ' + (QZ ? '📝 Today’s quiz' : '📤 Turn in your work')),
     h(MathDrill, { key: 'md' + day + sid, day: day, sid: sid, admin: admin }),
+    h(MealPrepWork, { key: 'mp' + day + sid, day: day, sid: sid }),
     h(WorkbookPage, { key: 'wb' + day + sid, day: day, sid: sid, admin: admin }),
     task && h('div', { style: { fontSize: 14, color: '#e8e8f4', lineHeight: 1.6, margin: '6px 0 8px' } }, h('b', { style: { color: '#FFD54F' } }, 'Today’s assignment: '), task),
     QZ && (function () { var L = (sid === 'kayla' ? 'kayla' : (sid === 'ashelyn' || st.grade >= 10) ? 'hi' : st.grade >= 6 ? 'mid' : 'lo'), doc = (typeof QUIZ_DOCS !== 'undefined' && QUIZ_DOCS[day] && QUIZ_DOCS[day][L]) || ''; return h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 } }, doc && h('button', { onClick: function () { open(doc); }, style: { flex: 1, minWidth: 150, background: '#fff', color: '#1A73E8', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, '📄 Open the quiz'), h('button', { onClick: function () { qvS[1](!qvS[0]); }, style: { flex: 1, minWidth: 150, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontWeight: 800, fontSize: 15, cursor: 'pointer' } }, qvS[0] ? '▲ Hide questions' : '▼ Show the questions')); })(),
@@ -41974,6 +41976,14 @@ function MathDrill(props) {
   var rS = React.useState(0), runAt = rS[0], eS = React.useState(0), base = eS[0], tk = React.useState(0), kS = React.useState(false), showKey = kS[0], mS = React.useState('');
   var kid = props.sid || (level === 'lo' ? 'mykah' : level === 'mid' ? 'ashelyn' : 'ryan');
   var DS = fpDoc('school/drill/' + day, {}), rec = (DS[0] || {})[kid] || null, put = DS[1];
+  var AS = fpDoc('school/drillans/' + day, {}), savedA = (AS[0] || {})[kid] || {}, putA = AS[1], lcS = React.useState(null), tmr = React.useRef(null), clS = ktUse('school/classroom', {}), clo = clS[0] || {};
+  var cur = lcS[0] || savedA.a || {}, kidView = !!ks;
+  function setAns(i, v) { var n = Object.assign({}, lcS[0] || savedA.a || {}); n[i] = v; lcS[1](n); clearTimeout(tmr.current); tmr.current = setTimeout(function () { putA(kid + '/a', n); }, 700); }
+  function ansText(name) { var Pk = mdProblems(day, level); return 'Day ' + day + ' math drill (' + MD_NAMES[mdKind(day, level)] + ') — ' + name + '\nMy time: ' + (rec ? mdFmt(rec.secs) + ' (' + Math.floor(rec.secs / 60) + ' min ' + (rec.secs % 60) + ' sec)' : 'not saved yet') + '\n\n' + Pk.map(function (p, i) { var v = cur[i]; return (i + 1) + ') ' + p.a + ' ' + p.op + ' ' + p.b + ' = ' + (v === undefined || v === null ? '' : v); }).join('\n'); }
+  function submitCR() { var t = runAt ? base + (Date.now() - runAt) / 1000 : base; if (runAt) { eS[1](t); rS[1](0); } if (t > 0) put(kid, { secs: Math.round(t), ts: Date.now(), kind: mdKind(day, level) }); clearTimeout(tmr.current); putA(kid + '/a', cur); putA(kid + '/sub', Date.now()); var txt = ansText(ks ? ks.name : kid).replace(/My time: not saved yet/, t > 0 ? 'My time: ' + mdFmt(t) : 'My time: not saved yet'); try { navigator.clipboard.writeText(txt); mS[1]('✅ Saved and copied. Paste it into Google Classroom and turn it in.'); } catch (e) { mS[1]('✅ Saved. Could not copy on this device — ask Mom.'); } var u = (clo.kids || {})[kid] || clo.main || 'https://classroom.google.com'; try { window.open(u, '_blank', 'noopener'); } catch (e) {} }
+  function gradeKid(k) { var lv = mdLevel(k.id, k.grade), Pk = mdProblems(day, lv), a = ((AS[0] || {})[k.id] || {}).a || {}, ok = 0, ans = 0, wrong = []; Pk.forEach(function (p, i) { var v = a[i]; if (v !== undefined && v !== null && String(v).trim() !== '') { ans++; if (String(v).trim() === String(p.ans)) ok++; else wrong.push((i + 1) + ') ' + p.a + ' ' + p.op + ' ' + p.b + ' = ' + v + ' (should be ' + p.ans + ')'); } }); return { lv: lv, ok: ok, ans: ans, wrong: wrong, sub: ((AS[0] || {})[k.id] || {}).sub, secs: (((DS[0] || {})[k.id]) || {}).secs }; }
+  function teacherReport() { return (typeof ssKids === 'function' ? ssKids() : []).filter(function (k) { return mdLevel(k.id, k.grade) === level; }).map(function (k) { var g = gradeKid(k); return k.name + ' — Day ' + day + ' drill: ' + g.ok + ' correct of ' + g.ans + ' answered' + (g.secs ? ' · time ' + mdFmt(g.secs) : '') + (g.wrong.length ? '\nMissed: ' + g.wrong.join('; ') : ''); }).join('\n\n'); }
+  function postDrill() { var Pk = mdProblems(day, level); var body = 'Math drill — ' + MD_NAMES[mdKind(day, level)] + '. Open the app (Today → Math drill), type your answer in each box, time yourself, then press “Submit to Google Classroom”. Or do it here and type your answers and time.\n\n' + Pk.map(function (p, i) { return (i + 1) + ') ' + p.a + ' ' + p.op + ' ' + p.b + ' = ____'; }).join('\n'); window.open(crUrl('Day ' + day + ' Math Drill — ' + MD_WHO[level], body, 'assignment'), '_blank'); }
   React.useEffect(function () { if (!runAt) return; var iv = setInterval(function () { tk[1](function (x) { return x + 1; }); }, 250); return function () { clearInterval(iv); }; }, [runAt]);
   var col = dayColor(day), P = mdProblems(day, level), el = base + (runAt ? (Date.now() - runAt) / 1000 : 0), kind = MD_NAMES[mdKind(day, level)];
   var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: fg, border: 'none', borderRadius: 12, padding: '10px 14px', fontWeight: 900, fontSize: 15, cursor: 'pointer', minHeight: 46 } }, t); };
@@ -41996,8 +42006,62 @@ function MathDrill(props) {
       h('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', margin: '8px 0' } },
         btn('#1A73E8', '#fff', function () { mdPrint(day, level, ks ? ks.name : MD_WHO[level], admin); }, '🖨 Print the drill page'),
         admin && btn('rgba(255,213,79,.25)', '#FFD54F', function () { kS[1](!showKey); }, showKey ? '▲ Hide answer key' : '🔑 Answer key')),
-      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(92px,1fr))', gap: 6 } }, P.map(function (p, i) { return h('div', { key: i, style: { background: 'rgba(0,0,0,.25)', borderRadius: 8, padding: '6px 8px', color: '#fff', fontSize: 16, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' } }, p.a + ' ' + p.op + ' ' + p.b + ' =', admin && showKey && h('div', { style: { color: '#FFEB3B' } }, p.ans)); }))));
+      kidView && h('div', { style: { margin: '6px 0 10px', padding: 10, borderRadius: 12, background: 'rgba(26,115,232,.14)', border: '1px solid rgba(26,115,232,.5)' } },
+        h('div', { style: { color: '#fff', fontSize: 14, lineHeight: 1.5, marginBottom: 8 } }, 'Type your answer in each box. It saves by itself. When you finish, save your time and press Submit.'),
+        btn('#1A73E8', '#fff', submitCR, '📤 Submit to Google Classroom'),
+        h('div', { style: { color: '#c8d4f0', fontSize: 12, marginTop: 6 } }, savedA.sub ? 'Last submitted ' + new Date(savedA.sub).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Not submitted yet')),
+      admin && !kidView && window._isAdminSession && h('div', { style: { margin: '6px 0 10px', padding: 10, borderRadius: 12, background: 'rgba(255,213,79,.1)', border: '1px solid rgba(255,213,79,.45)' } },
+        h('div', { style: { color: '#FFD54F', fontWeight: 900, fontSize: 14, marginBottom: 6 } }, 'Teacher: Classroom sync'),
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, btn('#1A73E8', '#fff', postDrill, '🎓 Post this drill to Classroom'), btn('rgba(255,255,255,.16)', '#fff', function () { try { navigator.clipboard.writeText(teacherReport()); mS[1]('Copied the scores.'); } catch (e) { mS[1]('Could not copy.'); } }, '📋 Copy scores')),
+        (typeof ssKids === 'function' ? ssKids() : []).filter(function (k) { return mdLevel(k.id, k.grade) === level; }).map(function (k) { var g = gradeKid(k); return h('div', { key: k.id, style: { color: '#fff', fontSize: 14, padding: '4px 0', borderTop: '1px solid rgba(255,255,255,.12)' } }, h('b', null, k.name), ': ' + (g.ans ? g.ok + ' correct of ' + g.ans + ' answered' : 'no answers yet') + (g.secs ? ' · ' + mdFmt(g.secs) : '') + (g.sub ? ' · submitted' : '')); })),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(' + (kidView ? 118 : 92) + 'px,1fr))', gap: 6 } }, P.map(function (p, i) { return h('div', { key: i, style: { background: 'rgba(0,0,0,.25)', borderRadius: 8, padding: '6px 8px', color: '#fff', fontSize: 16, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' } }, p.a + ' ' + p.op + ' ' + p.b + ' =', kidView && h('input', { value: cur[i] === undefined || cur[i] === null ? '' : cur[i], inputMode: 'numeric', 'aria-label': 'Answer ' + (i + 1), onChange: function (e) { setAns(i, e.target.value.replace(/[^0-9\-]/g, '')); }, style: { display: 'block', width: '100%', marginTop: 4, boxSizing: 'border-box', background: '#fff', color: '#000', border: '2px solid ' + col, borderRadius: 8, padding: '6px 4px', fontSize: 18, fontWeight: 800, textAlign: 'center' } }), admin && showKey && h('div', { style: { color: '#FFEB3B' } }, p.ans)); }))));
 }
+
+// ═══ MEAL PREP PLANNING: kids write their plan, recipes, times and grocery list in the app, and send it to Google Classroom. Teacher posts the assignment and sees every response. ═══
+var MP_FIELDS = [['plan', '🍽 My meal plan (breakfast, lunch, dinner)', 'Example: Breakfast – overnight oats. Lunch – ... Dinner – ...'], ['recipe', '📖 My recipe (name, ingredients, steps)', 'Recipe name, then the ingredients with amounts, then the steps in order.'], ['times', '⏱ Times (prep time, cook time, when it will be ready)', 'Prep: __ min. Cook: __ min. Ready at: __'], ['grocery', '🛒 Grocery list (what we need to buy or already have)', 'Produce: ...  Meat: ...  Dairy: ...  Pantry: ...'], ['notes', '📝 Notes (what went well, what I would change)', 'Write in your own words.']];
+var MP_DEFAULT_TASK = 'Plan the family’s meals. Write your meal plan, one recipe with ingredients and steps, your prep and cook times, and a grocery list. Then send it to Google Classroom.';
+function mpMealText(day, name, d) { d = d || {}; return 'Day ' + day + ' meal prep planning — ' + name + '\n' + MP_FIELDS.map(function (f) { return '\n' + f[1].replace(/\s*\(.*\)$/, '').toUpperCase() + '\n' + (d[f[0]] || '(not filled in yet)'); }).join('\n'); }
+function MealPrepWork(props) {
+  var h = React.createElement, day = props.day, sid = props.sid, st = (typeof ssKid === 'function') ? ssKid(sid) : null, col = dayColor(day);
+  var oS = React.useState(false), open = oS[0], mS = React.useState(''), tk = React.useRef({});
+  var D = fpDoc('school/mealprep/' + day + '/' + sid, {}), d = D[0] || {}, put = D[1];
+  var TS = fpDoc('school/mealprep_task/' + day, ''), task = (typeof TS[0] === 'string' && TS[0]) || MP_DEFAULT_TASK;
+  var lS = React.useState({}), loc = lS[0], clS = ktUse('school/classroom', {}), cl = clS[0] || {};
+  if (!st) return null;
+  function val(k) { return loc[k] !== undefined ? loc[k] : (d[k] || ''); }
+  function setF(k, v) { var n = Object.assign({}, loc); n[k] = v; lS[1](n); clearTimeout(tk.current[k]); tk.current[k] = setTimeout(function () { put(k, v); }, 700); }
+  function submit() { var all = Object.assign({}, d, loc); Object.keys(loc).forEach(function (k) { put(k, loc[k]); }); put('sub', Date.now()); var txt = mpMealText(day, st.name, all); try { navigator.clipboard.writeText(txt); mS[1]('✅ Saved and copied. Paste it into Google Classroom and turn it in.'); } catch (e) { mS[1]('✅ Saved. Could not copy on this device — ask Mom.'); } var u = (cl.kids || {})[sid] || cl.main || 'https://classroom.google.com'; try { window.open(u, '_blank', 'noopener'); } catch (e) {} }
+  var filled = MP_FIELDS.filter(function (f) { return val(f[0]); }).length;
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid ' + col, background: dayTint(day, .1), padding: 12 } },
+    h('button', { onClick: function () { oS[1](!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: col, fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '🍽 Day ' + day + ' meal prep planning' + (d.sub ? ' · ✅ sent' : filled ? ' · ' + filled + '/5 done' : '')),
+    open && h('div', { style: { marginTop: 10 } },
+      h('div', { style: { color: '#fff', fontSize: 15, lineHeight: 1.55, marginBottom: 10 } }, h('b', { style: { color: '#FFD54F' } }, 'Today’s assignment: '), task),
+      MP_FIELDS.map(function (f) { return h('div', { key: f[0], style: { marginBottom: 10 } }, h('div', { style: { color: '#fff', fontWeight: 800, fontSize: 14, marginBottom: 4 } }, f[1]), h('textarea', { value: val(f[0]), placeholder: f[2], onChange: function (e) { setF(f[0], e.target.value); }, style: { width: '100%', boxSizing: 'border-box', minHeight: 84, background: '#fff', color: '#000', border: '2px solid ' + col, borderRadius: 10, padding: 10, fontSize: 16, fontFamily: 'inherit' } })); }),
+      h('button', { onClick: submit, style: { width: '100%', background: '#1A73E8', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '📤 Submit to Google Classroom'),
+      h('div', { style: { color: '#c8d4f0', fontSize: 12, marginTop: 6 } }, 'Everything saves by itself.' + (d.sub ? ' Last sent ' + new Date(d.sub).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '')),
+      mS[0] && h('div', { style: { color: '#81C784', fontSize: 13, marginTop: 6 } }, mS[0])));
+}
+function MealPrepAdmin(props) {
+  if (!window._isAdminSession) return null;
+  var h = React.createElement, day = props.day, col = dayColor(day), oS = React.useState(false), open = oS[0], mS = React.useState('');
+  var TS = fpDoc('school/mealprep_task/' + day, ''), task = (typeof TS[0] === 'string' && TS[0]) || MP_DEFAULT_TASK, tl = React.useState(null), tmr = React.useRef(null);
+  var AD = fpDoc('school/mealprep/' + day, {}), all = AD[0] || {}, kids = (typeof ssKids === 'function' ? ssKids() : []);
+  function say(t) { mS[1](t); setTimeout(function () { mS[1](''); }, 3500); }
+  var btn = function (bg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, t); };
+  function allText() { return kids.filter(function (k) { return all[k.id]; }).map(function (k) { return mpMealText(day, k.name, all[k.id]); }).join('\n\n----------\n\n'); }
+  var shown = tl[0] !== null ? tl[0] : task;
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid ' + col, background: dayTint(day, .1), padding: 12 } },
+    h('button', { onClick: function () { oS[1](!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: col, fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '🍽 Day ' + day + ' meal prep planning (teacher)'),
+    open && h('div', { style: { marginTop: 10 } },
+      h('div', { style: { color: '#FFD54F', fontWeight: 900, fontSize: 14, marginBottom: 4 } }, 'What the students are asked to do (they see this in the app and in Classroom)'),
+      h('textarea', { value: shown, onChange: function (e) { tl[1](e.target.value); clearTimeout(tmr.current); var v = e.target.value; tmr.current = setTimeout(function () { TS[1] && fpPutRoot(day, v); }, 700); }, style: { width: '100%', boxSizing: 'border-box', minHeight: 70, background: '#fff', color: '#000', borderRadius: 10, padding: 10, fontSize: 15, fontFamily: 'inherit' } }),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' } },
+        btn('#1A73E8', function () { window.open(crUrl('Day ' + day + ' Meal Prep Planning', shown + '\n\nIn the app (Today → Meal prep planning) write: 1) your meal plan, 2) a recipe with ingredients and steps, 3) prep and cook times, 4) a grocery list, 5) notes. Then press “Submit to Google Classroom”.', 'assignment'), '_blank'); }, '🎓 Post to Classroom'),
+        btn('rgba(255,255,255,.16)', function () { try { navigator.clipboard.writeText(allText()); say('Copied every response.'); } catch (e) { say('Could not copy.'); } }, '📋 Copy all responses')),
+      mS[0] && h('div', { style: { color: '#81C784', fontSize: 13, marginBottom: 6 } }, mS[0]),
+      kids.map(function (k) { var r = all[k.id]; return h('div', { key: k.id, style: { borderTop: '1px solid rgba(255,255,255,.14)', padding: '8px 0', color: '#fff', fontSize: 14, lineHeight: 1.55 } }, h('b', null, k.name), r ? (r.sub ? ' · ✅ sent' : ' · in progress') : ' · nothing yet', r && h('div', { style: { whiteSpace: 'pre-wrap', color: '#e0e0ee', marginTop: 4 } }, mpMealText(day, k.name, r).split('\n').slice(1).join('\n'))); })));
+}
+function fpPutRoot(day, v) { try { syncSet('school/mealprep_task/' + day, v); } catch (e) {} }
 function msHas(day) { return typeof MS_DATA !== 'undefined' && !!MS_DATA[day]; }
 function msClean(t) { return String(t || '').replace(/^§A(\d):\s*/, ''); }
 function msText(day) {
@@ -42073,7 +42137,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v231';
+var FM_BUILD = 'v232';
 (function () {
   function stamp() {
     try {
