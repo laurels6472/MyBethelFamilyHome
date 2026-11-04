@@ -26358,16 +26358,13 @@ var BASS_LESSONS = [{
 
 // Fixed instrument assignments per child (set by Laurel/Eric — not freely chosen)
 // Fixed instrument assignments per child — a string (one instrument) or array (choice of several)
-var MUSIC_ASSIGNMENTS = {
-  ryan: ['bass', 'guitar'],
-  ashelyn: ['bass', 'guitar'],
-  mykah: 'guitar',
-  kayla: 'drums'
-};
+// No instrument is assigned in advance. Each child picks; the pick is saved as music_progress/<id> {instrument, picked:true}.
+var MUSIC_ASSIGNMENTS = {};
+function mpPick(pr) { return (pr && pr.picked && pr.instrument) ? pr.instrument : null; }
+function mpPickOf(pid) { try { return mpPick(syncGet('music_progress/' + pid)); } catch (e) { return null; } }
+function mpKidList() { try { return (typeof ssKids === 'function' ? ssKids() : []).map(function (k) { return k.id; }); } catch (e) { return []; } }
 function getAssignedInstruments(personId) {
-  var a = MUSIC_ASSIGNMENTS[personId];
-  if (!a) return null;
-  return Array.isArray(a) ? a : [a];
+  return null;
 }
 
 // Get lesson for instrument and day number
@@ -26422,6 +26419,16 @@ function musicVideoFor(instr, lesson, day) {
   if (/amazing grace|hymn|gospel|worship|holy|sacred|spiritual/i.test(q)) q = 'Mary Had a Little Lamb easy song';
   return {t:'Find a beginner tutorial: ' + (lesson ? lesson.title : ''), u:'https://www.youtube.com/results?search_query=' + encodeURIComponent(m.tag + ' ' + q), exact:false};
 }
+var TEACHER_VIDEOS = {
+  guitar: [['Marty Music — Your Very First Guitar Lesson (E Minor + Asus2)', 'HNSaXAe8tyg'], ['Marty Music — Beginners first guitar lesson: ten songs with two easy chords', '0heHRj9aHAk'], ['Marty Music — Easy one-finger riffs for beginners', 'wzPx8pTaelM']],
+  drums: [['Drum Lesson #1 for absolute beginners (holding the sticks)', 'chWkvMVgKfo'], ['Lesson 1 for absolute beginners on the drum set', 'YW9Pho8fWGs'], ['Easy first drum set lesson for kids', 'YXrq5lOw5KA'], ['Your first drum lesson in 6 steps', '0uQiH9XIECg']],
+  ukulele: [['Start Here: Ukulele Basics for Complete Beginners (Lesson 1)', 'G_40HhQ2yss'], ['Your FIRST ukulele lesson (by a music teacher)', 'NA0SvOREelg'], ['Bernadette Teaches Music — Kum Ba Ya on ukulele', 'TuqoYzzwmK4']],
+  piano: [['Hoffman Academy — Unit 1 easy beginner piano lessons for kids (playlist)', 'PLOpWFi5W-47oMUgHx3S0gWOAGbWuDwHPe', 'playlist'], ['Hoffman Academy — The musical alphabet', 'zV1x4-1Owsw']],
+  bass: [['Scott’s Bass Lessons — Beginner Bass Lesson, your very first steps', 'W7KWZYNYpFs'], ['BassBuzz — Beginner Bass Lesson #1', '7anFuDXV2j8'], ['Beginner’s Guide to Bass Guitar — Lesson 1, the absolute basics', 'c1pC20SXnqY']],
+  violin: [['Violin Lesson #1 for absolute beginners — parts and proper hold', 'tE_30kgglKU'], ['Violin Lesson #3 — how to hold the violin (kids and adults)', 'N3939letlSQ'], ['Beginner violin series, lessons 1–30 (playlist)', 'PLTaAxpCJaIGkI9T0n-GJ_lLxUf7Xjq-42', 'playlist']],
+  singing: [['Cheryl Porter — 10-minute daily vocal workout (warm-ups only)', '9dVW9E40-Gw'], ['Cheryl Porter — Vocal exercise for range and tempo', 'PQynEer2JAY']]
+};
+function tvUrl(v) { return v[2] === 'playlist' ? 'https://www.youtube.com/playlist?list=' + v[1] : 'https://www.youtube.com/watch?v=' + v[1]; }
 var YOUTUBE_TUTORIALS = {
   guitar:[
     {title:"Mary Had a Little Lamb on Guitar",genre:"Easy Songs",url:"https://www.youtube.com/results?search_query=mary+had+a+little+lamb+guitar+beginner+lesson"},
@@ -26513,15 +26520,16 @@ function MusicVideoGate(props) {
 
 // ═══ TEACHER: every child's music lesson for the day — pick the one video, then post it to Google Classroom ═══
 function MusicClassroomSection(props) {
-  var h = React.createElement, kids = Object.keys(MUSIC_ASSIGNMENTS || {});
+  var h = React.createElement, kids = mpKidList();
   var dS = React.useState({}), ov = dS[0], setOv = dS[1];
   if (!window._isAdminSession) return null;
   var rows = [];
-  kids.forEach(function (k) { (getAssignedInstruments(k) || []).forEach(function (ins) { rows.push({ k: k, ins: ins }); }); });
+  kids.forEach(function (k) { var p = mpPickOf(k); if (p) rows.push({ k: k, ins: p }); });
   var nm = function (k) { try { return crName(k); } catch (e) { return k; } };
   return h('div', { style: { margin: '10px 0', padding: 12, borderRadius: 14, background: 'rgba(233,30,99,.08)', border: '2px solid rgba(233,30,99,.45)' } },
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#F48FB1', letterSpacing: 1, marginBottom: 2 } }, '🎵 MUSIC — SEND TO GOOGLE CLASSROOM'),
     h('div', { style: { fontSize: 12, color: '#c8c8d8', marginBottom: 8 } }, 'Pick the one video for each child, then post it. In Classroom they see only that video.'),
+    !rows.length && h('div', { style: { fontSize: 13, color: '#FFB74D' } }, 'No one has picked an instrument yet. Their names show here once they do. You can also pick any child in the Music Teacher Guide.'),
     rows.map(function (r) {
       var key = r.k + r.ins, pr = null; try { pr = syncGet('music_progress/' + r.k); } catch (e) {}
       var ld = ov[key] || (pr && pr.instrument === r.ins && pr.lessonDay) || 1, lesson = null, instr = null;
@@ -26555,10 +26563,10 @@ function tmgKey(inst, l) {
 function TeacherMusicGuide(props) {
   var h = React.createElement;
   if (!window._isAdminSession) return null;
-  var insList = (typeof INSTRUMENTS !== 'undefined' ? INSTRUMENTS : []), A = (typeof MUSIC_ASSIGNMENTS !== 'undefined' ? MUSIC_ASSIGNMENTS : {});
+  var insList = (typeof INSTRUMENTS !== 'undefined' ? INSTRUMENTS : []), A = {}; mpKidList().forEach(function (k) { var p = mpPickOf(k); if (p) A[k] = [p]; });
   var iS = React.useState(''), insId = iS[0], setIns = iS[1], lS = React.useState(0), openD = lS[0], setOpenD = lS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], kS = React.useState({}), kSel = kS[0], setKSel = kS[1];
   var nm = function (k) { try { return crName(k); } catch (e) { return k; } };
-  var kidsOf = function (id) { return Object.keys(A).filter(function (k) { var a = A[k]; return Array.isArray(a) ? a.indexOf(id) !== -1 : a === id; }); };
+  var kidsOf = function (id) { return Object.keys(A).filter(function (k) { return A[k].indexOf(id) !== -1; }); };
   var chip = function (on, col) { return { background: on ? col : 'rgba(255,255,255,.1)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 }; };
   var cur = insList.filter(function (i) { return i.id === insId; })[0];
   var lessons = cur ? tmgLessons(cur.id) : [];
@@ -26567,20 +26575,24 @@ function TeacherMusicGuide(props) {
     h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#F48FB1', fontWeight: 900, fontSize: 16, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '🎵 MUSIC TEACHER GUIDE — all lessons, scripts, answer keys & videos'),
     open && h('div', { style: { marginTop: 10 } },
       h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, 'WHO PLAYS WHAT'),
-      h('div', { style: Object.assign({}, box, { fontSize: 14, color: '#fff', lineHeight: 1.7 }) }, Object.keys(A).map(function (k) { return h('div', { key: k }, h('b', null, nm(k)), ': ', (Array.isArray(A[k]) ? A[k] : [A[k]]).map(function (x) { var i = insList.filter(function (y) { return y.id === x; })[0]; return i ? i.emoji + ' ' + i.name : x; }).join(', ')); })),
+      h('div', { style: Object.assign({}, box, { fontSize: 14, color: '#fff', lineHeight: 1.7 }) }, !Object.keys(A).length ? 'No one has picked an instrument yet.' : Object.keys(A).map(function (k) { return h('div', { key: k }, h('b', null, nm(k)), ': ', (Array.isArray(A[k]) ? A[k] : [A[k]]).map(function (x) { var i = insList.filter(function (y) { return y.id === x; })[0]; return i ? i.emoji + ' ' + i.name : x; }).join(', ')); })),
       h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, margin: '8px 0 4px' } }, 'PICK AN INSTRUMENT'),
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, insList.map(function (i) { return h('button', { key: i.id, onClick: function () { setIns(i.id); setOpenD(0); }, style: chip(insId === i.id, '#F48FB1') }, i.emoji + ' ' + i.name + (kidsOf(i.id).length ? ' · ' + kidsOf(i.id).map(nm).join(', ') : '')); })),
       cur && h('div', { style: { marginTop: 10 } },
+        h('div', { style: Object.assign({}, box, { border: '1px solid #FF5252' }) },
+          h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FF8A80', letterSpacing: 1 } }, '🎬 INSTRUCTOR VIDEOS — ' + cur.name.toUpperCase() + ' (teacher only)'),
+          h('div', { style: { fontSize: 12, color: '#c8c8d8', margin: '2px 0 6px' } }, 'Open one to preview. To send a child one video, use a lesson below and paste its link. Check the video yourself first.'),
+          ((typeof TEACHER_VIDEOS !== 'undefined' && TEACHER_VIDEOS[cur.id]) || []).map(function (v) { return h('div', { key: v[1], style: { marginBottom: 6 } }, h('a', { href: tvUrl(v), target: '_blank', rel: 'noopener', style: { color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: 1.5 } }, '▶ ' + v[0]), h('button', { onClick: function () { try { navigator.clipboard.writeText(tvUrl(v)); } catch (e) {} }, style: { marginLeft: 8, background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 12 } }, 'Copy link')); })),
         h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 4 } }, cur.name.toUpperCase() + ' — ' + lessons.length + ' LESSONS (tap one)'),
         lessons.map(function (l) {
-          var on = openD === l._d, kids = kidsOf(cur.id), ks = kSel[cur.id] || kids[0];
+          var on = openD === l._d, kids = mpKidList(), pk = kidsOf(cur.id), ks = kSel[cur.id] || pk[0] || kids[0];
           return h('div', { key: l._d, style: { marginBottom: 6 } },
             h('button', { onClick: function () { setOpenD(on ? 0 : l._d); }, style: { width: '100%', textAlign: 'left', background: on ? 'rgba(233,30,99,.3)' : 'rgba(255,255,255,.08)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 12px', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, (on ? '▲ ' : '▼ ') + 'Lesson ' + l._d + ': ' + l.title),
             on && h('div', { style: { padding: '4px 0' } },
               h('div', { style: box }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#81C784', letterSpacing: 1 } }, '🗣 WHAT TO SAY (read this aloud)'), h('div', { style: { fontSize: 15, color: '#fff', lineHeight: 1.7, marginTop: 4 } }, tmgScript(cur.name, l))),
               h('div', { style: Object.assign({}, box, { background: 'rgba(255,235,59,.12)', border: '1px solid #FFEB3B' }) }, h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFEB3B', letterSpacing: 1 } }, '🔑 ANSWER KEY (teacher only)'), tmgKey(cur.name, l).map(function (q, i) { return h('div', { key: i, style: { fontSize: 14, color: '#fff', lineHeight: 1.6, marginTop: 4 } }, (i + 1) + '. ' + q[0], h('div', { style: { color: '#FFF59D', fontWeight: 700 } }, '✔ ' + q[1])); })),
-              kids.length > 1 && h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0' } }, kids.map(function (k) { return h('button', { key: k, onClick: function () { var o = Object.assign({}, kSel); o[cur.id] = k; setKSel(o); }, style: chip(ks === k, '#90CAF9') }, 'For ' + nm(k)); })),
-              ks ? h(MusicVideoGate, { key: ks + cur.id + l._d, pid: ks, instrument: cur.id, lessonDay: l._d, lesson: l, instr: cur, teacherOnly: true }) : h('div', { style: { fontSize: 13, color: '#FFB74D' } }, 'No child has this instrument yet.')));
+              kids.length > 1 && h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0' } }, kids.map(function (k) { return h('button', { key: k, onClick: function () { var o = Object.assign({}, kSel); o[cur.id] = k; setKSel(o); }, style: chip(ks === k, '#90CAF9') }, 'For ' + nm(k) + (pk.indexOf(k) !== -1 ? ' ✓ picked' : '')); })),
+              ks ? h(MusicVideoGate, { key: ks + cur.id + l._d, pid: ks, instrument: cur.id, lessonDay: l._d, lesson: l, instr: cur, teacherOnly: true }) : h('div', { style: { fontSize: 13, color: '#FFB74D' } }, 'No students found.')));
         }))));
 }
 
@@ -26593,12 +26605,12 @@ function MusicClassPanel(_ref) {
   var _React$useState = React.useState(function () {
       try {
         var saved = syncGet('music_progress/' + personId);
-        if (saved && saved.instrument) return saved.instrument;
-        var local = JSON.parse(localStorage.getItem(storageKey) || '{}').instrument;
-        if (local) return local;
-        return assignedList ? assignedList[0] : null;
+        if (mpPick(saved)) return saved.instrument;
+        var lc = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        if (lc.picked && lc.instrument) return lc.instrument;
+        return null;
       } catch (_unused) {
-        return assignedList ? assignedList[0] : null;
+        return null;
       }
     }),
     _React$useState2 = _slicedToArray(_React$useState, 2),
@@ -26607,8 +26619,9 @@ function MusicClassPanel(_ref) {
   var _React$useState3 = React.useState(function () {
       try {
         var saved = syncGet('music_progress/' + personId);
-        if (saved && saved.lessonDay) return saved.lessonDay;
-        return JSON.parse(localStorage.getItem(storageKey) || '{}').lessonDay || 1;
+        if (mpPick(saved) && saved.lessonDay) return saved.lessonDay;
+        var lc2 = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        return (lc2.picked && lc2.lessonDay) || 1;
       } catch (_unused2) {
         return 1;
       }
@@ -26619,7 +26632,7 @@ function MusicClassPanel(_ref) {
   var _React$useState5 = React.useState(function () {
       try {
         var saved = syncGet('music_progress/' + personId);
-        return saved && saved.notes || '';
+        return mpPick(saved) && saved.notes || '';
       } catch (_unused3) {
         return '';
       }
@@ -26648,7 +26661,7 @@ function MusicClassPanel(_ref) {
   // Subscribe to Firebase for cross-device sync
   React.useEffect(function () {
     var unsub = syncOn('music_progress/' + personId, function (d) {
-      if (d && d.instrument) {
+      if (d && mpPick(d)) {
         setInstrument(d.instrument);
         setLessonDay(d.lessonDay || 1);
         setNotes(d.notes || '');
@@ -26698,6 +26711,7 @@ function MusicClassPanel(_ref) {
   function saveProgress(inst, day, n) {
     var data = {
       instrument: inst,
+      picked: true,
       lessonDay: day,
       notes: n || notes,
       updatedAt: Date.now()
@@ -26772,7 +26786,7 @@ function MusicClassPanel(_ref) {
         color: 'rgba(255,255,255,.4)',
         marginBottom: 14
       }
-    }, 'This is your instrument for the year. Your lessons will be saved and continue each day.'), React.createElement('div', {
+    }, 'Tap the one you want to learn. Your lessons will be saved and continue each day.'), React.createElement('div', {
       style: {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
@@ -26818,7 +26832,7 @@ function MusicClassPanel(_ref) {
         color: 'rgba(255,255,255,.3)',
         textAlign: 'center'
       }
-    }, 'More instruments (Violin, Bass, and others) can be added. Ask Laurel!'));
+    }, ''));
   }
 
   // ── Lesson view ─────────────────────────────────────────────────────────────
@@ -34163,6 +34177,7 @@ function TeacherManualIn(props) {
     !have && !MSD && h('div', { style: { background: 'rgba(255,152,0,.15)', border: '1px solid rgba(255,152,0,.5)', borderRadius: 12, padding: 10, marginBottom: 10, fontSize: 13, color: '#FFE0B2', lineHeight: 1.5 } }, 'This day is not written out in your Teacher Lectures document yet, so you are seeing the app’s general outline. Ask me and I can write a full word-for-word script for it.'),
     typeof KidReadAlong === 'function' && h(KidReadAlong, { key: 'kra' + day, day: day, big: big, admin: true }),
     day <= 24 && h(MathDrill, { key: 'md' + day, day: day, admin: true }),
+    typeof MeetingPrepAdmin === 'function' && h(MeetingPrepAdmin, { key: 'mwba' }),
     day <= 24 && h(MealPrepAdmin, { key: 'mpa' + day, day: day }),
     day <= 24 && h(WorkbookPage, { key: 'wb' + day, day: day, admin: true }),
     MSD ? h(MsPanel, { day: day, big: big }) : h('div', { style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: 14 } }, h(ScriptText, { text: text, big: big })),
@@ -39694,9 +39709,9 @@ function ssLessons(sid, day) {
   });
   // Music class: a lesson like the others — check it off when done
   try {
-    var ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(sid)) || ['guitar'], lines = [], first = '';
+    var pk = mpPickOf(sid), ins = pk ? [pk] : [], lines = [], first = '';
     ins.forEach(function (id) { var ml = typeof getMusicLesson === 'function' ? getMusicLesson(id, day) : null; if (!ml) return; var nm = id.charAt(0).toUpperCase() + id.slice(1); if (!first) first = ml.title; lines.push(nm + ' — ' + ml.title + '. ' + (ml.focus || '') + (ml.chord ? ' Chord: ' + ml.chord + '.' : '') + (ml.song ? ' Song: ' + ml.song + '.' : '')); });
-    out.push({ id: 'music', label: '🎵 Music Class', color: '#E91E63', topic: first || 'Instrument lesson, chords and rhythm', act: (lines.join('\n') || 'Instrument lesson, chords and rhythm.') + '\nPlay slowly first, then up to speed. Practice for 30 minutes, then play it for someone at home.', ans: 'Look for: ' + st.name + ' can show today’s chord or rhythm cleanly at a slow speed, can name what the lesson was about, and practiced the full time.', scr: 'Say: “Music class. Get your instrument and tune it. Today’s lesson is ' + (first || 'your next step') + '. Show me when you are ready, and play it slowly first.”', wnote: '', key: sid + '_d' + day + '_music' });
+    out.push({ id: 'music', label: '🎵 Music Class', color: '#E91E63', topic: first || 'Pick your instrument', act: (lines.join('\n') || 'Open Music class and tap the instrument you want to learn (guitar, drums, ukulele, piano, bass, violin or singing).') + '\nPlay slowly first, then up to speed. Practice for 30 minutes, then play it for someone at home.', ans: 'Look for: ' + st.name + ' can show today’s chord or rhythm cleanly at a slow speed, can name what the lesson was about, and practiced the full time.', scr: 'Say: “Music class. Get your instrument and tune it. Today’s lesson is ' + (first || 'your next step') + '. Show me when you are ready, and play it slowly first.”', wnote: '', key: sid + '_d' + day + '_music' });
   } catch (e) {}
   // Computer Lab: its own checkoff right under Bible study
   var labRow = { id: 'lab', lab: true, label: '💻 Computer Lab', color: '#00ACC1', topic: 'Your next computer step + typing practice', act: '', key: sid + '_d' + day + '_lab' };
@@ -39824,6 +39839,7 @@ function SchoolClassroomRow(props) {
     typeof KidReadAlong === 'function' && !admin && h(KidReadAlong, { key: 'kra' + day, day: day, big: true }),
     h('div', { style: { fontSize: 16, fontWeight: 900, color: dayColor(day) } }, 'Day ' + day + ' · ' + (QZ ? '📝 Today’s quiz' : '📤 Turn in your work')),
     h(MathDrill, { key: 'md' + day + sid, day: day, sid: sid, admin: admin }),
+    typeof MeetingPrepWork === 'function' && h(MeetingPrepWork, { key: 'mwb' + sid, sid: sid }),
     h(MealPrepWork, { key: 'mp' + day + sid, day: day, sid: sid }),
     h(WorkbookPage, { key: 'wb' + day + sid, day: day, sid: sid, admin: admin }),
     task && h('div', { style: { fontSize: 14, color: '#e8e8f4', lineHeight: 1.6, margin: '6px 0 8px' } }, h('b', { style: { color: '#FFD54F' } }, 'Today’s assignment: '), task),
@@ -42020,10 +42036,10 @@ function mpUse(pid) {
 function mpInstName(id) { return id ? id.charAt(0).toUpperCase() + id.slice(1) : ''; }
 function MusicTile(props) {
   var h = React.createElement, sid = props.sid, day = props.day || 1, o = React.useState(false), open = o[0], setOpen = o[1], pr = mpUse(sid) || {};
-  var ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(sid)) || ['guitar'], cur = pr.instrument || ins[0], ml = null;
-  try { ml = getMusicLesson(cur, pr.lessonDay || day); } catch (e) {}
+  var ins = [], cur = mpPick(pr), ml = null;
+  try { if (cur) ml = getMusicLesson(cur, pr.lessonDay || day); } catch (e) {}
   return h('div', { style: { marginBottom: 10, borderRadius: 16, border: '2px solid #E91E63', background: 'rgba(233,30,99,.1)', padding: 12 } },
-    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', minHeight: 52, textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0, fontWeight: 900, fontSize: 18 } }, (open ? '▲ ' : '▼ ') + '🎵 Music class — ' + mpInstName(cur) + (ml ? ' · ' + ml.title : '')),
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', minHeight: 52, textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0, fontWeight: 900, fontSize: 18 } }, (open ? '▲ ' : '▼ ') + '🎵 Music class — ' + (cur ? mpInstName(cur) + (ml ? ' · ' + ml.title : '') : 'pick your instrument')),
     !open && ins.length > 1 && h('div', { style: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } }, ins.map(function (id) { return h('button', { key: id, onClick: function () { try { syncSet('music_progress/' + sid, Object.assign({}, pr, { instrument: id, lessonDay: pr.lessonDay || 1, updatedAt: Date.now() })); } catch (e) {} }, style: { minHeight: 44, padding: '0 16px', borderRadius: 14, border: '2px solid #E91E63', background: id === cur ? '#E91E63' : 'transparent', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (id === 'guitar' ? '🎸 ' : id === 'drums' ? '🥁 ' : id === 'piano' ? '🎹 ' : '🎵 ') + mpInstName(id)); })),
     open && typeof MusicClassPanel === 'function' && h('div', { style: { marginTop: 8 } }, h(MusicClassPanel, { key: sid, personId: sid, isTeacher: false, dayNum: day })));
 }
@@ -42043,9 +42059,9 @@ function MusicOverview(props) {
   function report() {
     var td = mpToday(), parts = [];
     kids.forEach(function (k) {
-      var pr = (D[k.id] && D[k.id].prog) || {}, pc = (D[k.id] && D[k.id].prac) || {}, ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(k.id)) || ['guitar'];
-      var cur = pr.instrument || ins[0], ld = pr.lessonDay || 1, ml = null; try { ml = getMusicLesson(cur, ld); } catch (e) {}
-      parts.push(mpReportText({ date: td, name: k.name, inst: mpInstName(cur), lesson: ld, title: ml ? ml.title : '', mins: (pc[td] && pc[td].mins) || 0, week: mpWeekMins(pc), notes: pr.notes }));
+      var pr = (D[k.id] && D[k.id].prog) || {}, pc = (D[k.id] && D[k.id].prac) || {}, ins = [];
+      var cur = mpPick(pr), ld = pr.lessonDay || 1, ml = null; try { if (cur) ml = getMusicLesson(cur, ld); } catch (e) {}
+      parts.push(mpReportText({ date: td, name: k.name, inst: cur ? mpInstName(cur) : 'has not picked an instrument yet', lesson: ld, title: ml ? ml.title : '', mins: (pc[td] && pc[td].mins) || 0, week: mpWeekMins(pc), notes: pr.notes }));
     });
     return parts.join('\n\n');
   }
@@ -42061,12 +42077,12 @@ function MusicOverview(props) {
   function msg(t) { return t ? h('span', { style: { fontSize: 13, color: '#81C784', alignSelf: 'center' } }, t) : null; }
 }
 function MusicRow(props) {
-  var h = React.createElement, k = props.k, pr = mpUse(k.id) || {}, ins = (typeof getAssignedInstruments === 'function' && getAssignedInstruments(k.id)) || ['guitar'];
-  var cur = pr.instrument || ins[0], ld = pr.lessonDay || 1, ml = null; try { ml = getMusicLesson(cur, ld); } catch (e) {}
+  var h = React.createElement, k = props.k, pr = mpUse(k.id) || {}, ins = [];
+  var cur = mpPick(pr), ld = pr.lessonDay || 1, ml = null; try { if (cur) ml = getMusicLesson(cur, ld); } catch (e) {}
   var when = pr.updatedAt ? new Date(pr.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'not started';
   return h('div', { style: { padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.12)', fontSize: 14, color: '#e8e8f2', lineHeight: 1.5 } },
-    h('b', { style: { color: '#fff' } }, k.name), ' — ', mpInstName(cur) + (ins.length > 1 ? ' (also: ' + ins.filter(function (x) { return x !== cur; }).map(mpInstName).join(', ') + ')' : ''),
-    h('div', null, 'Lesson ' + ld + (ml ? ': ' + ml.title : '') + ' · last updated ' + when), pr.notes && h('div', { style: { color: '#c8c8d8' } }, 'Note: ' + pr.notes));
+    h('b', { style: { color: '#fff' } }, k.name), ' — ', (cur ? mpInstName(cur) : 'has not picked an instrument yet') + (ins.length > 1 ? ' (also: ' + ins.filter(function (x) { return x !== cur; }).map(mpInstName).join(', ') + ')' : ''),
+    cur && h('div', null, 'Lesson ' + ld + (ml ? ': ' + ml.title : '') + ' · last updated ' + when), pr.notes && h('div', { style: { color: '#c8c8d8' } }, 'Note: ' + pr.notes));
 }
 
 </script>
@@ -42333,6 +42349,159 @@ function MathDrill(props) {
 var MP_FIELDS = [['plan', '🍽 My meal plan (breakfast, lunch, dinner)', 'Example: Breakfast – overnight oats. Lunch – ... Dinner – ...'], ['recipe', '📖 My recipe (name, ingredients, steps)', 'Recipe name, then the ingredients with amounts, then the steps in order.'], ['times', '⏱ Times (prep time, cook time, when it will be ready)', 'Prep: __ min. Cook: __ min. Ready at: __'], ['grocery', '🛒 Grocery list (what we need to buy or already have)', 'Produce: ...  Meat: ...  Dairy: ...  Pantry: ...'], ['notes', '📝 Notes (what went well, what I would change)', 'Write in your own words.']];
 var MP_DEFAULT_TASK = 'Plan the family’s meals. Write your meal plan, one recipe with ingredients and steps, your prep and cook times, and a grocery list. Then send it to Google Classroom.';
 function mpMealText(day, name, d) { d = d || {}; return 'Day ' + day + ' meal prep planning — ' + name + '\n' + MP_FIELDS.map(function (f) { return '\n' + f[1].replace(/\s*\(.*\)$/, '').toUpperCase() + '\n' + (d[f[0]] || '(not filled in yet)'); }).join('\n'); }
+// ═══ MEETING PREP — the Life and Ministry Meeting Workbook (jw.org). Kids prepare the Thursday meeting a week ahead; Mom posts it to Classroom. ═══
+var MWB_WEEKS = [
+{ id: 'w1102', s: '2026-11-02', th: '2026-11-05', lbl: 'Nov 2–8', t1: 'Help Others Benefit From Jehovah’s Mercy', med: '',
+  gems: [['Jer 50:24—In what way did Jehovah catch Babylon in a “snare”?', 'it “Trap” ¶3']], read: ['Jer 50:24-40', 'th study 11'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'House to house. Share a Bible truth, such as one from appendix A of the Love People brochure. (lmd lesson 1 point 5)'], [5, 'Following Up', 4, 'demo', 'House to house. The person expresses interest in a subject different from the one you returned to discuss. (lmd lesson 9 point 3)'], [6, 'Making Disciples', 5, 'demo', 'lff lesson 20 point 4 (lmd lesson 11 point 4)']],
+  p7: ['Never Forget What Jehovah Remembers', 'Play the video, then answer:', ['What lessons did you learn?']], cbs: 'wcg chap. 15' },
+{ id: 'w1109', s: '2026-11-09', th: '2026-11-12', lbl: 'Nov 9–15', t1: 'Learn From the Warning Example of Zedekiah', med: 'How can I avoid being like Zedekiah? (w17.10 23 ¶11-12)',
+  gems: [['Jer 51:6, 7, 36—How does this warning parallel a warning being given today?', 'jr 165 ¶21; 167 ¶25']], read: ['Jer 52:6-20', 'th study 5'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'House to house. Use the direct approach to offer a Bible study. (lmd lesson 3 point 3)'], [5, 'Starting a Conversation', 4, 'demo', 'House to house. A householder objects to our belief that Jesus is God’s Son. (lmd lesson 3 point 4)'], [6, 'Talk', 5, 'talk', 'lmd appendix A point 21. Theme: “God’s Kingdom Is a Real Government in Heaven.” (th study 7)']],
+  p7: ['Our Donations Glorify God’s Beautiful Name', 'Read 1Ch 29:8-10; Ps 96:8; 1Ch 29:14-16; Isa 12:5. Play the video Giving Glorifies Jehovah, then answer:', ['How do our donations bring praise to Jehovah?', 'How have you benefited from the organizational updates on jw.org and the letters of appreciation that you receive?', 'What specific organizational initiatives are you especially thankful for?']], cbs: 'wcg chap. 16' },
+{ id: 'w1116', s: '2026-11-16', th: '2026-11-19', lbl: 'Nov 16–22', t1: 'An Understandable Response to a Terrible Loss', med: 'What can help us if we blame ourselves for the poor decisions that others make? (w23.08 29-30 ¶12-13)',
+  gems: [['La 2:1—How was the beauty of Israel thrown down from heaven to earth?', 'w07 6/1 9 ¶1']], read: ['La 1:8-18', 'th study 10'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'Informal witnessing. Initiate a friendly conversation that ends before you can give a witness. (lmd lesson 2 point 4)'], [5, 'Following Up', 4, 'demo', 'Public witnessing. Feature a video from the Teaching Toolbox, and offer a Bible study. (lmd lesson 9 point 4)'], [6, 'What Would You Say?', 5, 'wwys', 'House to house. Briefly review lmd lesson 1 point 4b, then refer to the picture of an apartment hallway with three doors, one decorated for Christmas. Answer: Based on what you observe, what question could you ask to start a conversation? Which Bible truth might you share?']],
+  p7: ['Do Not Forget Our Inactive Brothers and Sisters', 'Read Ga 6:10; 1Pe 5:2. Play the video Encourage the Inactive Ones, then answer:', ['How might you be of assistance to an inactive brother or sister?', 'What lessons did you learn from this video?']], cbs: 'wcg chap. 17' },
+{ id: 'w1123', s: '2026-11-23', th: '2026-11-26', lbl: 'Nov 23–29', t1: 'Do Not Give Out When Experiencing Trials', med: '',
+  gems: [['La 3:27—What good can come from enduring hardships during youth?', 'w07 6/1 11 ¶5']], read: ['La 3:19-42', 'th study 12'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'House to house. Share a Bible truth, such as one from appendix A of the Love People brochure. (lmd lesson 5 point 4)'], [5, 'Starting a Conversation', 4, 'demo', 'Informal witnessing. Offer a tract. (lmd lesson 4 point 3)'], [6, 'Talk', 5, 'talk', 'w25.12 26-30. Theme: “Older Ones—You Are an Asset to the Congregation.” (th study 16)']],
+  p7: ['Help Caregivers Not to Give Out', 'Read Proverbs 20:18 and Philippians 2:4: how can family members apply them when caring for loved ones? Play the video Comfort for the Caregiver, then answer:', ['What is involved in being a caregiver?', 'How can caregivers take care of themselves?', 'How can the congregation help caregivers?', 'How does Jehovah help caregivers not to give out?']], cbs: 'wcg chap. 18' },
+{ id: 'w1130', s: '2026-11-30', th: '2026-12-03', lbl: 'Nov 30–Dec 6', t1: 'Keep Pace With Jehovah’s Celestial Chariot', med: 'What must I do to keep pace with the celestial chariot?',
+  gems: [['Eze 1:6, 10—What do the four faces of each cherub in Ezekiel’s vision illustrate?', 'rr 43 ¶5; 45 ¶13; 48 ¶14']], read: ['Eze 2:1-10', 'th study 2'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'House to house. Offer a Bible study. (lmd lesson 3 point 3)'], [5, 'Making Disciples', 5, 'demo', 'Encourage a Bible student who is dealing with family opposition. (lmd lesson 11 point 5)'], [6, 'Talk', 4, 'talk', 'lmd appendix A point 22. Theme: “God’s Kingdom Will Replace Human Governments.” (th study 6)']],
+  p7: ['Local Needs', 'No questions in the workbook for this part.', []], cbs: 'wcg chap. 19' },
+{ id: 'w1207', s: '2026-12-07', th: '2026-12-10', lbl: 'Dec 7–13', t1: 'Why We Preach Fearlessly', med: '',
+  gems: [['Eze 4:12-15—What do we learn from Jehovah’s willingness to listen to Ezekiel?', 'w94 8/1 13 ¶14-15']], read: ['Eze 3:16-27', 'th study 2'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'House to house. Share a Bible truth, such as one from appendix A of the Love People brochure. (lmd lesson 1 point 5)'], [5, 'Starting a Conversation', 4, 'demo', 'Public witnessing. The person has heard that Jehovah’s Witnesses are a cult. (lmd lesson 4 point 4)'], [6, 'Making Disciples', 5, 'demo', 'Talk to your student about cleanliness. (lmd lesson 12 point 4)']],
+  p7: ['Local Needs', 'No questions in the workbook for this part.', []], cbs: 'wcg chap. 20' },
+{ id: 'w1214', s: '2026-12-14', th: '2026-12-17', lbl: 'Dec 14–20', t1: 'Idolaters Break Jehovah’s Heart', med: '',
+  gems: [['Eze 5:1, 2—What was the significance of Ezekiel’s actions?', 'rr 63 ¶6']], read: ['Eze 6:1-10', 'th study 5'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'Public witnessing. The person wants to argue. (lmd lesson 4 point 5)'], [5, 'Following Up', 4, 'demo', 'House to house. Feature a magazine on the topic of the previous conversation. (lmd lesson 9 point 4)'], [6, 'What Would You Say?', 5, 'wwys', 'House to house. Briefly review lmd lesson 1 point 4b. Refer to the picture, then answer: Based on what you observe, what could you say to start a conversation? Which Bible truth might you share?']],
+  p7: ['Why Refrain From Nationalistic Ceremonies?', 'Read Mt 4:10. Play the video Maintain Neutrality at Public Events, then answer:', ['What good examples can we imitate?', 'How can families prepare so that they are not caught off guard?', 'What helpful information have you found from the organization on this subject?']], cbs: 'wcg chap. 21' },
+{ id: 'w1221', s: '2026-12-21', th: '2026-12-24', lbl: 'Dec 21–27', t1: 'Jehovah’s Day Will Come on Time', med: '',
+  gems: [['Eze 7:19—In what sense will this prophecy be fulfilled, and what is the lesson for us?', 'w24.09 11 ¶14']], read: ['Eze 8:7-18', 'th study 2'],
+  parts: [[4, 'Starting a Conversation', 3, 'demo', 'House to house. (lmd lesson 1 point 4)'], [5, 'Following Up', 4, 'demo', 'House to house. Talk to a family member other than the one who originally showed interest. (lmd lesson 9 point 3)'], [6, 'Making Disciples', 5, 'demo', 'Help your student prepare to witness to a relative. (lmd lesson 12 point 3)']],
+  p7: ['Imagine the Outcome', 'Discuss Eze 7:4 (De 32:29; Isa 59:2). Read Proverbs 27:11 and Philippians 4:7. Read Psalm 38:3-8. Play the video Imagine the Time, then answer:', ['What blessings do we enjoy from keeping our integrity?', 'What bad consequences of giving in to sin might we imagine?', 'What future blessings do you look forward to receiving in the new world?']], cbs: 'wcg intro to section 2, timeline, and chap. 22' }];
+
+// Weeks after Dec 27 are not published yet: they start as blank templates with the same parts; Mom fills each one in from the workbook (✏️ button) as it comes out.
+(function () {
+  var d = new Date('2026-12-28T12:00:00'), M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], pad = function (n) { return ('0' + n).slice(-2); }, iso = function (x) { return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); };
+  for (var i = 0; i < 40; i++) {
+    var a = new Date(d.getTime()); a.setDate(a.getDate() + 7 * i); var e = new Date(a.getTime()); e.setDate(e.getDate() + 6); var t = new Date(a.getTime()); t.setDate(t.getDate() + 3);
+    if (a > new Date('2027-06-28T12:00:00')) break;
+    MWB_WEEKS.push({ id: 'w' + iso(a).replace(/-/g, ''), s: iso(a), th: iso(t), lbl: M[a.getMonth()] + ' ' + a.getDate() + '–' + (e.getMonth() !== a.getMonth() ? M[e.getMonth()] + ' ' : '') + e.getDate(), t1: '(open this week’s workbook in JW Library)', med: '', tpl: true,
+      gems: [['Part 2 — Spiritual Gems: copy this week’s question from the workbook', 'see the reference in the workbook']], read: ['this week’s Bible reading', 'th study'],
+      parts: [[4, 'Starting a Conversation', 3, 'demo', 'See this week’s workbook for the setting and the lmd lesson point.'], [5, 'Part 5 (4 min.)', 4, 'demo', 'See this week’s workbook for the setting and the lmd lesson point.'], [6, 'Part 6 (5 min.)', 5, 'demo', 'Talk or demonstration: see this week’s workbook.']],
+      p7: ['Part 7 (15 min.)', 'See this week’s workbook, then answer:', ['What lessons did you learn from this part?']], cbs: 'this week’s wcg chapter' });
+  }
+})();
+function mwbEff(w, o) {
+  if (!o || typeof o !== 'object' || !o.t1) return w;
+  var parts = [[4, o.n4 || 'Starting a Conversation', 3, 'demo', o.x4 || ''], [5, o.n5 || 'Starting a Conversation', +o.m5 || 4, 'demo', o.x5 || ''], [6, o.n6 || 'Talk', +o.m6 || 5, o.k6 || 'talk', o.x6 || '']];
+  return Object.assign({}, w, { t1: o.t1, med: o.med || '', tpl: false, gems: [[o.gq || 'Spiritual Gems', o.gr || 'workbook']].concat(o.gq2 ? [[o.gq2, o.gr2 || 'workbook']] : []), read: [o.rd || w.read[0], o.rth || 'th study'], parts: parts, p7: [o.p7t || 'Part 7', o.p7i || '', String(o.p7q || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean)], cbs: o.cbs || w.cbs });
+}
+function MwbEditor(props) {
+  var h = React.createElement, w = props.w, E = fpDoc('mwb_week/' + w.id, null), o = E[0] || {}, put = E[1], lS = React.useState({}), loc = lS[0];
+  var get = function (k) { return loc[w.id + k] !== undefined ? loc[w.id + k] : (o[k] || ''); };
+  var set = function (k, v) { var n = Object.assign({}, loc); n[w.id + k] = v; lS[1](n); put(k, v); };
+  var F = [['t1', '1. Treasures title'], ['med', 'Part 1 meditation question (if any)'], ['gq', '2. Spiritual Gems question'], ['gr', 'Gems reference (e.g. it “Trap” ¶3)'], ['gq2', 'Second gems question (if any)'], ['gr2', 'Second reference'], ['rd', '3. Bible reading (e.g. Jer 52:6-20)'], ['rth', 'th study number'], ['n4', 'Part 4 title'], ['x4', 'Part 4 instructions'], ['n5', 'Part 5 title'], ['m5', 'Part 5 minutes'], ['x5', 'Part 5 instructions'], ['n6', 'Part 6 title'], ['m6', 'Part 6 minutes'], ['x6', 'Part 6 instructions'], ['p7t', '7. Part 7 title'], ['p7i', 'Part 7 instructions (read, play video)'], ['p7q', 'Part 7 questions (one per line)'], ['cbs', '8. Congregation Bible Study (e.g. wcg chap. 23)']];
+  var inp = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, padding: 10, color: '#fff', fontSize: 14, marginBottom: 6, fontFamily: 'inherit' };
+  return h('div', { style: { background: 'rgba(0,0,0,.25)', borderRadius: 12, padding: 10, margin: '8px 0' } },
+    h('div', { style: { color: '#FFD54F', fontWeight: 900, fontSize: 13, marginBottom: 6 } }, '✏️ Enter ' + w.lbl + ' from the workbook (kids see it right away)'),
+    F.map(function (f) { return h('div', { key: f[0] }, h('div', { style: { color: '#c8c8d8', fontSize: 12 } }, f[1]), h(f[0] === 'p7q' || f[0].charAt(0) === 'x' ? 'textarea' : 'input', { value: get(f[0]), onChange: function (e) { set(f[0], e.target.value); }, style: inp })); }),
+    h('div', { style: { color: '#c8c8d8', fontSize: 12 } }, 'Part 6 type: '), h('div', { style: { display: 'flex', gap: 6 } }, [['talk', 'Talk'], ['demo', 'Demonstration'], ['wwys', 'What Would You Say?']].map(function (x) { return h('button', { key: x[0], onClick: function () { set('k6', x[0]); }, style: { background: (o.k6 || 'talk') === x[0] ? '#FFD54F' : 'rgba(255,255,255,.12)', color: (o.k6 || 'talk') === x[0] ? '#000' : '#fff', border: 'none', borderRadius: 10, padding: '10px 12px', fontWeight: 800, cursor: 'pointer' } }, x[1]); })));
+}
+
+function mwbDefault() {
+  var n = new Date(), ymd = n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2), i = -1;
+  MWB_WEEKS.forEach(function (w, k) { var e = new Date(w.s + 'T12:00:00'); e.setDate(e.getDate() + 6); var ee = e.getFullYear() + '-' + ('0' + (e.getMonth() + 1)).slice(-2) + '-' + ('0' + e.getDate()).slice(-2); if (w.s <= ymd && ymd <= ee) i = k; });
+  return Math.min(MWB_WEEKS.length - 1, Math.max(0, i + 1));
+}
+function mwbThu(w) { try { return new Date(w.th + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }); } catch (e) { return w.th; } }
+function mwbDue(w) { try { var d = new Date(w.th + 'T12:00:00'); d.setDate(d.getDate() - 7); return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }); } catch (e) { return ''; } }
+function mwbFields(w) {
+  var f = [];
+  if (w.med) f.push(['med', '1. For meditation — ' + w.med, 'Write your thoughts in your own words.']);
+  w.gems.forEach(function (g, i) { f.push(['gem' + i, '2. Spiritual Gems — ' + g[0] + '  (' + g[1] + ')', 'Dig for the answer in ' + g[1] + ' in JW Library, then write it in your own words.']); });
+  f.push(['mygem', '2. Spiritual Gems — my own gem from the Bible reading (' + w.read[0] + ')', 'One thing from the reading that stood out and why.']);
+  f.push(['read', '3. Bible Reading — ' + w.read[0] + ' (' + w.read[1] + ')', 'Practice reading it aloud 3 times. Write the words you had to practice and one thing you learned.']);
+  w.parts.forEach(function (p) {
+    var lbl = p[0] + '. ' + p[1] + ' (' + p[2] + ' min.) — ' + p[4];
+    if (p[3] === 'wwys') f.push(['p' + p[0], lbl, 'Write what you would say.']);
+    else f.push(['p' + p[0], lbl, p[3] === 'talk' ? 'Write your talk, about ' + p[2] * 100 + ' words.' : 'Write your demonstration word for word (what you say and what the householder says), about ' + p[2] * 100 + ' words.']);
+  });
+  w.p7[2].forEach(function (q, i) { f.push(['q' + i, '7. ' + w.p7[0] + ' — ' + q, 'Your answer in your own words.']); });
+  f.push(['cbs_par', '8. Congregation Bible Study (' + w.cbs + ') — which paragraph will you comment on?', 'Paragraph number']);
+  f.push(['cbs_com', '8. Congregation Bible Study — your comment', 'Write the comment you will make, with the answer found in the paragraph.']);
+  return f;
+}
+function mwbText(w, name, d) {
+  d = d || {};
+  var out = 'Meeting Prep — ' + name + '\nLife and Ministry Meeting, ' + mwbThu(w) + ' (week of ' + w.lbl + ')\n1. ' + w.t1 + '\n';
+  mwbFields(w).forEach(function (f) { var v = d[f[0]]; out += '\n' + f[1] + '\n' + (v ? v : '(not done yet)') + '\n'; });
+  out += '\nTexted the family study group my paragraph and comment: ' + (d.texted ? 'Yes' : 'Not yet');
+  return out;
+}
+function MeetingPrepWork(props) {
+  var h = React.createElement, sid = props.sid, st = (typeof ssKid === 'function') ? ssKid(sid) : null;
+  var oS = React.useState(false), open = oS[0], wS = React.useState(mwbDefault()), wi = wS[0], mS = React.useState(''), lS = React.useState({}), loc = lS[0], tk = React.useRef({});
+  var w0 = MWB_WEEKS[wi], WO = fpDoc('mwb_week/' + w0.id, null), w = mwbEff(w0, WO[0]), D = fpDoc('mwb/' + w.id + '/' + sid, {}), d = D[0] || {}, put = D[1];
+  if (!st) return null;
+  var val = function (k) { return loc[w.id + k] !== undefined ? loc[w.id + k] : (d[k] || ''); };
+  var setF = function (k, v) { var n = Object.assign({}, loc); n[w.id + k] = v; lS[1](n); clearTimeout(tk.current[k]); tk.current[k] = setTimeout(function () { put(k, v); }, 700); };
+  var fields = mwbFields(w), filled = fields.filter(function (f) { return val(f[0]); }).length + (d.texted ? 1 : 0), total = fields.length + 1;
+  var cur = mwbDefault() - 1;
+  function submit() { var all = Object.assign({}, d); fields.forEach(function (f) { all[f[0]] = val(f[0]); }); fields.forEach(function (f) { put(f[0], val(f[0])); }); put('sub', Date.now()); var txt = mwbText(w, st.name, all); try { navigator.clipboard.writeText(txt); } catch (e) {} mS[1]('✅ Sent. Your answers are copied; paste them into the Classroom assignment.'); try { window.open(crUrl('Meeting Prep — ' + mwbThu(w) + ' — ' + st.name, txt, 'assignment'), '_blank'); } catch (e) {} }
+  var ta = { width: '100%', boxSizing: 'border-box', minHeight: 84, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 10, padding: 10, color: '#fff', fontSize: 15, fontFamily: 'inherit' };
+  var chip = function (on) { return { background: on ? '#FFD54F' : 'rgba(255,255,255,.12)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 }; };
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid #FFD54F', background: 'rgba(255,213,79,.08)', padding: 12 } },
+    h('button', { onClick: function () { oS[1](!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#FFD54F', fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '📘 Meeting Prep — ' + mwbThu(w) + ' (' + filled + '/' + total + ')'),
+    open && h('div', { style: { marginTop: 10 } },
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, MWB_WEEKS.map(function (x, i) { return h('button', { key: x.id, onClick: function () { wS[1](i); }, style: chip(i === wi) }, x.lbl + (i === mwbDefault() ? ' · due now' : i === cur ? ' · this week' : '')); })),
+      h('div', { style: { color: '#fff', fontSize: 15, lineHeight: 1.55, marginBottom: 10 } }, h('b', { style: { color: '#FFD54F' } }, 'Prepare this one week ahead. '), 'Use JW Library and jw.org. Your work for the meeting on ', h('b', null, mwbThu(w)), ' is due by ', h('b', null, mwbDue(w)), '. Everything saves by itself.'),
+      h('div', { style: { color: '#fff', fontWeight: 900, fontSize: 16, marginBottom: 8 } }, '1. ' + w.t1),
+      fields.map(function (f) { return h('div', { key: f[0], style: { marginBottom: 12 } }, h('div', { style: { color: '#fff', fontWeight: 800, fontSize: 14, marginBottom: 4, lineHeight: 1.45 } }, f[1]), f[0] === 'p6' && h('div', { style: { display: 'flex', gap: 6, marginBottom: 4 } }, ['Talk', 'Demonstration'].map(function (o) { return h('button', { key: o, onClick: function () { setF('p6mode', o); }, style: chip(val('p6mode') === o) }, o); })), h('textarea', { value: val(f[0]), placeholder: f[2], onChange: function (e) { setF(f[0], e.target.value); }, style: f[0] === 'cbs_par' ? Object.assign({}, ta, { minHeight: 44 }) : ta })); }),
+      h('label', { style: { display: 'flex', gap: 8, alignItems: 'center', color: '#fff', fontSize: 15, margin: '6px 0 12px', minHeight: 44 } }, h('input', { type: 'checkbox', checked: !!d.texted, onChange: function (e) { put('texted', e.target.checked ? Date.now() : null); }, style: { width: 22, height: 22 } }), 'I texted the family study group which paragraph and comment I will make.'),
+      h('button', { onClick: submit, style: { width: '100%', background: '#1A73E8', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 16, cursor: 'pointer', minHeight: 48 } }, '📤 Submit to Google Classroom'),
+      d.sub && h('div', { style: { color: '#c8d4f0', fontSize: 12, marginTop: 6 } }, 'Last sent ' + new Date(d.sub).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })),
+      mS[0] && h('div', { style: { color: '#81C784', fontSize: 13, marginTop: 6 } }, mS[0])));
+}
+function MeetingPrepAdmin(props) {
+  if (!window._isAdminSession) return null;
+  var h = React.createElement, oS = React.useState(false), open = oS[0], wS = React.useState(mwbDefault()), wi = wS[0], mS = React.useState(''), kS = React.useState(''), kid = kS[0];
+  var w0 = MWB_WEEKS[wi], WO = fpDoc('mwb_week/' + w0.id, null), w = mwbEff(w0, WO[0]), eS = React.useState(false), AD = fpDoc('mwb/' + w.id, {}), all = AD[0] || {}, kids = (typeof ssKids === 'function' ? ssKids() : []);
+  var say = function (t) { mS[1](t); setTimeout(function () { mS[1](''); }, 3500); };
+  var btn = function (bg, fn, t) { return h('button', { onClick: fn, style: { background: bg, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 } }, t); };
+  var assignText = function () { return 'Meeting Prep — Life and Ministry Meeting, ' + mwbThu(w) + ' (week of ' + w.lbl + ')\nDue: ' + mwbDue(w) + '\n\n1. ' + w.t1 + (w.med ? '\nFor meditation: ' + w.med : '') + '\n\nFill out in the family app (School ▸ Turn in your work ▸ Meeting Prep), or here:\n' + mwbFields(w).map(function (f) { return '• ' + f[1]; }).join('\n') + '\n\nText the family study group which paragraph and comment you will make before the meeting.'; };
+  var chip = function (on) { return { background: on ? '#FFD54F' : 'rgba(255,255,255,.12)', color: on ? '#000' : '#fff', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, fontSize: 14, cursor: 'pointer', minHeight: 44 }; };
+  var shown = kid && all[kid] ? all[kid] : null;
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid #FFD54F', background: 'rgba(255,213,79,.08)', padding: 12 } },
+    h('button', { onClick: function () { oS[1](!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#FFD54F', fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '📘 Meeting Prep (Life & Ministry Workbook) — teacher'),
+    open && h('div', { style: { marginTop: 10 } },
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 } }, MWB_WEEKS.map(function (x, i) { return h('button', { key: x.id, onClick: function () { wS[1](i); }, style: chip(i === wi) }, x.lbl); })),
+      h('div', { style: { color: '#fff', fontWeight: 900, fontSize: 16 } }, 'Meeting ' + mwbThu(w) + ' · due ' + mwbDue(w)),
+      h('div', { style: { color: '#c8c8d8', fontSize: 13, margin: '2px 0 8px' } }, 'From the Life and Ministry Meeting Workbook on jw.org. The answers to the gems and parts come from the cited publications in JW Library.'),
+      h('div', { style: { background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: 10, color: '#fff', fontSize: 14, lineHeight: 1.6, marginBottom: 8 } },
+        h('div', null, h('b', null, '1. '), w.t1 + (w.med ? ' — meditation: ' + w.med : '')),
+        w.gems.map(function (g, i) { return h('div', { key: i }, h('b', null, '2. Gems: '), g[0] + ' (' + g[1] + ')'); }),
+        h('div', null, h('b', null, '3. Bible Reading: '), w.read[0] + ' (' + w.read[1] + ')'),
+        w.parts.map(function (p) { return h('div', { key: p[0] }, h('b', null, p[0] + '. ' + p[1] + ' (' + p[2] + ' min.): '), p[4]); }),
+        h('div', null, h('b', null, '7. '), w.p7[0] + ' — ' + w.p7[1]), w.p7[2].map(function (q, i) { return h('div', { key: i, style: { paddingLeft: 12 } }, '• ' + q); }),
+        h('div', null, h('b', null, '8. Congregation Bible Study: '), w.cbs)),
+      w.tpl && h('div', { style: { color: '#FFB74D', fontSize: 13, marginBottom: 6 } }, 'This week’s workbook is not entered yet. Tap ✏️ and type in the parts from the workbook; until then the kids see the blank template.'),
+      btn('rgba(255,213,79,.3)', function () { eS[1](!eS[0]); }, eS[0] ? '▲ Close editor' : '✏️ Enter / change this week from the workbook'),
+      eS[0] && h(MwbEditor, { w: w0 }),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' } },
+        btn('#1A73E8', function () { window.open(crUrl('Meeting Prep — ' + mwbThu(w), assignText(), 'assignment'), '_blank'); }, '🎓 Post this week to Classroom'),
+        btn('rgba(255,255,255,.16)', function () { try { navigator.clipboard.writeText(assignText()); say('Copied the assignment.'); } catch (e) { say('Could not copy on this device.'); } }, '📋 Copy assignment')),
+      h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 4 } }, 'WHO HAS DONE HOW MUCH'),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, kids.map(function (k) { var d = all[k.id] || {}, f = mwbFields(w), n = f.filter(function (x) { return d[x[0]]; }).length; return h('button', { key: k.id, onClick: function () { kS[1](kid === k.id ? '' : k.id); }, style: chip(kid === k.id) }, k.name + ' ' + n + '/' + f.length + (d.texted ? ' ✓texted' : '') + (d.sub ? ' ✓sent' : '')); })),
+      shown && h('div', { style: { whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,.25)', borderRadius: 12, padding: 12, color: '#fff', fontSize: 14, lineHeight: 1.6 } }, mwbText(w, (kids.filter(function (k) { return k.id === kid; })[0] || {}).name || kid, shown)),
+      kid && !shown && h('div', { style: { color: '#FFB74D', fontSize: 13 } }, 'Nothing written yet.'),
+      mS[0] && h('div', { style: { color: '#81C784', fontSize: 13, marginTop: 6 } }, mS[0])));
+}
+
 function MealPrepWork(props) {
   var h = React.createElement, day = props.day, sid = props.sid, st = (typeof ssKid === 'function') ? ssKid(sid) : null, col = dayColor(day);
   var oS = React.useState(false), open = oS[0], mS = React.useState(''), tk = React.useRef({});
@@ -42450,7 +42619,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v242';
+var FM_BUILD = 'v245';
 (function () {
   function stamp() {
     try {
