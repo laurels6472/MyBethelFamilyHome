@@ -268,6 +268,7 @@ var _backupData = (function(){
 syncSet = function(p, v) {
   setSyncStatus('syncing');
   _originalSyncSet(p, v);
+  if (v === null) { try { var _pre = '_s_' + p.replace(/[^a-zA-Z0-9]/g, '_') + '_', _ks = []; for (var _i = 0; _i < localStorage.length; _i++) { var _k = localStorage.key(_i); if (_k.indexOf(_pre) === 0) _ks.push(_k); } _ks.forEach(function (_k) { localStorage.removeItem(_k); }); var _q = fmQGet(); Object.keys(_q).forEach(function (_x) { if (_x.indexOf(p + '/') === 0) delete _q[_x]; }); fmQPut(_q); } catch (e) {} }
   try { Object.keys(_backupData).forEach(function (k) { if (k.indexOf(p + '/') === 0) delete _backupData[k]; }); } catch (e) {}
   try { window.dispatchEvent(new CustomEvent('fm-local', { detail: p })); } catch (e) {}
   // Write to rolling backup — keeps ALL data safe even if Firebase is down
@@ -289,7 +290,7 @@ function restoreFromBackup(path){
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function syncOn(p,cb,nulls){var l=syncGet(p);if(l!==null)cb(l);var ref=null,fn=null,had=false,key='_s_'+p.replace(/[^a-zA-Z0-9]/g,'_');if(db){ref=db.ref('argilan/'+p);fn=function(s){var v=s.val();if(v!==null){had=true;localStorage.setItem(key,JSON.stringify(v));cb(v);}else if(nulls&&had){had=false;localStorage.removeItem(key);cb(null);}else if(v===null&&l!==null&&nulls===undefined){}};ref.on('value',fn);}return function(){if(ref&&fn)ref.off('value',fn);};}
+function syncOn(p,cb,nulls){var l=syncGet(p);if(l!==null)cb(l);var ref=null,fn=null,had=false,key='_s_'+p.replace(/[^a-zA-Z0-9]/g,'_');if(db){ref=db.ref('argilan/'+p);fn=function(s){var v=s.val();if(v!==null){had=true;localStorage.setItem(key,JSON.stringify(v));cb(v);}else if(nulls&&(had||l!==null)){had=false;l=null;localStorage.removeItem(key);cb(null);}else if(v===null&&l!==null&&nulls===undefined){}};ref.on('value',fn);}return function(){if(ref&&fn)ref.off('value',fn);};}
 // window.storage polyfill
 window.storage={
   get:function(k){return new Promise(function(res,rej){var v=localStorage.getItem('ws_'+k);if(v===null)rej(new Error('nf'));else res({key:k,value:v});});},
@@ -7675,7 +7676,7 @@ function Dashboard({
     isTeacher: isLaurel,
     syncSet: syncSet
   }), (tab === 'clock' || tab === 'admin') && /*#__PURE__*/React.createElement("div", null,
-  (tab === 'admin' || tab === 'clock') && (isAdmin || isOwner) && typeof ExcuseBar === 'function' && React.createElement(ExcuseBar, { family: fam }),
+  tab === 'admin' && (isAdmin || isOwner) && typeof ExcuseBar === 'function' && React.createElement(ExcuseBar, { family: fam }),
   tab === 'admin' && (isAdmin || isOwner) && React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 14px 4px', position: 'sticky', top: 0, zIndex: 5, background: 'inherit' } }, [['overview', '📋 Today'], ['ops', '🏠 Home'], ['pay', '💵 Pay'], ['settings', '⚙️ Settings'], ['reports', '📊 Reports'], ['reset', '🔄 Reset']].map(function (t) { var on = admSec === t[0]; return React.createElement('button', { key: t[0], onClick: function () { if (t[0] === 'reset') { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; } setAdmSec(t[0]); try { window.scrollTo(0, 0); } catch (e) {} }, style: { padding: '10px 14px', minHeight: 44, borderRadius: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: on ? '#000' : '#fff', background: on ? '#FFD54F' : 'rgba(255,255,255,.08)', border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.2)') } }, t[1]); })),
   tab === 'admin' && (isAdmin || isOwner) && admSec !== 'reset' && React.createElement('div', { style: { padding: '2px 14px 6px' } }, React.createElement('button', { onClick: function () { window._foldMem = window._foldMem || {}; window._foldMem.resetcenter = true; setAdmSec('reset'); try { window.scrollTo(0, 0); } catch (e) {} }, style: { width: '100%', minHeight: 44, borderRadius: 12, border: '2px solid #4FC3F7', background: 'rgba(79,195,247,.14)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '💾 Back up the app / restart from a backup')),
   tab === 'clock' && (isAdmin || isOwner) && React.createElement('div', { style: { margin: '14px', padding: 16, borderRadius: 16, background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.5)', color: '#fff' } }, React.createElement('div', { style: { fontSize: 16, fontWeight: 900, marginBottom: 8 } }, '🏠 Operations, settings, budget and more live in Administration now'), React.createElement('button', { onClick: function () { setAdmSec('ops'); setTab('admin'); }, style: { width: '100%', minHeight: 52, background: '#FFD54F', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, 'Open Administration ›')),
@@ -31364,7 +31365,7 @@ function SF_Terms(props) {
 var CD_DEPTS = [
   { id: 'extra', label: 'My Time & Extracurricular', sub: 'Getting ready, daily habits, free time, fun and errands', emoji: '🎨', color: '#EC407A', acts: ['free', 'fun', 'driving'] },
   { id: 'work', label: 'Work', sub: 'School, worship, service, and the family businesses', emoji: '💼', color: '#F4511E', acts: ['school', 'spiritual', 'service', 'va_work', 'eric_work', 'el_sales', 'detailing', 'consulting'] },
-  { id: 'chores', label: 'Household Work', sub: 'Chores, order of operations and caring for the animals', emoji: '🧹', color: '#26A69A', acts: ['chores', 'animals'] }
+  { id: 'chores', label: 'Household Work', sub: 'Getting ready for the day, chores, order of operations and caring for the animals', emoji: '🧹', color: '#26A69A', acts: ['chores', 'animals'] }
 ];
 function cdHms(sec) { sec = Math.max(0, Math.floor(sec)); var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2) + ':' + ('0' + s).slice(-2); }
 function cdStyle() {
@@ -31396,15 +31397,17 @@ function ClockDepartments(props) {
   React.useEffect(function () { if (!running.length) return; var iv = setInterval(function () { setTick(function (x) { return x + 1; }); }, 1000); return function () { clearInterval(iv); }; }, [running.length]);
   var acts = typeof CLOCK_ACTS !== 'undefined' ? CLOCK_ACTS : [];
   var person = (props.getPerson && props.getPerson(pid)) || {};
-  var runOf = function (id) { return running.find(function (r) { return r.activity === id; }); };
+  var runOf = function (id) { return running.find(function (r) { return id === '__ready' ? (r.activity === 'free' && /getting ready/i.test(String(r.label || ''))) : r.activity === id; }); };
   function toggle(a) {
     var r = runOf(a.id);
+    if (a.id === '__ready') { if (r) { if (typeof clockOutActivity === 'function') clockOutActivity(pid, sessions, onUpdate, 'free'); } else if (typeof clockInActivity === 'function') clockInActivity(pid, sessions, onUpdate, 'free', { stack: true, label: 'Getting ready' }); return; }
     if (r) { if (typeof clockOutActivity === 'function') clockOutActivity(pid, sessions, onUpdate, a.id); return; }
     if (typeof clockInActivity === 'function') clockInActivity(pid, sessions, onUpdate, a.id, { stack: true });
     if (props.onClockIn) props.onClockIn(a.id);
   }
   function stopAll() { if (typeof clockOutAll === 'function') clockOutAll(pid, sessions, onUpdate); }
   function actSeconds(id) {
+    if (id === '__ready') { var r0 = runOf('__ready'); return (data.today || []).filter(function (e) { return e.activity === 'free' && /getting ready/i.test(String(e.label || '')); }).reduce(function (n, e) { return n + (e.duration || 0) * 60; }, 0) + (r0 ? (Date.now() - r0.startTime) / 1000 : 0); }
     var done = (data.today || []).filter(function (e) { return e.activity === id; }).reduce(function (n, e) { return n + (e.duration || 0) * 60; }, 0);
     var r = runOf(id); return done + (r ? (Date.now() - r.startTime) / 1000 : 0);
   }
@@ -31420,6 +31423,7 @@ function ClockDepartments(props) {
     CD_DEPTS.map(function (d) {
       var on = d.acts.some(function (id) { return !!runOf(id); }), sec = deptSeconds(d);
       var opts = d.acts.map(function (a) { return acts.find(function (x) { return x.id === a; }); }).filter(Boolean);
+      if (d.id === 'chores') { var rdy = { id: '__ready', label: '☀️ Getting ready for the day' }; opts = props.softLock ? [rdy] : [rdy].concat(opts); }
       var isLocked = locked.indexOf(d.id) !== -1, isOpen = !isLocked && (openD[d.id] != null ? openD[d.id] : on);
       return h('div', { key: d.id, className: on ? 'cd-card-on' : '', style: { opacity: isLocked ? .55 : 1, '--cdc': d.color + '88', background: 'linear-gradient(135deg,' + d.color + (on ? '40' : '22') + ',' + d.color + '0a)', border: '1.5px solid ' + d.color + (on ? '' : '70'), borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: '0 4px 16px rgba(0,0,0,.3)' } },
         h('div', { onClick: function () { if (isLocked) return; var o = Object.assign({}, openD); o[d.id] = !isOpen; setOpenD(o); }, style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: isOpen ? 8 : 0, cursor: isLocked ? 'default' : 'pointer' } },
@@ -32036,8 +32040,8 @@ function StartMyDay(props) {
     return h('div', { style: { background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 12, marginTop: 12 } },
       h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff' } }, '📈 My time — should take vs. what I did'),
       h('div', { style: { fontSize: 13, color: sv >= 0 ? '#81C784' : '#FF8A80', margin: '4px 0 8px', fontWeight: 700 } }, dayPlanned(dkToday) ? 'Today: ' + (sv >= 0 ? 'saved ' + fm(sv) : fm(sv) + ' over') + ' (should take ' + fm(dayPlanned(dkToday)) + ')' : 'Finish a routine to see your time.'),
-      h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 6, height: 54 } }, allDays.map(function (k) { var v = daySaved(k), hh = Math.max(4, Math.round(Math.abs(v) / mx * 44)); return h('div', { key: k, style: { flex: 1, textAlign: 'center' } }, h('div', { style: { height: hh, background: v >= 0 ? '#4CAF82' : '#EF5350', borderRadius: 4, margin: '0 auto', width: '70%' } }), h('div', { style: { fontSize: 9, color: '#9aa' } }, k.split('-').slice(1).join('/'))); })),
-      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 4 } }, 'Green = faster than the plan. Taller is better. Keep beating your own time!'));
+      typeof TimeStoplight === 'function' && h(TimeStoplight, { pid: pid }),
+      h('div', { style: { fontSize: 11, color: '#9aa', marginTop: 4 } }, 'Green = faster than the plan. Pink = over, like a red light. Keep beating your own time!'));
   })();
   // what drops down under each clock-in
   function panelFor(actId) {
@@ -32050,7 +32054,7 @@ function StartMyDay(props) {
         WORK_SUB[actId] && props.role === 'parent' && big('#039BE5', '#fff', goWork(WORK_SUB[actId][0]), WORK_SUB[actId][1]));
     return null;
   }
-  var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: (ready || window._isAdminSession) ? [] : ['work', 'chores'], panelFor: panelFor, noWhere: true }) : null;
+  var depts = typeof ClockDepartments === 'function' ? h(ClockDepartments, { personId: pid, role: props.role, sessions: props.sessions, onUpdate: props.onUpdate, addNotif: props.addNotif, getPerson: props.getPerson, locked: (ready || window._isAdminSession) ? [] : ['work'], softLock: !(ready || window._isAdminSession), panelFor: panelFor, noWhere: true }) : null;
   function secHead(open, icon, title, sub, state, onTap) {
     var col = state === 'done' ? C.done : state === 'now' ? C.now : C.lock;
     return h('div', { onClick: onTap, style: { display: 'flex', alignItems: 'center', gap: 12, cursor: onTap ? 'pointer' : 'default' } },
@@ -32817,6 +32821,7 @@ function DayClock(props) {
         lsT && bt2('#4CAF82', '#000', function () { var p = lsT.split(':'), dd = new Date(); dd.setHours(+p[0], +p[1], 0, 0); beginAt(Math.min(dd.getTime(), schR.startTime), true); }, 'Start my day at that time')));
   }
   if (!started) return h('div', { style: card },
+    typeof TimeStoplight === 'function' && h(TimeStoplight, { pid: pid }),
     h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } }, h('div', { style: { fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1 } }, '🕐 MY DAY CLOCK'), typeof WallClock === 'function' && h(WallClock, { admin: !!props.canReset })),
     h('div', { style: { fontSize: 14, color: '#d8d8e8', margin: '4px 0 12px' } }, 'Start this first. It shows how long your whole day was.'),
     h('button', { onClick: startDay, style: { width: '100%', background: '#4CAF82', color: '#000', border: 'none', borderRadius: 18, padding: 20, fontWeight: 900, fontSize: 22, cursor: 'pointer' } }, '▶ Start my day'),
@@ -32825,7 +32830,8 @@ function DayClock(props) {
   var cfgD = cfgGet() || {}, hours = cfgD.dayHours != null && cfgD.dayHours !== '' ? +cfgD.dayHours : 10, L = Math.max(1, hours) * 3600;
   var ents = typeof cdEntries === 'function' ? cdEntries(data) : [], depts = typeof CD_DEPTS !== 'undefined' ? CD_DEPTS : [];
   var running = typeof clockActiveList === 'function' ? clockActiveList(data) : [];
-  var deptColor = function (act) { var d = depts.filter(function (x) { return x.acts.indexOf(act) !== -1; })[0]; return d ? d.color : '#9E9E9E'; };
+  var deptColor = function (act) { var d = depts.filter(function (x) { return x.acts.indexOf(act) !== -1; })[0]; return d && d.id === 'extra' ? '#CE93D8' : '#A5D6A7'; };
+  var PINK = '#F8A5C2';
   var nameOf = function (id) { return typeof planActLabel === 'function' ? planActLabel(id) : id; };
   var elapsed = Math.min(total, L), frac = elapsed / L;
   // wedges: colored where clocked into something, gray where nothing was clocked, empty where the day has not happened yet
@@ -32833,8 +32839,8 @@ function DayClock(props) {
   ents.forEach(function (e) { var a = Math.max(e.start, sd.dayStart), z = Math.min(e.end, sd.dayStart + elapsed * 1000); if (z > a) cuts.push({ a: a, z: z, col: deptColor(e.activity) }); });
   cuts.sort(function (x, y) { return x.a - y.a; });
   var segs = [], cur = sd.dayStart, stop = sd.dayStart + elapsed * 1000;
-  cuts.forEach(function (c) { if (c.z <= cur) return; var a = Math.max(c.a, cur); if (a > cur) segs.push({ a: cur, z: a, col: 'rgba(255,255,255,.28)' }); segs.push({ a: a, z: c.z, col: c.col }); cur = c.z; });
-  if (stop > cur) segs.push({ a: cur, z: stop, col: 'rgba(255,255,255,.28)' });
+  cuts.forEach(function (c) { if (c.z <= cur) return; var a = Math.max(c.a, cur); if (a > cur) segs.push({ a: cur, z: a, col: PINK }); segs.push({ a: a, z: c.z, col: c.col }); cur = c.z; });
+  if (stop > cur) segs.push({ a: cur, z: stop, col: PINK });
   var R = 90, CX = 100, CY = 100;
   function pt(f) { var ang = f * 2 * Math.PI - Math.PI / 2; return [CX + R * Math.cos(ang), CY + R * Math.sin(ang)]; }
   function wedge(f0, f1, col, key) {
@@ -32852,6 +32858,18 @@ function DayClock(props) {
     h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } }, h('div', { style: { flex: 1, minWidth: 0 } },
     h('div', { style: { fontSize: 12, fontWeight: 900, color: '#fff', letterSpacing: 1 } }, ended ? '🌙 DAY FINISHED' : '🟢 CLOCKED IN — MY DAY IS RUNNING'),
     h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, 'Started ' + dcTime(sd.dayStart) + (ended ? ' · Ended ' + dcTime(sd.dayEnd) : ''), !ended && total < 900 && h('button', { onClick: function () { try { if (typeof mdClockUndo === 'function') { mdClockUndo(pid, props.sessions || {}, props.onUpdate, 'free'); } syncSet(key, Object.assign({}, sd, { dayStart: null, dayEnd: null, clockedAt: null, readyAt: null })); } catch (e) {} }, style: { marginLeft: 10, background: 'transparent', color: '#FFD54F', border: '1px solid rgba(255,213,79,.5)', borderRadius: 8, padding: '3px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' } }, '↩ Undo — I started by mistake'))), typeof WallClock === 'function' && h(WallClock, { admin: !!props.canReset })),
+    h('div', { style: { display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' } },
+      h('svg', { viewBox: '0 0 200 200', width: 190, height: 190, style: { flexShrink: 0 } },
+        h('circle', { cx: CX, cy: CY, r: R + 6, fill: 'rgba(255,255,255,.08)' }),
+        h('circle', { cx: CX, cy: CY, r: R, fill: 'rgba(0,0,0,.35)' }),
+        segs.map(function (g, n) { return wedge((g.a - sd.dayStart) / 1000 / L, (g.z - sd.dayStart) / 1000 / L, g.col, 'w' + n); }),
+        h('circle', { cx: CX, cy: CY, r: 44, fill: '#1a1a2e' }),
+        h('text', { x: CX, y: CY - 2, textAnchor: 'middle', fill: '#fff', fontSize: 20, fontWeight: 900 }, Math.round(frac * 100) + '%'),
+        h('text', { x: CX, y: CY + 16, textAnchor: 'middle', fill: '#b8b8c8', fontSize: 10 }, 'of my day')),
+      h('div', { style: { flex: 1, minWidth: 150, fontSize: 13, color: '#fff' } },
+        h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 4 } }, '🟢 Green = work, school, chores · 🟣 Purple = my time · 🩷 Pink = not clocked in (like a red light). The circle fills as your day goes (' + hours + ' hours = full).'),
+        byLab.map(function (x) { return h('div', { key: x.k, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } }, h('div', { style: { width: 12, height: 12, borderRadius: 3, background: x.col, flexShrink: 0 } }), h('div', { style: { flex: 1, minWidth: 0 } }, x.k), h('b', null, dcFmt(x.s)), h('span', { style: { fontSize: 11, color: '#c8c8d8', minWidth: 34, textAlign: 'right' } }, pctOf(x.s))); }),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } }, h('div', { style: { width: 12, height: 12, borderRadius: 3, background: PINK } }), h('div', { style: { flex: 1 } }, 'Not clocked into anything (red light)'), h('b', { style: { color: un > 1800 ? '#FF8A80' : '#FFD54F' } }, dcFmt(un)), h('span', { style: { fontSize: 11, color: '#c8c8d8', minWidth: 34, textAlign: 'right' } }, pctOf(un))))),
     h('div', { style: { textAlign: 'center', fontSize: 56, fontWeight: 900, color: '#fff', fontFamily: mono, margin: '6px 0 2px', lineHeight: 1 } }, hms(total)),
     h('div', { style: { textAlign: 'center', fontSize: 12, color: '#c8c8d8', marginBottom: 6 } }, 'time since you started your day'),
     h('div', { style: { display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 10 } }, h('span', { style: { color: '#81C784' } }, '✅ Clocked: ' + dcFmt(Math.max(0, total - un))), h('span', { style: { color: un > 1800 ? '#FF8A80' : '#FFD54F' } }, '⚪ Not clocked: ' + dcFmt(un)), h('span', null, Math.round((total - un) / Math.max(1, total) * 100) + '% of my time counted')),
@@ -32864,18 +32882,6 @@ function DayClock(props) {
         h('div', { style: { flex: 1, fontSize: 18, fontWeight: 900, color: '#fff' } }, (r.label && r.activity !== 'school' ? r.label : nameOf(r.activity) + (r.label ? ' · ' + r.label.replace(/^[^\w]+/, '') : '')) + (r.with ? ' with ' + r.with : '')),
         h('div', { style: { fontSize: 28, fontWeight: 900, color: '#fff', fontFamily: mono } }, hms((now - r.startTime) / 1000))); })),
     !ended && typeof NowNextCard === 'function' && h(NowNextCard, { pid: pid, sessions: props.sessions, schedHook: props.schedHook, onUpdate: props.onUpdate }),
-    h('div', { style: { display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' } },
-      h('svg', { viewBox: '0 0 200 200', width: 190, height: 190, style: { flexShrink: 0 } },
-        h('circle', { cx: CX, cy: CY, r: R + 6, fill: 'rgba(255,255,255,.08)' }),
-        h('circle', { cx: CX, cy: CY, r: R, fill: 'rgba(0,0,0,.35)' }),
-        segs.map(function (g, n) { return wedge((g.a - sd.dayStart) / 1000 / L, (g.z - sd.dayStart) / 1000 / L, g.col, 'w' + n); }),
-        h('circle', { cx: CX, cy: CY, r: 44, fill: '#1a1a2e' }),
-        h('text', { x: CX, y: CY - 2, textAnchor: 'middle', fill: '#fff', fontSize: 20, fontWeight: 900 }, Math.round(frac * 100) + '%'),
-        h('text', { x: CX, y: CY + 16, textAnchor: 'middle', fill: '#b8b8c8', fontSize: 10 }, 'of my day')),
-      h('div', { style: { flex: 1, minWidth: 150, fontSize: 13, color: '#fff' } },
-        h('div', { style: { fontSize: 11, color: '#b8b8c8', marginBottom: 4 } }, 'The circle fills in as your day goes (' + hours + ' hours = full).'),
-        byLab.map(function (x) { return h('div', { key: x.k, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } }, h('div', { style: { width: 12, height: 12, borderRadius: 3, background: x.col, flexShrink: 0 } }), h('div', { style: { flex: 1, minWidth: 0 } }, x.k), h('b', null, dcFmt(x.s)), h('span', { style: { fontSize: 11, color: '#c8c8d8', minWidth: 34, textAlign: 'right' } }, pctOf(x.s))); }),
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' } }, h('div', { style: { width: 12, height: 12, borderRadius: 3, background: 'rgba(255,255,255,.28)' } }), h('div', { style: { flex: 1 } }, 'Not clocked into anything'), h('b', { style: { color: un > 1800 ? '#FF8A80' : '#FFD54F' } }, dcFmt(un)), h('span', { style: { fontSize: 11, color: '#c8c8d8', minWidth: 34, textAlign: 'right' } }, pctOf(un))))),
     false && h('button', { onClick: pciOpen, style: { width: '100%', background: '#FF1493', color: '#fff', border: '2px solid #fff', borderRadius: 16, padding: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer', marginTop: 10 } }, '👋 Check in'),
     !ended && !props.noEnd && h(DcConfirm, { onConfirm: endDay, label: '🌙 End my day', sure: 'Tap again to end my day', style: { width: '100%', background: 'rgba(239,83,80,.25)', color: '#FF8A80', border: '1px solid #EF5350', borderRadius: 16, padding: 12, fontWeight: 900, fontSize: 15, cursor: 'pointer', marginTop: 12 } }),
     props.canReset && h(DcConfirm, { onConfirm: startOver, label: '↺ Start today over (parent only)', sure: 'Tap again — this clears today', style: { display: 'block', marginTop: 8, background: 'transparent', color: '#FFB74D', border: '1px solid #FFB74D', borderRadius: 14, padding: '10px 14px', fontSize: 13, cursor: 'pointer' } }),
@@ -33799,6 +33805,41 @@ function TakeAttendance(props) {
   return h(Fold, { id: 'takeatt', title: '🍎 Take attendance' }, h(TakeAttendanceInner, props));
 }
 function TakeAttendanceInner(props) {
+  var h = React.createElement, advS = React.useState(false);
+  return h('div', null, h(SimpleAttendance, props),
+    h('button', { onClick: function () { advS[1](!advS[0]); }, style: { background: 'none', border: 'none', color: '#9a9ab0', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: '8px 0' } }, (advS[0] ? '▲ ' : '▼ ') + 'More options (bulk times, late, excused, holiday)'),
+    advS[0] && h(TakeAttendanceAdv, props));
+}
+function SimpleAttendance(props) {
+  var h = React.createElement, kids = fmSchoolKids(props.family);
+  var dS = React.useState(tcIso(new Date())), date = dS[0], setDate = dS[1], xS = React.useState({}), openT = xS[0], setOpenT = xS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var aS = ktUse('attendance/' + date, {}), att = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('attendance/' + date, {}) : null) || {}, aS[0] || {});
+  var isToday = date === tcIso(new Date());
+  function hm(t) { var m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); if (!m) return t || ''; var H = +m[1]; return ((H % 12) || 12) + ':' + m[2] + (H >= 12 ? ' PM' : ' AM'); }
+  function put(p, patch) { var rec = Object.assign({ status: 'present', start: '', end: '', note: '' }, att[p.id] || {}, patch, { by: window._currentPersonId || 'parent', at: Date.now() }); try { syncSet('attendance/' + date + '/' + p.id, rec); } catch (e) {} }
+  function mark(p, st) { var cur = att[p.id]; if (cur && cur.status === st) { try { syncSet('attendance/' + date + '/' + p.id, null); } catch (e) {} setMsg('↺ ' + p.name + ' cleared'); return; } put(p, st === 'present' ? { status: 'present' } : { status: 'absent', start: '', end: '' }); setMsg('✅ ' + p.name + ' — ' + (st === 'present' ? 'here' : 'not here') + ' · ' + date); }
+  function everyone() { kids.forEach(function (p) { if (!att[p.id]) put(p, { status: 'present' }); }); setMsg('✅ Everyone not yet marked is here · ' + date); }
+  var inp = { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, color: '#fff', padding: 10, fontSize: 16 };
+  var btn = function (on, col, fn, t) { return h('button', { onClick: fn, style: { flex: 1, minHeight: 52, borderRadius: 14, border: '2px solid ' + (on ? col : 'rgba(255,255,255,.2)'), background: on ? col : 'rgba(255,255,255,.06)', color: on ? '#000' : '#fff', fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, t); };
+  return h('div', { style: { background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, padding: 14, marginBottom: 6 } },
+    h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 } },
+      h('input', { type: 'date', value: date, onChange: function (e) { setDate(e.target.value); setMsg(''); }, style: inp }),
+      !isToday && h('button', { onClick: function () { setDate(tcIso(new Date())); setMsg(''); }, style: { background: '#FFD54F', color: '#000', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, cursor: 'pointer' } }, 'Back to today'),
+      h('button', { onClick: everyone, style: { background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: '10px 12px', fontWeight: 900, cursor: 'pointer', marginLeft: 'auto' } }, '✅ Everyone here')),
+    kids.map(function (p) {
+      var r = att[p.id] || null, here = !!r && r.status !== 'absent' && r.status !== 'excused' && r.status !== 'holiday', gone = !!r && !here, open = !!openT[p.id];
+      return h('div', { key: p.id, style: { padding: '10px 0', borderTop: '1px solid rgba(255,255,255,.1)' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } }, h('div', { style: { flex: 1, fontSize: 17, fontWeight: 900, color: '#fff' } }, p.emoji + ' ' + p.name), r && r.start && h('div', { style: { fontSize: 12, color: '#c8c8d8' } }, 'in ' + hm(r.start) + (r.end ? ' · out ' + hm(r.end) : ''))),
+        h('div', { style: { display: 'flex', gap: 8 } }, btn(here, '#4CAF82', function () { mark(p, 'present'); }, '✅ Here'), btn(gone, '#EF5350', function () { mark(p, 'absent'); }, '❌ Not here')),
+        here && h('button', { onClick: function () { var o = Object.assign({}, openT); o[p.id] = !open; setOpenT(o); }, style: { background: 'none', border: 'none', color: '#90CAF9', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: '8px 0 0' } }, open ? '▲ Hide time and note' : '＋ Add a time or note (not required)'),
+        here && open && h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 } },
+          h('span', { style: { color: '#e8e8f4', fontSize: 14 } }, 'In'), h('input', { type: 'time', value: r.start || '', onChange: function (e) { put(p, { start: e.target.value }); }, style: inp }),
+          h('span', { style: { color: '#e8e8f4', fontSize: 14 } }, 'Out'), h('input', { type: 'time', value: r.end || '', onChange: function (e) { put(p, { end: e.target.value }); }, style: inp }),
+          h('input', { type: 'text', placeholder: 'Note (optional)', defaultValue: r.note || '', onBlur: function (e) { put(p, { note: e.target.value }); }, style: Object.assign({}, inp, { flex: 1, minWidth: 160 }) })));
+    }),
+    msg && h('div', { style: { color: '#9be3bd', fontSize: 13, fontWeight: 800, marginTop: 8 } }, msg));
+}
+function TakeAttendanceAdv(props) {
   var h = React.createElement, kids = fmSchoolKids(props.family);
   var dS = React.useState(tcIso(new Date())), date = dS[0], setDate = dS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var tabS = React.useState('all'), tab = tabS[0], setTab = tabS[1];
@@ -39837,6 +39878,23 @@ function ssFinish(sid, sessions, onUpdate, label) {
 function ssRunning(sid, sessions) { var d = (sessions || {})[sid] || {}; return clockActiveList(d).filter(function (a) { return a.activity === 'school'; })[0] || null; }
 function ssMin(r) { return r ? Math.max(0, Math.round((Date.now() - r.startTime) / 60000)) : 0; }
 
+// ═══ TIME STOPLIGHT: three pastel circles (last three days, should-take vs. what I did). Green = faster than plan, purple = about right, pink = over (like a red light) ═══
+function TimeStoplight(props) {
+  var h = React.createElement, pid = props.pid, tS = ktUse('habittime/' + pid, null), all = tS[0] || {};
+  var days = Object.keys(all).filter(function (k) { var o = all[k] || {}; return Object.keys(o).some(function (p) { return +(o[p] || {}).planned > 0; }); }).sort().slice(-3);
+  var C = { good: '#A5D6A7', ok: '#CE93D8', bad: '#F8A5C2' }, N = { good: 'Faster', ok: 'About right', bad: 'Over' };
+  function calc(k) { var o = all[k] || {}, pl = 0, ac = 0; Object.keys(o).forEach(function (p) { pl += +(o[p] || {}).planned || 0; ac += +(o[p] || {}).actual || 0; }); var sv = pl - ac, tol = Math.max(60, pl * 0.1); return { sv: sv, st: sv > tol ? 'good' : sv >= -tol ? 'ok' : 'bad' }; }
+  var cells = [], i; for (i = 0; i < 3; i++) { var k = days[days.length - 3 + i + (days.length < 3 ? 3 - days.length : 0)]; cells.push(k ? Object.assign({ k: k }, calc(k)) : { k: null }); }
+  if (days.length < 3) cells = [0, 1, 2].map(function (j) { var idx = j - (3 - days.length); return idx >= 0 ? Object.assign({ k: days[idx] }, calc(days[idx])) : { k: null }; });
+  var fm = function (sec) { var m = Math.round(Math.abs(sec) / 60); return (sec >= 0 ? '+' : '−') + m + 'm'; };
+  return h('div', { style: { margin: '10px 0 4px', padding: '10px 8px', borderRadius: 16, background: 'rgba(0,0,0,.22)' } },
+    h('div', { style: { fontSize: 12, fontWeight: 900, color: '#fff', letterSpacing: 1, textAlign: 'center', marginBottom: 8 } }, '🚦 MY TIME — SHOULD TAKE VS. WHAT I DID'),
+    h('div', { style: { display: 'flex', justifyContent: 'center', gap: 22 } }, cells.map(function (c, j) { return h('div', { key: j, style: { textAlign: 'center' } },
+      h('div', { style: { width: 54, height: 54, borderRadius: '50%', background: c.k ? C[c.st] : 'transparent', border: c.k ? '3px solid rgba(255,255,255,.55)' : '3px dashed rgba(255,255,255,.25)', boxShadow: c.k ? '0 0 14px ' + C[c.st] + '99' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#222', fontWeight: 900, fontSize: 14 } }, c.k ? fm(c.sv) : ''),
+      h('div', { style: { fontSize: 11, color: '#c8c8d8', marginTop: 4 } }, c.k ? c.k.split('-').slice(1).join('/') : '—')); })),
+    h('div', { style: { display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', fontSize: 11, color: '#c8c8d8', marginTop: 8 } }, ['good', 'ok', 'bad'].map(function (x) { return h('span', { key: x }, h('span', { style: { display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: C[x], marginRight: 4 } }), N[x]); })),
+    !days.length && h('div', { style: { fontSize: 12, color: '#9aa', textAlign: 'center', marginTop: 6 } }, 'Finish a routine to see your time.'));
+}
 // ═══ GETTING READY + CHORES / ORDER OF OPERATIONS — shown in My Day when clocked into them: what I'm on now and what is next ═══
 function SopNowCard(props) {
   var h = React.createElement, pid = props.pid, data = (props.sessions || {})[pid] || {}, run = typeof clockActiveList === 'function' ? clockActiveList(data) : [];
@@ -40801,9 +40859,10 @@ var RC_SCHOOL = { school: 1, classroom: 1, gradebook: 1, grades: 1 };
 var RC_KEEP_ALWAYS = { erase_backup: 1, reset_backup: 1, reset_backup_last: 1, app_version: 1 };
 function rcDayPaths(pid) {
   var tk = todayKey(), dk = typeof planDayKey === 'function' ? planDayKey() : tk, iso = typeof tcIso === 'function' ? tcIso(new Date()) : tk;
-  return ['startday/' + tk + '/' + pid, 'habitsdone/' + dk + '/' + pid, 'habitsrun/' + dk + '/' + pid, 'taskruns/' + dk + '/' + pid, 'plansdone/' + dk + '/' + pid, 'planlog/' + dk + '/' + pid, 'sessions/' + tk + '/' + pid,
+  return ['startday/' + tk + '/' + pid, 'habitsdone/' + dk + '/' + pid, 'habitsrun/' + dk + '/' + pid, 'habitstart/' + dk + '/' + pid, 'skips/' + dk + '/' + pid, 'awards/' + dk + '/' + pid, 'habittime/' + pid + '/' + dk, 'taskruns/' + dk + '/' + pid, 'plansdone/' + dk + '/' + pid, 'planlog/' + dk + '/' + pid, 'sessions/' + tk + '/' + pid,
     'blocklog/' + tk + '/' + pid, 'breaks/' + tk + '/' + pid, 'attendance/' + iso + '/' + pid, 'checkin_pause/' + pid];
 }
+function rcRevoke(pid) { try { var dk = typeof planDayKey === 'function' ? planDayKey() : todayKey(), aw = syncGet('awards/' + dk + '/' + pid) || {}; Object.keys(aw).forEach(function (k) { mdRevoke(pid, k, 'Day reset'); }); } catch (e) {} }
 function rcClearClockUi(pids) { try { var up = window._clockApi && window._clockApi.onUpdate, cur = (window._clockApi && window._clockApi.sessions) || {}; if (up) { var n = Object.assign({}, cur); pids.forEach(function (p) { delete n[p]; }); up(n); } } catch (e) {} }
 function rcSnapshotItems(rec) { var o = {}; (rec.items || []).forEach(function (it) { o[it.p] = it.v; }); return o; }
 function ResetCenter(props) {
@@ -40821,11 +40880,11 @@ function ResetCenter(props) {
   function resetTimer() {
     var p = fam.filter(function (x) { return x.id === pick; })[0]; if (!p) { say('Pick a person first.'); return; }
     var paths = rcDayPaths(p.id);
-    guard('Before: reset ' + p.name + '’s timers (today)', paths, function () { paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi([p.id]); }, '✅ ' + p.name + '’s timers, clock-ins, breaks and Start My Day are cleared.');
+    guard('Before: reset ' + p.name + '’s timers (today)', paths, function () { rcRevoke(p.id); paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi([p.id]); }, '✅ ' + p.name + '’s timers, clock-ins, breaks and Start My Day are cleared.');
   }
   function resetDay() {
     var paths = []; fam.forEach(function (p) { paths = paths.concat(rcDayPaths(p.id)); }); paths = paths.concat(['opsdone', 'opsprog', 'late_req']);
-    guard('Before: reset today for everyone', paths, function () { paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi(fam.map(function (p) { return p.id; })); }, '✅ Today is reset for everyone. Money, schedules, members and passwords were not touched.');
+    guard('Before: reset today for everyone', paths, function () { fam.forEach(function (p) { rcRevoke(p.id); }); paths.forEach(function (x) { try { syncSet(x, null); } catch (e) {} }); rcClearClockUi(fam.map(function (p) { return p.id; })); }, '✅ Today is reset for everyone. Money, schedules, members and passwords were not touched.');
   }
   function freshTomorrow() {
     var paths = ['awards', 'earnings', 'habitsdone', 'habitsrun', 'habitstart', 'plansdone', 'planlog', 'taskruns', 'skips', 'sessions', 'startday', 'blocklog', 'breaks', 'opsdone', 'opsprog', 'late_req'];
@@ -42771,7 +42830,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v251';
+var FM_BUILD = 'v254';
 (function () {
   function stamp() {
     try {
