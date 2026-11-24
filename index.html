@@ -38196,7 +38196,7 @@ function bcKidize(t, grade) {
   return String(t || '').replace(/tell (a )?(grown-up|adult|parent|Mom or Dad)( one thing)?/gi, function (m, a, b, c) { return 'type (or speak) ' + (c ? 'one thing' : 'it'); }).replace(/then talk about/gi, 'then type or speak');
 }
 function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} var legacy = c && (c.date === '2026-10-26' || c.date === '2026-10-21') && (+c.day || 12) === 12; return { date: (c && !legacy && c.date) || '2026-11-02', day: (c && !legacy && +c.day) || 20 }; }
-function bcMerge(c) { var fr = (c && +c.from > 0) ? +c.from : 4; if (c && c.on === false) return { on: false, through: +c.through || 0, from: fr }; return { on: true, through: (c && +c.through) || 36, from: fr }; }
+function bcMerge(c) { var fr = (c && +c.from > 0) ? +c.from : 4; if (c && c.on === false) return { on: false, through: +c.through || 0, from: fr }; return { on: true, through: (c && +c.through) || 35, from: fr }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
 function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
 function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
@@ -38288,20 +38288,21 @@ function BigCatchCard(props) {
   var btn = function (bg, fg, fn, t, grow) { return h('button', { onClick: fn, style: { flex: grow ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
   return h('div', { style: card },
     h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Lessons Quiz' + (admin ? ' — ' + s.name : '')),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day ' + (qs.length ? qs[0].day : 1) + ' to Day ' + through + ' (' + ssDayLabelShort(qs.length ? qs[0].day : 1) + ' to ' + ssDayLabelShort(through) + '; one question for each class, each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'You already told Mom these answers out loud. Now say or type them again so they can go in Google Classroom. Tap the 🎤 to talk instead of typing. ' + 'These ' + qs.length + ' questions take the place of the old homework for Day ' + (qs.length ? qs[0].day : 1) + ' to Day ' + through + ' (' + ssDayLabelShort(qs.length ? qs[0].day : 1) + ' to ' + ssDayLabelShort(through) + '; one question for each class, each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, answered + ' of ' + qs.length + ' answered'),
     h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 } }, h('div', { style: { height: '100%', width: (qs.length ? answered / qs.length * 100 : 0) + '%', background: '#4CAF82' } })),
     status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
     Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; }).map(function (d) {
       return h('div', { key: d, style: { marginBottom: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.14)' } },
         h('div', { style: { fontSize: 14, fontWeight: 900, color: '#FFD54F', marginBottom: 4 } }, 'Day ' + d + (typeof schoolDayLabel === 'function' ? ' · ' + schoolDayLabel(d) : '')),
+        h('div', { style: { fontSize: 12.5, color: '#ffe0b2', background: 'rgba(255,255,255,.07)', borderRadius: 10, padding: '6px 10px', marginBottom: 8, lineHeight: 1.5 } }, h('b', null, '💭 Remember this day: '), (function () { try { return ssLessons(sid, d).map(function (r) { return r.label.replace(/^\S+\s/, '') + ' — ' + ssClean(r.topic, 60); }).join(' · '); } catch (e) { return ''; } })() || 'Think back to what we talked about.'),
         byDay[d].map(function (q, i) {
           return h('div', { key: q.id, style: { marginBottom: 6 } },
             h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 4, lineHeight: 1.5 } }, (i + 1) + '. ' + q.text),
             h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked && local) save(status || 'draft', true); }, placeholder: 'Type your answer here', style: ta }),
             ans[q.id + '_img'] && h('div', { style: { margin: '4px 0 6px' } }, h('img', { src: ans[q.id + '_img'], alt: 'My picture', style: { maxWidth: '100%', maxHeight: 220, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)' } }), !locked && !admin && h('button', { onClick: function () { setA(q.id + '_img', ''); }, style: { display: 'block', marginTop: 4, background: 'transparent', color: '#FF8A80', border: '1px solid rgba(255,138,128,.5)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 } }, '✕ Remove picture')),
             !admin && !locked && h('label', { style: { display: 'inline-block', margin: '2px 0 6px', padding: '10px 14px', minHeight: 44, boxSizing: 'border-box', borderRadius: 12, background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🎨 Draw a picture instead — add a photo', h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: function (e) { var f = e.target.files && e.target.files[0]; if (!f || typeof ntResizeImage !== 'function') return; ntResizeImage(f, 700, function (d) { setA(q.id + '_img', d); }); e.target.value = ''; } })),
-            !admin && !locked && s.grade <= 5 && h('div', { style: { margin: '4px 0 6px' } }, h(MicButton, { onText: function (t) { setA(q.id, ((ans[q.id] || '') + ' ' + t).trim()); } })),
+            !admin && !locked && h('div', { style: { margin: '4px 0 6px' } }, h(MicButton, { onText: function (t) { setA(q.id, ((ans[q.id] || '') + ' ' + t).trim()); } })),
             admin && q.key && h('div', { style: { fontSize: 11, color: '#9be3bd', marginBottom: 6 } }, '🔑 ' + q.key.slice(0, 240)));
         }));
     }),
@@ -42838,7 +42839,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v257';
+var FM_BUILD = 'v258';
 (function () {
   function stamp() {
     try {
