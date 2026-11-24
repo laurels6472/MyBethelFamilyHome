@@ -22422,10 +22422,10 @@ function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" !=
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 // ─── School Calendar Constants ─────────────────────────────────────────────────
 var SCHOOL_START_DATE = '2026-10-06'; // First day of school — Tuesday Oct 6, 2026 (revised start)
-var SCHOOL_END_DATE = '2027-06-29'; // 180th school day — Tuesday Jun 29, 2027 (Mon-Fri, minus the 11 holidays listed below, which are days off)
+var SCHOOL_END_DATE = '2027-06-14'; // 180th school day — Tuesday Jun 29, 2027 (Mon-Fri, minus the 11 holidays listed below, which are days off)
 var SCHOOL_START_MS = new Date(SCHOOL_START_DATE + 'T08:00:00').getTime();
 
-var SC_OFF_DAYS = ['2026-11-11','2026-11-26','2026-11-27','2026-12-24','2026-12-25','2027-01-01','2027-01-18','2027-02-15','2027-05-10','2027-05-31'];
+var SC_OFF_DAYS = []; // the family does not observe holidays: school runs every weekday
 // Calendar date of school day n (Day 1 = Tue Oct 6, 2026; Mon-Fri, holidays are days off)
 function schoolDayDate(n) {
   var d = new Date(SCHOOL_START_DATE + 'T12:00:00'), count = 0, guard = 0;
@@ -22455,17 +22455,7 @@ function getSchoolDayInfo() {
   
   // SC Federal + state holidays excluded — 2026-27 school year
   // Source: timeanddate.com — 11 holidays are days off so the kids aren't overworked
-  var SC_HOLIDAYS_2026_27 = [
-    '2026-11-11', // Veterans Day
-    '2026-11-26', // Thanksgiving Day
-    '2026-11-27', // Day After Thanksgiving
-    '2026-12-24', // Christmas Eve
-    '2026-12-25', // Christmas Day
-    '2027-01-01', // New Year's Day
-    '2027-01-18', // Martin Luther King Jr. Day
-    '2027-02-15', // Presidents' Day
-    '2027-05-10', // Confederate Memorial Day (SC)
-    '2027-05-31', // Memorial Day
+  var SC_HOLIDAYS_2026_27 = [ // none: the family does not take holidays off
   ];
 
   // Count school days elapsed (Mon-Fri only, skip weekends + SC holidays)
@@ -38136,7 +38126,7 @@ function CatchUpBanner(props) {
     if (bsub.status === 'approved') return null;
     return h('div', { onClick: props.onOpen, style: { cursor: 'pointer', margin: '0 0 10px', padding: 14, borderRadius: 14, background: 'rgba(255,152,0,.16)', border: '2px solid #FFB74D' } },
       h('div', { style: { fontSize: 15, fontWeight: 900, color: '#FFB74D' } }, bsub.status === 'submitted' ? '🕓 Lessons Quiz turned in — waiting for Mom or Dad' : '📝 Do your Lessons Quiz'),
-      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'One question per class for each of Days 1–' + bc.through + ', from the real lessons. Tap here.'));
+      h('div', { style: { fontSize: 12, color: '#eee', marginTop: 3 } }, 'One question per class for each of Days ' + bc.from + '–' + bc.through + ', from the real lessons. Tap here.'));
   }
   var P = cuPlanFor(sid, prog, cfg, props.todayDay);
   if (!P.today.length) return null;
@@ -38206,7 +38196,7 @@ function bcKidize(t, grade) {
   return String(t || '').replace(/tell (a )?(grown-up|adult|parent|Mom or Dad)( one thing)?/gi, function (m, a, b, c) { return 'type (or speak) ' + (c ? 'one thing' : 'it'); }).replace(/then talk about/gi, 'then type or speak');
 }
 function ssRestartCfg() { var c = null; try { c = syncGet('school/restart'); } catch (e) {} var legacy = c && (c.date === '2026-10-26' || c.date === '2026-10-21') && (+c.day || 12) === 12; return { date: (c && !legacy && c.date) || '2026-11-02', day: (c && !legacy && +c.day) || 20 }; }
-function bcMerge(c) { if (c && c.on === false) return { on: false, through: +c.through || 0 }; var t = ssRestartCfg().day - 1; return { on: true, through: (c && +c.through) || t }; }
+function bcMerge(c) { var fr = (c && +c.from > 0) ? +c.from : 4; if (c && c.on === false) return { on: false, through: +c.through || 0, from: fr }; return { on: true, through: (c && +c.through) || 36, from: fr }; }
 function bcCfg() { var c = null; try { c = syncGet('school/bigcatch'); } catch (e) {} return bcMerge(c); }
 function bcUse() { var s = ktUse('school/bigcatch', null); return bcMerge(s[0]); }
 function bcActive(day) { var c = bcCfg(); return !!(c && c.on && (day == null || day <= (+c.through || 0))); }
@@ -38218,9 +38208,10 @@ function bcWrite(path, val, onErr) {
   try { if (typeof db !== 'undefined' && db) db.ref('argilan/' + path).set(val === undefined ? null : val).catch(function (err) { if (onErr) onErr(err && err.message ? err.message : 'not allowed'); }); } catch (e) {}
 }
 // one real question for every class on every missed school day (hand-written for Bible plus one more class, the rest pulled from that day's actual lessons)
-function bcQuestions(sid, through) {
+function bcQuestions(sid, through, from) {
   var st = bcStudent(sid), out = [], SUBJ = typeof SUBJECTS !== 'undefined' ? SUBJECTS : [];
-  for (var d = 1; d <= through; d++) {
+  if (from == null) { try { from = bcCfg().from; } catch (e0) { from = 1; } }
+  for (var d = Math.max(1, from || 1); d <= through; d++) {
     BC_ROT.forEach(function (sub) {
       var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, qs = [];
       try { qs = qaFor(sub, d, st.id === 'ashelyn' ? 12 : st.grade); } catch (e) {}
@@ -38232,32 +38223,47 @@ function bcQuestions(sid, through) {
 function bcAsk(grade) { return grade <= 5 ? 'Type your answer, or tap the 🎤 button and say it. One to three short sentences is perfect.' : grade <= 9 ? 'Answer in 1–3 sentences in your own words.' : 'Answer in 2–4 sentences in your own words and include a detail from the lesson.'; }
 function bcApprove(sid, through) {
   var prog = {}; try { prog = syncGet('school/progress') || {}; } catch (e) {}
-  var n = 0; (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).forEach(function (s) { for (var d = 1; d <= through; d++) { if (!cuDone(prog[sid + '_d' + d + '_' + s.id])) { cuMark(sid, d, s.id); n++; } } });
+  var fr = 1; try { fr = bcCfg().from || 1; } catch (e1) {}
+  var n = 0; (typeof SUBJECTS !== 'undefined' ? SUBJECTS : []).forEach(function (s) { for (var d = fr; d <= through; d++) { if (!cuDone(prog[sid + '_d' + d + '_' + s.id])) { cuMark(sid, d, s.id); n++; } } });
   return n;
 }
 function BigCatchSetup(props) {
-  var h = React.createElement, cfg = bcUse(), mgS = React.useState(''), bmsg = mgS[0], setMsg = mgS[1], nS = React.useState(''), nv = nS[0], setNv = nS[1], todayDay = props.todayDay || cuTodayDay();
+  var h = React.createElement, cfg = bcUse(), mgS = React.useState(''), bmsg = mgS[0], setMsg = mgS[1], nS = React.useState(''), nv = nS[0], setNv = nS[1], fvS = React.useState(''), fv = fvS[0], setFv = fvS[1], todayDay = props.todayDay || cuTodayDay();
   var box = { background: 'rgba(26,115,232,.14)', border: '2px solid #1A73E8', borderRadius: 14, padding: 12, marginBottom: 10 };
   var through = nv !== '' ? Math.max(1, Math.min(180, +nv || 1)) : (cfg.through || todayDay);
-  function turnOn() { bcWrite('school/bigcatch', { on: true, through: through, ts: Date.now() }, function (er) { setMsg('⚠️ Could not save (' + er + ')'); }); setMsg('✅ Saved. The kids’ orange button is on.'); setTimeout(function () { setMsg(''); }, 6000); }
+  var fromV = fv !== '' ? Math.max(1, Math.min(through, +fv || 1)) : (cfg.from || 4);
+  function turnOn() { bcWrite('school/bigcatch', { on: true, from: fromV, through: through, ts: Date.now() }, function (er) { setMsg('⚠️ Could not save (' + er + ')'); }); setMsg('✅ Saved. The kids’ orange button is on.'); setTimeout(function () { setMsg(''); }, 6000); }
   function turnOff() { if (!window.confirm('Turn the Lessons Quiz off? Anything already approved stays caught up.')) return; bcWrite('school/bigcatch', Object.assign({}, cfg, { on: false })); setMsg('Turned off.'); }
   return h('div', { style: box },
     h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🎒 Lessons Quiz'),
     h('div', { style: { fontSize: 13, color: '#dbe8ff', lineHeight: 1.6, margin: '4px 0 8px' } }, 'Instead of making up every old lesson and homework page, each child answers 2 questions for every missed day (10 days = 20 questions). Each question is pulled from that day’s real lessons. When you approve it, all the old lessons up to the day you choose are marked caught up. Nothing is deleted.'),
     h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
-      h('span', { style: { fontSize: 13, color: '#fff' } }, 'Cover school Day 1 through Day'),
+      h('span', { style: { fontSize: 13, color: '#fff' } }, 'Cover school Day'), h('input', { type: 'number', min: 1, max: 180, value: fv !== '' ? fv : fromV, onChange: function (e) { setFv(e.target.value); }, style: { width: 70, padding: 8, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 15 } }), h('span', { style: { fontSize: 13, color: '#fff' } }, 'through Day'),
       h('input', { type: 'number', min: 1, max: 180, value: nv !== '' ? nv : through, onChange: function (e) { setNv(e.target.value); }, style: { width: 70, padding: 8, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'rgba(255,255,255,.1)', color: '#fff', fontSize: 15 } }),
       h('span', { style: { fontSize: 12, color: '#bcd' } }, '(today is Day ' + todayDay + ')')),
     h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
       h('button', { onClick: turnOn, style: { flex: 1, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, cfg.on ? '💾 Save the day number' : '✅ Turn it on'),
       cfg.on && h('button', { onClick: turnOff, style: { background: 'rgba(239,83,80,.3)', color: '#FF8A80', border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, cursor: 'pointer' } }, 'Turn off')),
     bmsg && h('div', { style: { fontSize: 13, color: /⚠/.test(bmsg) ? '#FF8A80' : '#9be3bd', marginTop: 6, fontWeight: 800 } }, bmsg),
-    cfg.on && h('div', { style: { fontSize: 12, color: '#9be3bd', marginTop: 6 } }, '✅ On — covers Day 1 through Day ' + cfg.through + '. The daily homework for those days now says it is covered by this assignment.'));
+    cfg.on && h('div', { style: { fontSize: 12, color: '#9be3bd', marginTop: 6 } }, '✅ On — covers Day ' + cfg.from + ' through Day ' + cfg.through + ' (' + ssDayLabelShort(cfg.from) + ' to ' + ssDayLabelShort(cfg.through) + '). The daily homework for those days now says it is covered by this assignment.'));
 }
 function bcClassText(st, qs, day) {
   var by = {}; qs.forEach(function (q) { (by[q.day] = by[q.day] || []).push(q); });
   var days = Object.keys(by).map(Number).sort(function (a, b) { return a - b; }).filter(function (d) { return day == null || d === day; });
   return days.map(function (d) { var lab = ''; try { lab = typeof schoolDayLabel === 'function' ? ' · ' + schoolDayLabel(d) : ''; } catch (e) {} return st.name + ' — Lessons Quiz, Day ' + d + lab + '\n' + by[d].map(function (q, i) { return (i + 1) + '. ' + q.text.replace(/\s+Be detailed:.*$/, '').replace(/\s+Tell one or two things you remember\.$/, ''); }).join('\n') + '\n(You can type your answer or add a picture of your drawing.)'; }).join('\n\n');
+}
+function bcAnswersText(st, qs, ans, doneTs) {
+  var by = {}; qs.forEach(function (q) { (by[q.day] = by[q.day] || []).push(q); });
+  var today = new Date(doneTs || Date.now()).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  var days = Object.keys(by).map(Number).sort(function (a, b) { return a - b; });
+  return st.name + ' — Catch-up quiz, Days ' + days[0] + '–' + days[days.length - 1] + '\nAnswers typed and turned in on ' + today + '.\n\n' + days.map(function (d) {
+    var lab = ''; try { lab = ssDayLabel(d); } catch (e) {}
+    return 'DAY ' + d + (lab ? ' · lesson date ' + lab : '') + '\n' + by[d].map(function (q, i) { var a = (ans[q.id] || '').trim(); return (i + 1) + '. ' + q.text.replace(/\s+Be detailed:.*$/, '').replace(/\s+Tell one or two things you remember\.$/, '') + '\n   Answer: ' + (a || '(picture or not answered)'); }).join('\n');
+  }).join('\n\n');
+}
+function bcClassUrl(st, qs, ans, doneTs) {
+  var days = qs.map(function (q) { return q.day; }), a = Math.min.apply(null, days), b = Math.max.apply(null, days);
+  return crUrl('Catch-up quiz · ' + st.name + ' · Days ' + a + '–' + b + ' (' + ssDayLabelShort(a) + '–' + ssDayLabelShort(b) + ')', bcAnswersText(st, qs, ans || {}, doneTs), 'assignment');
 }
 function bcCopy(txt, say, ok) { try { navigator.clipboard.writeText(txt).then(function () { say('📋 ' + ok + '. Paste it into Google Classroom.'); }, function () { say('Copy is blocked on this device — use “Save as text file”.'); }); } catch (e) { say('Copy is blocked on this device — use “Save as text file”.'); } }
 function bcDownload(st, qs) { try { var b = new Blob([bcClassText(st, qs, null)], { type: 'text/plain' }), a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = st.name + '-lessons-quiz.txt'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); } catch (e) {} }
@@ -38275,14 +38281,14 @@ function BigCatchCard(props) {
   function save(st, quiet) { var rec = Object.assign({}, sub || {}, { answers: ans, through: through, status: st, ts: Date.now() }); if (st === 'submitted') rec.submittedAt = Date.now(); bcWrite('school/bigcatch_sub/' + sid, rec, function (er) { say('⚠️ Could not save (' + er + '). Tell Mom or Dad.'); }); if (!quiet) say(st === 'submitted' ? '✅ Turned in!' : '💾 Saved'); }
   var answered = qs.filter(function (q) { return (ans[q.id] || '').trim().length > 2 || !!ans[q.id + '_img']; }).length;
   function approve() { var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'approved', approvedAt: Date.now(), marked: n }), function (er) { say('⚠️ Could not save (' + er + ')'); }); say('✅ Approved — ' + n + ' lessons marked caught up.'); }
-  function excuse() { if (!window.confirm('Mark ALL of ' + s.name + '’s lessons from Day 1 to Day ' + through + ' as caught up without a turn-in?')) return; var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { answers: ans, status: 'approved', approvedAt: Date.now(), marked: n, excused: true })); say('✅ Excused — ' + n + ' lessons marked caught up.'); }
+  function excuse() { if (!window.confirm('Mark ALL of ' + s.name + '’s lessons from Day ' + (qs.length ? qs[0].day : 1) + ' to Day ' + through + ' as caught up without a turn-in?')) return; var n = bcApprove(sid, through); bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { answers: ans, status: 'approved', approvedAt: Date.now(), marked: n, excused: true })); say('✅ Excused — ' + n + ' lessons marked caught up.'); }
   function redo() { var note = ''; try { note = window.prompt('What should ' + s.name + ' fix? (optional)', '') || ''; } catch (e) {} bcWrite('school/bigcatch_sub/' + sid, Object.assign({}, sub || {}, { status: 'redo', note: note })); say('🔁 Sent back to ' + s.name + '.'); }
   if (status === 'approved') return h('div', { style: Object.assign({}, card, { background: 'rgba(76,175,130,.14)', borderColor: '#4CAF82' }) }, h('div', { style: { fontSize: 15, fontWeight: 900, color: '#9be3bd' } }, '✅ ' + s.name + ' is all caught up through Day ' + through + (sub.excused ? ' (excused)' : '') + '!'), admin && sub.marked != null && h('div', { style: { fontSize: 11, color: '#b8d8c8' } }, sub.marked + ' lessons were marked caught up.'));
   var locked = status === 'submitted' && !admin, byDay = {}; qs.forEach(function (q) { (byDay[q.day] = byDay[q.day] || []).push(q); });
   var btn = function (bg, fg, fn, t, grow) { return h('button', { onClick: fn, style: { flex: grow ? 1 : 'none', background: bg, color: fg, border: 'none', borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 14, cursor: 'pointer' } }, t); };
   return h('div', { style: card },
     h('div', { style: { fontSize: 17, fontWeight: 900, color: '#fff' } }, '📝 Lessons Quiz' + (admin ? ' — ' + s.name : '')),
-    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day 1 to Day ' + through + ' (one question for each class, each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
+    h('div', { style: { fontSize: 13, color: '#ffe0b2', lineHeight: 1.6, margin: '4px 0 6px' } }, 'These ' + qs.length + ' questions take the place of the old homework for Day ' + (qs.length ? qs[0].day : 1) + ' to Day ' + through + ' (' + ssDayLabelShort(qs.length ? qs[0].day : 1) + ' to ' + ssDayLabelShort(through) + '; one question for each class, each day). Each question comes from what we studied that day. ' + bcAsk(s.grade)),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', marginBottom: 6 } }, answered + ' of ' + qs.length + ' answered'),
     h('div', { style: { height: 8, background: 'rgba(255,255,255,.12)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 } }, h('div', { style: { height: '100%', width: (qs.length ? answered / qs.length * 100 : 0) + '%', background: '#4CAF82' } })),
     status === 'redo' && h('div', { style: { background: 'rgba(239,83,80,.2)', borderRadius: 10, padding: 8, marginBottom: 8, color: '#ffcdd2', fontSize: 13 } }, '🔁 Please fix and turn it in again.' + (sub.note ? ' ' + sub.note : '')),
@@ -38300,12 +38306,14 @@ function BigCatchCard(props) {
         }));
     }),
     !admin && !locked && h('div', { style: { display: 'flex', gap: 8 } }, btn('rgba(255,255,255,.14)', '#fff', function () { save(status || 'draft'); }, '💾 Save for later', true), btn('#4CAF82', '#000', function () { if (answered < qs.length) { if (!window.confirm((qs.length - answered) + ' questions are still empty. Turn it in anyway?')) return; } save('submitted'); }, '📤 Turn it in', true)),
+    !admin && answered > 0 && h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } }, btn('#1A73E8', '#fff', function () { bcCopy(bcAnswersText(s, qs, ans, Date.now()), say, 'Your answers were copied'); try { var cl = syncGet('school/classroom') || {}; setTimeout(function () { window.open(((cl.kids || {})[sid]) || cl.main || 'https://classroom.google.com', '_blank', 'noopener'); }, 400); } catch (e) {} }, '🎓 Copy my answers + open Google Classroom', true)),
     !admin && status === 'submitted' && h('div', { style: { background: 'rgba(255,213,79,.15)', borderRadius: 10, padding: 10, color: '#FFD54F', fontWeight: 800, fontSize: 14 } }, '🕓 Turned in — waiting for Mom or Dad to check it.'),
-    admin && !(typeof ssQuizDay === 'function' && ssQuizDay(through)) && h('div', { style: { margin: '8px 0', padding: 10, borderRadius: 12, background: 'rgba(26,115,232,.14)', border: '1px solid #1A73E8' } },
+    admin && h('div', { style: { margin: '8px 0', padding: 10, borderRadius: 12, background: 'rgba(26,115,232,.14)', border: '1px solid #1A73E8' } },
       h('div', { style: { fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 2 } }, '🎓 Put ' + s.name + '’s quiz in Google Classroom'),
       h('div', { style: { fontSize: 12, color: '#c8d8ff', marginBottom: 6, lineHeight: 1.5 } }, 'In Classroom choose Create → Question (or Assignment), then paste. One day at a time works best: one question per class, worded for ' + s.name + '.'),
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 } },
-        btn('#1A73E8', '#fff', function () { bcCopy(bcClassText(s, qs, null), say, 'Whole quiz copied'); }, '📋 Copy whole quiz'),
+        btn('#1A73E8', '#fff', function () { try { var u = bcClassUrl(s, qs, ans, (sub && sub.submittedAt) || Date.now()); if (u.length > 7000) { bcCopy(bcAnswersText(s, qs, ans, (sub && sub.submittedAt) || Date.now()), say, 'Too long to fill in automatically, so the full text was copied'); setTimeout(function () { window.open(crUrl('Catch-up quiz · ' + s.name + ' · Days ' + qs[0].day + '–' + through, 'Paste the copied answers here.', 'assignment'), '_blank'); }, 500); } else window.open(u, '_blank'); } catch (e) {} }, '🎓 Post to Classroom with ' + s.name + '’s answers'),
+        btn('#1A73E8', '#fff', function () { bcCopy(bcClassText(s, qs, null), say, 'Whole quiz copied'); }, '📋 Copy questions only'),
         btn('rgba(255,255,255,.14)', '#fff', function () { bcDownload(s, qs); }, '⬇ Save as text file'),
         btn('rgba(255,255,255,.14)', '#fff', function () { try { var cl = syncGet('school/classroom') || {}; window.open(((cl.kids || {})[sid]) || cl.main || 'https://classroom.google.com', '_blank', 'noopener'); } catch (e) {} }, '↗ Open Classroom')),
       h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; }).map(function (d) { return h('button', { key: d, onClick: function () { bcCopy(bcClassText(s, qs, d), say, 'Day ' + d + ' copied'); }, style: { minHeight: 38, padding: '0 10px', borderRadius: 10, border: '1px solid rgba(255,255,255,.3)', background: 'transparent', color: '#fff', fontWeight: 800, fontSize: 12.5, cursor: 'pointer' } }, 'Day ' + d); }))),
@@ -42830,7 +42838,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v254';
+var FM_BUILD = 'v257';
 (function () {
   function stamp() {
     try {
