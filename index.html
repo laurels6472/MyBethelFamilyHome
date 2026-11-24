@@ -38266,7 +38266,8 @@ function bcQuestions(sid, through, from) {
     BC_ROT.forEach(function (sub) {
       var meta = SUBJ.filter(function (x) { return x.id === sub; })[0] || { l: sub }, qs = [];
       try { qs = qaFor(sub, d, st.id === 'ashelyn' ? 12 : st.grade); } catch (e) {}
-      qs.forEach(function (q, qi) { out.push({ id: 'd' + d + '_' + sub + (qi ? '_b' : ''), day: d, sub: sub, label: meta.l || sub, text: q.q, key: q.a }); });
+      if (sub === 'math') return;
+      qs.slice(0, 1).forEach(function (q, qi) { out.push({ id: 'd' + d + '_' + sub + (qi ? '_b' : ''), day: d, sub: sub, label: meta.l || sub, text: q.q, key: q.a }); });
     });
   }
   return out;
@@ -38316,12 +38317,21 @@ function bcClassUrl(st, qs, ans, doneTs) {
   var days = qs.map(function (q) { return q.day; }), a = Math.min.apply(null, days), b = Math.max.apply(null, days);
   return crUrl('Catch-up quiz · ' + st.name + ' · Days ' + a + '–' + b + ' (' + ssDayLabelShort(a) + '–' + ssDayLabelShort(b) + ')', bcAnswersText(st, qs, ans || {}, doneTs), 'assignment');
 }
+function ssKr(d, sub, kid) {
+  var K = { bible: 'BIBLE', science: 'SCIENCE', lang: 'LANGUAGE', history: 'HISTORY', comp: 'WRITING' }[sub], rows = (typeof KIDS_READ !== 'undefined' && KIDS_READ[d]) || [], cur = '', sect = '', out = [], KN = ['RYAN', 'KAYLA', 'ASHELYN', 'MYKAH'];
+  if (!K) return out; kid = String(kid || '').toUpperCase();
+  rows.forEach(function (r) {
+    if (r[0] === 'h2') { var m = /^(BIBLE|SCIENCE|MATH|LANGUAGE|HISTORY|WRITING)/.exec(r[1]); if (m) { cur = m[1]; sect = ''; } else sect = r[1].toUpperCase(); }
+    else if (r[0] === 'p' && cur === K) { var names = KN.filter(function (n) { return sect.indexOf(n) > -1; }); if (!sect || !names.length || names.indexOf(kid) > -1) out.push(r[1]); }
+  });
+  return out;
+}
 function bcCopy(txt, say, ok) { try { navigator.clipboard.writeText(txt).then(function () { say('📋 ' + ok + '. Paste it into Google Classroom.'); }, function () { say('Copy is blocked on this device — use “Save as text file”.'); }); } catch (e) { say('Copy is blocked on this device — use “Save as text file”.'); } }
 function bcDownload(st, qs) { try { var b = new Blob([bcClassText(st, qs, null)], { type: 'text/plain' }), a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = st.name + '-lessons-quiz.txt'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); } catch (e) {} }
 function BigCatchCard(props) {
   var h = React.createElement, s = props.student, sid = s.id, admin = !!props.isAdmin;
   var cfg = bcUse(), subS = ktUse('school/bigcatch_sub/' + sid, null), sub = subS[0] || null;
-  var aS = React.useState(null), local = aS[0], setLocal = aS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var aS = React.useState(null), local = aS[0], setLocal = aS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1], rdS = React.useState({}), rd = rdS[0], setRd = rdS[1];
   if (!cfg.on) return null;
   var through = +cfg.through || 1, qs = bcQuestions(sid, through), ans = local || (sub && sub.answers) || {};
   var status = sub && sub.status;
@@ -38350,6 +38360,7 @@ function BigCatchCard(props) {
         byDay[d].map(function (q, i) {
           return h('div', { key: q.id, style: { marginBottom: 6 } },
             h('div', { style: { fontSize: 14, color: '#fff', fontWeight: 700, marginBottom: 4, lineHeight: 1.5 } }, (i + 1) + '. ' + q.text),
+            (function () { var ps = ssKr(q.day, q.sub, s.name); if (!ps.length) return null; return h('div', { style: { marginBottom: 6 } }, h('button', { onClick: function () { var o = Object.assign({}, rd); o[q.id] = !o[q.id]; setRd(o); }, style: { background: 'rgba(255,255,255,.1)', color: '#FFD54F', border: '1px solid rgba(255,213,79,.4)', borderRadius: 10, padding: '8px 12px', minHeight: 40, fontWeight: 800, fontSize: 13, cursor: 'pointer' } }, rd[q.id] ? '▲ Hide the reading' : '📖 Read the lesson again'), rd[q.id] && h('div', { style: { background: 'rgba(0,0,0,.25)', borderRadius: 10, padding: 10, marginTop: 6 } }, ps.map(function (t, k) { return h('p', { key: k, style: { fontSize: 14, color: '#f2f2f8', lineHeight: 1.65, margin: '0 0 8px' } }, t); }))); })(),
             h('textarea', { rows: s.grade <= 5 ? 2 : 3, value: ans[q.id] || '', disabled: locked, onChange: function (e) { setA(q.id, e.target.value); }, onBlur: function () { if (!locked && local) save(status || 'draft', true); }, placeholder: 'Type your answer here', style: ta }),
             ans[q.id + '_img'] && h('div', { style: { margin: '4px 0 6px' } }, h('img', { src: ans[q.id + '_img'], alt: 'My picture', style: { maxWidth: '100%', maxHeight: 220, borderRadius: 10, border: '1px solid rgba(255,255,255,.3)' } }), !locked && !admin && h('button', { onClick: function () { setA(q.id + '_img', ''); }, style: { display: 'block', marginTop: 4, background: 'transparent', color: '#FF8A80', border: '1px solid rgba(255,138,128,.5)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12 } }, '✕ Remove picture')),
             !admin && !locked && h('label', { style: { display: 'inline-block', margin: '2px 0 6px', padding: '10px 14px', minHeight: 44, boxSizing: 'border-box', borderRadius: 12, background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' } }, '🎨 Draw a picture instead — add a photo', h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: function (e) { var f = e.target.files && e.target.files[0]; if (!f || typeof ntResizeImage !== 'function') return; ntResizeImage(f, 700, function (d) { setA(q.id + '_img', d); }); e.target.value = ''; } })),
@@ -40392,6 +40403,7 @@ function TeacherHome(props) {
     h(SchoolDayPicker, { day: props.day, autoDay: props.autoDay, viewDay: props.viewDay, setViewDay: props.setViewDay, restart: props.restart, openSet: props.openSet, setSetOpen: props.setSetOpen }),
     h('div', { style: { fontSize: 13, fontWeight: 900, color: '#FFD54F', letterSpacing: 1, marginBottom: 6 } }, 'FOR WHICH CHILD?'),
     h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 } }, [{ id: 'all', name: 'All kids', emoji: '👨‍👩‍👧‍👦' }].concat(kids).map(function (k) { var on = k.id === tk; return h('button', { key: k.id, onClick: function () { setTk(k.id); }, style: { flex: 1, minWidth: 74, minHeight: 48, borderRadius: 14, border: '2px solid ' + (on ? '#FFD54F' : 'rgba(255,255,255,.18)'), background: on ? 'rgba(255,213,79,.18)' : 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, (k.emoji || '') + ' ' + k.name); })),
+    typeof CatchUpQuizCard === 'function' && h(CatchUpQuizCard, { day: tday }),
     h(DailyTextCard, { day: tday }),
     typeof TeacherMusicGuide === 'function' && h(TeacherMusicGuide, { day: tday }),
     typeof MusicOverview === 'function' && h(MusicOverview, { day: tday }),
@@ -40794,6 +40806,7 @@ function SchoolTimeline(props) {
   var left = curB ? curB.en - now : 0;
   var btn = function (bg, fg, fn, t) { return h('button', { onClick: fn, style: { flex: 1, minWidth: 130, minHeight: 52, background: bg, color: fg, border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, t); };
   return h('div', { style: { marginBottom: 12 } },
+    props.teacher && typeof CatchUpQuizCard === 'function' && h(CatchUpQuizCard, { day: props.schoolDay }),
     h('div', { style: { background: curB ? 'rgba(255,213,79,.12)' : 'rgba(255,255,255,.05)', border: '2px solid ' + (curB ? '#FFD54F' : 'rgba(255,255,255,.15)'), borderRadius: 18, padding: 14, marginBottom: 10 } },
       curB ? h('div', null,
         h('div', { style: { fontSize: 12, fontWeight: 900, color: '#FFD54F', letterSpacing: 1 } }, 'RIGHT NOW · ' + btFmt(curB.st) + ' – ' + btFmt(curB.en)),
@@ -42392,6 +42405,34 @@ function dqKey(day, tier, grade) {
   QZ_SUBS.forEach(function (s) { var qs = []; try { qs = qaFor(s, day, grade); } catch (e) {} qs.forEach(function (q) { out.push(LAB[s] + ': ' + q.q + '\n   ✔ ' + q.a); }); });
   return out.join('\n');
 }
+// ── ADMIN: one Google Doc per day for each level, posted to ONE child at a time ──
+var CUQ_DOCS = {"4":{"hi":"15cMdUmYUF110BfLTP0V6oZ_00gpm_X3Kvx33mvoLJGw","lo":"1bm1VRCvqF5qKPh28D7--kPGRDGbWoiJESRCsZqZ8CfY"},"5":{"hi":"1PV4uArt2qGrjIrkyfoo9tnygqs9_2FGUg2YpBSch_JU","lo":"1DhmUxeVTlICo5arnSn08L2rkdo8cjszC-xAEIMTqS0o"},"6":{"hi":"1MMd2ZvTNpP6BcMfqFsSj-TJ8ZyRvA_-LjDqs5EeXlw8","lo":"1PECSi1g5LnzSw1cjgqAfLEaln0MHe8qmAmTWe5hwsrQ"},"7":{"hi":"1qSFh8CZYIKwqtBTOTyzI-bRm2QLnR7MA0QKs4K1Hq8w","lo":"1D1Usr_O602G6n5At-PEBSQzv1XtxDcUIafzfYUPVQp0"},"8":{"hi":"12IW9cuIl2fycMUJcczpT7QMM-3GsfjtNzShiUn2BbuE","lo":"1dn1nrp_qb7r-R1PKoOob1qhkcriL86_mkYkI5Akg_2c"},"9":{"hi":"1-Z13IqMsdOmAo_8nrtd6-OPfzTw9cCnWA2NpyFStI8Q","lo":"1gyFyvwNb8shyvE7KH-5XByZ2jC3C9fZeZA18A4QW4OU"},"10":{"hi":"12vMoqaG39mCTO-mYwk4iXEPCDB57ZJYXj8l6x1ssNIs","lo":"1lEqfhTQsxlo2xTC3bkSzrWGCEIaLYbUguqAKk1br68c"},"11":{"hi":"1D6GXGmvJgnYxM-8aNZXmVgBbQBbwqShxpeTN69IMCUM","lo":"1lkU0fwfKTTd2CplFBASfQuu0Q7AUli0w02iLgoFvb9Y"},"12":{"hi":"14yrQgPt3Zib-cUeGmQcGbruMGFTNt3dbAi9ykLsm_RM","lo":"1xABjxA7hcruzd_2ler3RiB5-y1vqRYX1gf9R_BDZcUU"},"13":{"hi":"16etaMGkBJZZl2RAcM2izj7rjqvCM5SKpB9oAzthk7JA","lo":"1mUm5rDR0qhiHGkX7_yeEVCqEPXVbDZEy7rmUsrB7DII"},"14":{"hi":"1CkZmAHLoAk63UzUO5H94HSo0D_o0FivzL1tvaS6xfZs","lo":"1JhC64tc0JSxiL-Ab5wukgerOM2YamCOftIEGicOTNVc"},"15":{"hi":"12ap5Q1K1644m_qcS3cTaFRbtf7PbgKkYFwwwYjAEfvg","lo":"1JBXdkzQZQMMpU-JdgHX17jjRmTVZD1d9bsprGHJy84M"},"16":{"hi":"1Si8UME8FrNoUHHXtd1RLUvX9Q0gLu0FLEKD8XZ9GtoI","lo":"1YFc9fAWlkKRm1xPDyO9T4-4tPoxF13AFPaxkJ4kdppE"},"17":{"hi":"1p1sbqv9GXsNmrYaQVCW2Xff4RyBdU0E35tVbEniJyFI","lo":"1QsivGdc8_B2DXt5uy9tElCKCDSnq4w8D-xKnxfUWGL8"},"18":{"hi":"17cQvSheq6slysDDDHM8RJ6R8cxIx5U31Xw2ZNfXOq0Q","lo":"1bEmuA93z8oMpoJ066I_2ul4gLT0m845KGMt8XftK0iA"},"19":{"hi":"1lUHcJgCSVPW7A-JSUlemyXzGZzF9JxuyH9EKHbPzMWI","lo":"1AtBglmuBJlPpyUjCer4IMxeIg98HLrt6lQQe8wYSHBk"},"20":{"hi":"1edLmv8N-wFSNeMN8_JSoaetKTrwYJUAWpIhn6p6pZu4","lo":"1nG3_ZaH7eyf9U1RFMYVER1YvSpDfRjoNJEIVThBNqCA"},"21":{"hi":"1gG-CG_O7KJTD7XHU-hV3M8ZvG37UQGGGe06lb6HXSpI","lo":"13N7yjL5Q8vo9NF_pKoy13aSsR8SK3D0yRh5wNoSBpEU"},"22":{"hi":"1f6CtNmuTp9f_8oJxMICHsiJ1-YpzWeOFm8XmV59dJOU","lo":"1CCv3sd2Zhy0Vi3QEpWpdqmJIYC008WhjpQ0pz8hgGQQ"},"23":{"hi":"1bW7hy0OFwxsxrEEVEYleCt8Km-b6uX6P2y3ItvRhA6g","lo":"1D1xDXlPrNgdoPHxEUex7z59sY6URRsrXFoPKec-oLzU"},"24":{"hi":"14ETENwJj7JHQCtWd2t-oMZuCWky7scewT0bPH5lE5Mw","lo":"1hQsmmj8KxmikjpvuwRynL8R9Tt9VYIlrwJHdaExS7Os"},"25":{"hi":"1hT7p3cXD2rgpfR41QUBWO0I5ZE5wjgEv3oF9pRS_0LU","lo":"1UCpzWAgc9iiGkevUTj7jqb4SN3fjOpkBfqJ1anBMn6o"},"26":{"hi":"1BGfOo4Qcv09aBD_SR7Wtd7Ri-IFzfrDqwoZioptI7KU","lo":"1cWy0fxkDInxPr_DmN2546cHJ8QyTZ--0RuSXxEzeft4"},"27":{"hi":"1Te3woDh3nPf1eV2vNH8o0lJi4kyGv4v4xiUMQdVJzJU","lo":"1yI7ZFW_QGklhBuYtNx0HmmtgL0oBF_3voYfW0uolemw"},"28":{"hi":"19lcY7rPZtLuBi6UPLYSW82sq7uHe4QchCcZmkc6rOlE","lo":"1p2YxgIZ5l2ZZkuuhrE_gyHJ46H6atB0ToBAieDILNU4"},"29":{"hi":"1h_uB8t75TWBsDgBPfmoEsOht2-qeJ29bcFztpbvfcPQ","lo":"1WeaBM6L3I40WlrL0wVURqgmmKB2Rd72OrFtw3Tldn2Y"},"30":{"hi":"17rOr8BYQboRIOaSb8fupqHAmTzT-xu0xhraodp0ct6k","lo":"11RT-VXl1fbX39djIp76WlSD63yu5lh0eOyIRD2mYWuk"},"31":{"hi":"1HqEH5J0Aqvl_IWjlx-lhQrYCtBiH9O4hKwpO1EAB4Fo","lo":"11x3H0co4QGNe0q3Q4kZK9cmdyTVUVC0P958gSkcx6U4"},"32":{"hi":"14pzUOK3VSQwuyJPdnM_I9xh4-faOEluXrOTh0XoZvwg","lo":"1CkOtW02vZtF-o0CXIXRBczpl1h8HyfZSktCRORnAcoA"},"33":{"hi":"165TPb64RO73fhKJkN-GSNePeQJkeSdrfo_SLHN2rXsA","lo":"1iS2VJM0PUIdBgmnz2ilvA8Z0CWUDEo-NLoTVQoOVJoo"},"34":{"hi":"1VLbBKQUWXty0Ybnx-YkAqmJK_dbxiAnDBFPNET6MTJo","lo":"1GD8CsnSItaVOVCnOMVoHCdfwGMLNQTOdINeI7kZMC04"},"35":{"hi":"1x_Z6tDOv7UzL1JrmMmAxXzRUlEw7TGZLyLZ4DcrjEvE","lo":"14rMUX-rAyTUVBPEkAfbm8XIIVPuhuPdk7T6V6v-DQDE"},"36":{"hi":"1VOIQYUbO6sPACv-NrqRKKaSRxn7av5by0Jx7u1YOkjc","lo":"1jcRNwVRaW2VuCPnP81Nk9nZcvz5uqYDYX49yFH5DJUQ"}};
+var CUQ_KIDS = [['ryan', 'Ryan', 'hi'], ['kayla', 'Kayla', 'hi'], ['ashelyn', 'Ashelyn', 'hi'], ['mykah', 'Mykah', 'lo']];
+function CatchUpQuizCard(props) {
+  var h = React.createElement, from = 4, to = 36, sd = +props.day || 0;
+  var dS = React.useState(sd >= from && sd <= to ? sd : from), day = dS[0], setDay = dS[1], oS = React.useState(false), open = oS[0], setOpen = oS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  if (!window._isAdminSession) return null;
+  var docs = CUQ_DOCS[day] || {}, hue = dayK(day) * 15;
+  var cA = 'hsl(' + hue + ',70%,62%)', cB = 'hsl(' + ((hue + 180) % 360) + ',70%,62%)', tA = 'hsla(' + hue + ',80%,60%,.18)', tB = 'hsla(' + ((hue + 180) % 360) + ',80%,60%,.18)';
+  var dl = ''; try { dl = ssDayLabel(day); } catch (e) {}
+  function qsFor(sid) { var out = [], seen = {}; try { bcQuestions(sid === 'mykah' ? 'mykah' : 'ashelyn', day, day).filter(function (q) { return q.day === day && q.sub !== 'math'; }).forEach(function (q) { if (seen[q.sub]) return; seen[q.sub] = 1; out.push(q); }); } catch (e) {} return out; }
+  function say(t) { setMsg(t); setTimeout(function () { setMsg(''); }, 6000); }
+  function post(k) { var id = docs[k[2]]; if (!id) return; var url = 'https://docs.google.com/document/d/' + id + '/edit'; window.open(crUrl('Day ' + day + ' · ' + dl + ' — Quiz for ' + k[1], 'For ' + k[1] + ' only. Open your Google Doc, type your name at the top, and type what you told Mom out loud under each question. Then do today’s math in the app and press Submit.', 'assignment', url), '_blank'); say('Classroom is open. Pick ONLY ' + k[1] + ' under “For”, then Assign.'); }
+  var nav = function (fn, t) { return h('button', { onClick: fn, style: { background: 'rgba(255,255,255,.14)', color: '#fff', border: 'none', borderRadius: 12, minWidth: 46, minHeight: 46, fontWeight: 900, fontSize: 18, cursor: 'pointer' } }, t); };
+  var list = function (qs, col, tint, who) { return h('div', { style: { background: tint, borderLeft: '5px solid ' + col, borderRadius: 10, padding: '8px 10px', marginBottom: 8 } }, h('div', { style: { fontWeight: 900, color: col, fontSize: 14, marginBottom: 4 } }, who), qs.map(function (q, i) { return h('div', { key: q.id, style: { fontSize: 13, color: '#eee', lineHeight: 1.5, padding: '2px 0' } }, (i + 1) + '. ' + q.text.replace(/\s+Be detailed:.*$/, '').replace(/\s+Tell one or two things you remember\.$/, '')); })); };
+  var any = !!(docs.hi || docs.lo);
+  return h('div', { style: { marginBottom: 12, borderRadius: 16, border: '2px solid ' + cA, background: tA, padding: 12 } },
+    h('div', { style: { fontSize: 16, fontWeight: 900, color: '#fff' } }, '🎓 Daily quiz → Google Classroom'),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' } }, nav(function () { setDay(Math.max(from, day - 1)); }, '‹'),
+      h('div', { style: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: 900, color: cA } }, 'Day ' + day + (dl ? ' · ' + dl : '')), nav(function () { setDay(Math.min(to, day + 1)); }, '›')),
+    h('div', { style: { fontSize: 12, color: '#c8d4f0', marginBottom: 6 } }, 'One doc per day, one question per class. Post each child their own. Math is the math in the app.'),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 } }, CUQ_KIDS.map(function (k) { var id = docs[k[2]]; return h('button', { key: k[0], onClick: function () { post(k); }, disabled: !id, style: { minHeight: 46, background: !id ? 'rgba(255,255,255,.08)' : (k[2] === 'lo' ? cB : '#1A73E8'), color: !id ? '#889' : (k[2] === 'lo' ? '#000' : '#fff'), border: 'none', borderRadius: 12, fontWeight: 900, fontSize: 14, cursor: id ? 'pointer' : 'default' } }, '📤 ' + k[1] + (id ? '' : ' (no doc yet)')); })),
+    h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 } }, CUQ_KIDS.filter(function (k) { return k[0] === 'ryan' || k[0] === 'mykah'; }).map(function (k) { var id = docs[k[2]]; return h('button', { key: 'o' + k[0], onClick: function () { if (id) window.open('https://docs.google.com/document/d/' + id + '/edit', '_blank'); }, disabled: !id, style: { flex: 1, minHeight: 40, background: 'rgba(255,255,255,.12)', color: id ? '#fff' : '#889', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 12.5, cursor: id ? 'pointer' : 'default' } }, '📄 Open ' + (k[2] === 'lo' ? 'Mykah’s' : 'older kids’') + ' doc'); })),
+    !any && h('div', { style: { fontSize: 12, color: '#FFB74D', marginTop: 6 } }, 'The Google Docs for this day are not made yet.'),
+    h('button', { onClick: function () { setOpen(!open); }, style: { background: 'none', border: 'none', color: '#FFD54F', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: '8px 0 0' } }, open ? '▲ Hide the questions' : '👀 See the questions'),
+    open && h('div', { style: { marginTop: 6 } }, list(qsFor('ryan'), cA, tA, 'Ryan · Kayla · Ashelyn'), list(qsFor('mykah'), cB, tB, 'Mykah')),
+    msg && h('div', { style: { fontSize: 13, color: '#81C784', marginTop: 6 } }, msg));
+}
 function DayQuizSend(props) { if (!window._isAdminSession) return null; return React.createElement(DayQuizSendIn, props); }
 function DayQuizSendIn(props) {
   var h = React.createElement, nvG = function () { try { return (typeof nvGet === 'function' && nvGet('quizday', null)) || 1; } catch (e) { return 1; } };
@@ -42890,7 +42931,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v259';
+var FM_BUILD = 'v263';
 (function () {
   function stamp() {
     try {
