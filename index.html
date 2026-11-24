@@ -33800,7 +33800,7 @@ function TakeAttendanceInner(props) {
     h('button', { onClick: function () { advS[1](!advS[0]); }, style: { background: 'none', border: 'none', color: '#9a9ab0', fontWeight: 800, fontSize: 13, cursor: 'pointer', padding: '8px 0' } }, (advS[0] ? '▲ ' : '▼ ') + 'More options (bulk times, late, excused, holiday)'),
     advS[0] && h(TakeAttendanceAdv, props));
 }
-function SimpleAttendance(props) {
+function SimpleAttendanceDay(props) {
   var h = React.createElement, kids = fmSchoolKids(props.family);
   var dS = React.useState(tcIso(new Date())), date = dS[0], setDate = dS[1], xS = React.useState({}), openT = xS[0], setOpenT = xS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
   var aS = ktUse('attendance/' + date, {}), att = Object.assign({}, (typeof ktLocal === 'function' ? ktLocal('attendance/' + date, {}) : null) || {}, aS[0] || {});
@@ -33828,6 +33828,57 @@ function SimpleAttendance(props) {
           h('input', { type: 'text', placeholder: 'Note (optional)', defaultValue: r.note || '', onBlur: function (e) { put(p, { note: e.target.value }); }, style: Object.assign({}, inp, { flex: 1, minWidth: 160 }) })));
     }),
     msg && h('div', { style: { color: '#9be3bd', fontSize: 13, fontWeight: 800, marginTop: 8 } }, msg));
+}
+// ── Catch up attendance in one block: pick From and To dates, who, Here / Not here, then Save ──
+function SimpleAttendance(props) {
+  var h = React.createElement;
+  return h('div', null, h(BulkAttendance, { family: props.family }), h(SimpleAttendanceDay, props));
+}
+function BulkAttendance(props) {
+  var h = React.createElement, kids = fmSchoolKids(props.family), today = tcIso(new Date());
+  var oS = React.useState(false), open = oS[0], setOpen = oS[1], fS = React.useState('2026-10-06'), from = fS[0], setFrom = fS[1], tS = React.useState(today), to = tS[0], setTo = tS[1];
+  var sS = React.useState({}), skip = sS[0], setSkip = sS[1], stS = React.useState('present'), st = stS[0], setSt = stS[1], rS = React.useState(true), repl = rS[0], setRepl = rS[1];
+  var nS = React.useState('Lessons taught that day; attendance entered late on ' + today + '.'), note = nS[0], setNote = nS[1], mS = React.useState(''), msg = mS[0], setMsg = mS[1];
+  var who = kids.filter(function (p) { return !skip[p.id]; });
+  function range() {
+    var out = [], a = new Date(from + 'T12:00:00'), b = new Date(Math.min(new Date(to + 'T12:00:00').getTime(), new Date(today + 'T12:00:00').getTime()));
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return out;
+    for (var d = new Date(a), g = 0; d <= b && g < 400; d.setDate(d.getDate() + 1), g++) { var w = d.getDay(); if (w !== 0 && w !== 6) out.push(tcIso(d)); }
+    return out;
+  }
+  var days = range(), total = days.length * who.length;
+  function save() {
+    if (!days.length || !who.length) { setMsg('Pick the dates and at least one child.'); return; }
+    var label = st === 'present' ? 'HERE' : 'NOT HERE';
+    if (!window.confirm('Mark ' + who.map(function (p) { return p.name; }).join(', ') + ' as ' + label + ' for ' + days.length + ' weekdays (' + days[0] + ' to ' + days[days.length - 1] + ')?' + (repl ? '\nThis replaces what is already saved for those days, including odd clock times.' : '\nDays that already have a record are left alone.'))) return;
+    var backup = {}, n = 0, skipped = 0;
+    days.forEach(function (iso) {
+      who.forEach(function (p) {
+        var cur = null; try { cur = syncGet('attendance/' + iso + '/' + p.id); } catch (e) {}
+        if (cur && !repl) { skipped++; return; }
+        if (cur) backup[iso + '__' + p.id] = cur;
+        var rec = { status: st === 'present' ? 'present' : 'absent', start: '', end: '', note: (note || '').trim(), by: window._currentPersonId || 'parent', at: Date.now(), bulk: true };
+        try { syncSet('attendance/' + iso + '/' + p.id, rec); n++; } catch (e) {}
+      });
+    });
+    try { if (Object.keys(backup).length) syncSet('attendance_backup/' + Date.now(), backup); } catch (e) {}
+    setMsg('✅ Saved ' + n + ' records (' + days.length + ' days × ' + who.length + ' kids)' + (skipped ? ' · ' + skipped + ' already had a record and were kept' : '') + '. Open the Attendance Report to see them.');
+  }
+  var inp = { background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, color: '#fff', padding: 10, fontSize: 16 };
+  var chip = function (on, col, fn, t) { return h('button', { key: t, onClick: fn, style: { minHeight: 44, padding: '0 14px', borderRadius: 12, border: '2px solid ' + (on ? col : 'rgba(255,255,255,.25)'), background: on ? col : 'transparent', color: on ? '#000' : '#fff', fontWeight: 900, fontSize: 15, cursor: 'pointer' } }, t); };
+  return h('div', { style: { background: 'rgba(121,134,203,.16)', border: '2px solid rgba(121,134,203,.55)', borderRadius: 16, padding: 14, marginBottom: 10 } },
+    h('button', { onClick: function () { setOpen(!open); }, style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff', fontWeight: 900, fontSize: 17, cursor: 'pointer', padding: 0 } }, (open ? '▲ ' : '▼ ') + '🗓 Behind? Fill in a block of days at once'),
+    open && h('div', { style: { marginTop: 10 } },
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 } },
+        h('span', { style: { color: '#e8e8f4', fontSize: 14 } }, 'From'), h('input', { type: 'date', value: from, max: today, onChange: function (e) { setFrom(e.target.value); setMsg(''); }, style: inp }),
+        h('span', { style: { color: '#e8e8f4', fontSize: 14 } }, 'To'), h('input', { type: 'date', value: to, max: today, onChange: function (e) { setTo(e.target.value); setMsg(''); }, style: inp })),
+      h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 } }, kids.map(function (p) { return chip(!skip[p.id], '#4CAF82', function () { var o = Object.assign({}, skip); o[p.id] = !o[p.id]; setSkip(o); }, (skip[p.id] ? '' : '✓ ') + p.name); })),
+      h('div', { style: { display: 'flex', gap: 8, marginBottom: 10 } }, chip(st === 'present', '#4CAF82', function () { setSt('present'); }, '✅ Here'), chip(st === 'absent', '#EF5350', function () { setSt('absent'); }, '❌ Not here')),
+      h('label', { style: { display: 'flex', gap: 8, alignItems: 'center', color: '#e8e8f4', fontSize: 14, marginBottom: 8, cursor: 'pointer' } }, h('input', { type: 'checkbox', checked: repl, onChange: function (e) { setRepl(e.target.checked); }, style: { width: 20, height: 20 } }), 'Replace days that already have a record (clears odd clock times)'),
+      h('input', { type: 'text', value: note, onChange: function (e) { setNote(e.target.value); }, placeholder: 'Note (optional)', style: Object.assign({}, inp, { width: '100%', boxSizing: 'border-box', marginBottom: 8 }) }),
+      h('div', { style: { fontSize: 13, color: '#C5CAE9', marginBottom: 8 } }, days.length + ' weekdays × ' + who.length + ' kids = ' + total + ' records. Weekends are skipped, holidays are not, and future dates are not allowed. The old records are saved to a backup first.'),
+      h('button', { onClick: save, style: { width: '100%', minHeight: 52, background: '#4CAF82', color: '#000', border: 'none', borderRadius: 14, fontWeight: 900, fontSize: 16, cursor: 'pointer' } }, '💾 Save all ' + total),
+      msg && h('div', { style: { color: '#9be3bd', fontSize: 13, fontWeight: 800, marginTop: 8 } }, msg)));
 }
 function TakeAttendanceAdv(props) {
   var h = React.createElement, kids = fmSchoolKids(props.family);
@@ -42839,7 +42890,7 @@ function ClockStyleCard() {
 </script>
 <script>
 // ═══ BUILD STAMP + "new version available" check (vanilla, no React) ═══
-var FM_BUILD = 'v258';
+var FM_BUILD = 'v259';
 (function () {
   function stamp() {
     try {
